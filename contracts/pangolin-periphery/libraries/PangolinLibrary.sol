@@ -22,7 +22,7 @@ library PangolinLibrary {
                 hex'ff',
                 factory,
                 keccak256(abi.encodePacked(token0, token1)),
-                hex'f1504f8c8c58e0a60674243935563b6e9b0ab1b661de7dfed9b64ab0ad0ed2ce' // init code hash
+                hex'40231f6b438bce0797c9ada29b718a87ea0a5cea3fe9a771abdd76bd41a3e545' // init code hash
             ))));
     }
 
