@@ -9,7 +9,7 @@
     "ethers": "^5.0.24",
     "hardhat": "^2.0.6"
   },
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Contracts for the Pangolin Dex.",
   "main": "index.js",
   "repository": {
@@ -29,5 +29,5 @@
   "bugs": {
     "url": "https://github.com/pangolindex/exchange-contracts/issues"
   },
-  "homepage": "https://github.com/pangolindex/exchange-contracts#readme"
+  "homepage": "https://pangolin.exchange"
 }
