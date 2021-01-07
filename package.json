@@ -1,5 +1,5 @@
 {
-  "name": "@pangolin/exchange-contracts",
+  "name": "@pangolindex/exchange-contracts",
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.1",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
@@ -9,10 +9,13 @@
     "ethers": "^5.0.24",
     "hardhat": "^2.0.6"
   },
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Contracts for the Pangolin Dex.",
   "main": "index.js",
-  "repository": "git@github.com:pangolindex/exchange-contracts.git",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/pangolindex/exchange-contracts.git"
+  },
   "author": "Connor Daly <connor.daly@avalabs.org>",
   "license": "MIT",
   "scripts": {
@@ -22,5 +25,9 @@
     "test": "npx hardhat test",
     "lint": "prettier ./test/**/*.ts --check",
     "prepublishOnly": "yarn test"
-  }
+  },
+  "bugs": {
+    "url": "https://github.com/pangolindex/exchange-contracts/issues"
+  },
+  "homepage": "https://pangolin.exchange"
 }
