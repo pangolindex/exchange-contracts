@@ -40,6 +40,10 @@ module.exports = {
       }
     ]
   },
+  paths: {
+    sources: "./src",
+    artifacts: "./artifacts",
+  },
   networks: {
     hardhat: {
       gasPrice: 470000000000,
