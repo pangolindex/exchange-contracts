@@ -5,3 +5,5 @@ test/
 cache/
 node_modules/
 artifacts/
+.vscode
+yarn.lock

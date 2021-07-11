@@ -1,5 +1,8 @@
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
+require('hardhat-contract-sizer');
+require("hardhat-gas-reporter");
+require("hardhat-tracer");
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -36,15 +39,29 @@ module.exports = {
         version: "0.7.0"
       },
       {
-        version: "0.8.0"
+        version: "0.8.0",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 1000
+          }
+        }
       }
     ]
   },
   networks: {
     hardhat: {
       gasPrice: 470000000000,
-      chainId: 43112,
+      chainId: 43114,
       initialDate: "2020-10-10",
+      forking: {
+        url: 'https://api.avax.network/ext/bc/C/rpc', 
+        enabled: true
+      },
+      accounts: {
+        accountsBalance: "10000000000000000000000000", 
+        count: 200
+      }
     },
     avash: {
       url: 'http://localhost:9650/ext/bc/C/rpc',
@@ -64,5 +81,15 @@ module.exports = {
       chainId: 43114,
       accounts: []
     }
+  },
+  contractSizer: {
+    alphaSort: false,
+    runOnCompile: true,
+    disambiguatePaths: false,
+  },
+  gasReporter: {
+    enabled: true,
+    showTimeSpent: true, 
+    gasPrice: 225
   }
 };

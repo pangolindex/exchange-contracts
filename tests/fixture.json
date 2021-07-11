@@ -1,0 +1,35 @@
+{
+    "Factory": "0xefa94DE7a4656D787667C749f7E1223D71E9FD88",
+    "Router": "0xE54Ca86531e17Ef3616d22Ca28b0D458b6C89106",
+    "Tokens": {
+        "WAVAX": "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
+        "PNG": "0x60781c2586d68229fde47564546784ab3faca982",
+        "AEB_ETH": "0xf20d962a6c8f70c731bd838a3a388d7d48fa6e15",
+        "LINK": "0xb3fe5374f67d7a22886a0ee082b2e2f9d2651651",
+        "USDT": "0xde3a24028580884448a5397872046a019649b084",
+        "AEB_WBTC": "0x408d4cd0adb7cebd1f1a1c33a0ba2098e1295bab"
+    },
+    "Pairs": {
+        "AVAX": {
+            "PNG": "0xd7538cabbf8605bde1f4901b47b8d42c61de0367",
+            "ETH": "0x1acf1583bebdca21c8025e172d8e8f2817343d65",
+            "WBTC": "0x7a6131110b82dacbb5872c7d352bfe071ea6a17c",
+            "LINK": "0xbbc7fff833d27264aac8806389e02f717a5506c9",
+            "USDT": "0x9ee0a4e21bd333a6bb2ab298194320b8daa26516",
+            "SUSHI": "0xd8b262c0676e13100b33590f10564b46eef652ad",
+            "DAI": "0x17a2e8275792b4616befb02eb9ae699aa0dcb94b",
+            "AAVE": "0x5f233a14e1315955f48c5750083d9a44b0df8b50",
+            "XAVA": "0x42152bdd72de8d6767fe3b4e17a221d6985e8b25",
+            "UNI": "0x92dc558cb9f8d0473391283ead77b79b416877ca"
+        },
+        "PNG": {
+            "ETH": "0x53b37b9a6631c462d74d65d61e1c056ea9daa637",
+            "LINK": "0x7313835802c6e8ca2a6327e6478747b71440f7a4",
+            "SNOB": "0x97b4957df08e185502a0ac624f332c7f8967ee8d",
+            "USDT": "0xe8acf438b10a2c09f80aef3ef2858f8e758c98f9",
+            "PEFI": "0x1bb5541eccda68a352649954d4c8ece6ad68338d",
+            "AAVE": "0x0025cebd8289bbe0a51a5c85464da68cbc2ec0c4",
+            "WBTC": "0xf372ceae6b2f4a2c4a6c0550044a7eab914405ea"
+        }
+    }
+}

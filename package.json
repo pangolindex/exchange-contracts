@@ -7,7 +7,13 @@
     "ethereum-waffle": "^3.2.1",
     "ethereumjs-tx": "^2.1.2",
     "ethers": "^5.0.24",
-    "hardhat": "^2.0.6"
+    "hardhat": "^2.0.6",
+    "hardhat-gas-reporter": "^1.0.4",
+    "mocha": "^7.2.0",
+    "hardhat-contract-sizer": "^2.0.3"
+  },
+  "dependencies": {
+    "hardhat-tracer": "^1.0.0-alpha.5"
   },
   "version": "1.0.1",
   "description": "Contracts for the Pangolin Dex.",
@@ -23,6 +29,7 @@
     "compile": "npx hardhat compile",
     "pretest": "yarn compile",
     "test": "npx hardhat test",
+    "test-local": "npx hardhat --network localhost test",
     "lint": "prettier ./test/**/*.ts --check",
     "prepublishOnly": "yarn test"
   },
