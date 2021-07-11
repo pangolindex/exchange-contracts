@@ -1,16 +1,17 @@
 {
   "name": "@pangolindex/exchange-contracts",
   "devDependencies": {
-    "@nomiclabs/hardhat-ethers": "^2.0.1",
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
-    "chai": "^4.2.0",
-    "ethereum-waffle": "^3.2.1",
+    "chai": "^4.3.4",
+    "ethereum-waffle": "^3.4.0",
     "ethereumjs-tx": "^2.1.2",
-    "ethers": "^5.0.24",
-    "hardhat": "^2.0.6",
+    "ethers": "^5.3.1",
+    "hardhat": "^2.4.1",
+    "hardhat-contract-sizer": "^2.0.3",
     "hardhat-gas-reporter": "^1.0.4",
-    "mocha": "^7.2.0",
-    "hardhat-contract-sizer": "^2.0.3"
+    "ethereumjs-util": "^7.0.10",
+    "mocha": "^7.2.0"
   },
   "dependencies": {
     "hardhat-tracer": "^1.0.0-alpha.5"
@@ -29,6 +30,7 @@
     "compile": "npx hardhat compile",
     "pretest": "yarn compile",
     "test": "npx hardhat test",
+    "test-node": "npx hardhat node --network hardhat",
     "test-local": "npx hardhat --network localhost test",
     "lint": "prettier ./test/**/*.ts --check",
     "prepublishOnly": "yarn test"

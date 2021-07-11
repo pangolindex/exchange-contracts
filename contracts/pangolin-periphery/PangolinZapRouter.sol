@@ -1,9 +1,11 @@
-pragma solidity ^0.7.0;
+pragma solidity ^0.6.6;
 
 import "../pangolin-core/interfaces/IPangolinFactory.sol";
 import '../pangolin-lib/libraries/TransferHelper.sol';
 import './interfaces/IPangolinRouter.sol';
 import "./libraries/PangolinLibrary.sol";
+import "../pangolin-core/interfaces/IPangolinERC20.sol";
+import "hardhat/console.sol";
 
 contract PangolinZapRouter {
     using SafeMath for uint;
@@ -14,8 +16,8 @@ contract PangolinZapRouter {
 
     constructor(
         address _factory,
-        address _router,
-    ) {
+        address _router
+    ) public {
         factory = IPangolinFactory(_factory);
         swapRouter = IPangolinRouter(_router);
     }
@@ -30,9 +32,9 @@ contract PangolinZapRouter {
         uint amount,
         address fromToken,
         address swapPair,
-        uint deadline,
+        uint deadline
     ) internal returns (uint) {
-        address[] path = new address[2];
+        address[] memory path = new address[](2);
         path[0] = IPangolinPair(swapPair).token0();
         path[1] = IPangolinPair(swapPair).token1();
         if (IPangolinPair(swapPair).token0() != fromToken) {
@@ -42,30 +44,20 @@ contract PangolinZapRouter {
             address(factory),
             amount,
             path
-        );
+        )[1];
+        _allowToken(fromToken, address(swapRouter), amount);
         swapRouter.swapExactTokensForTokens(amount, amountOut, path, address(this), deadline);
-        return amountOut
+        return amountOut;
     }
 
+    function _allowToken(address tokenAddress, address spenderAddress, uint amount) internal {
+        if (IPangolinERC20(tokenAddress).allowance(address(this), spenderAddress) <= amount) {
+            IPangolinERC20(tokenAddress).approve(spenderAddress, uint(-1));
+        }
+    }
 
-    function convertLiquidity(
-        address liquidityPairFrom,
-        address liquidityPairTo,
-        address to,
-        uint amount,
-        uint deadline
-    ) external ensure(deadline) {
-        require(liquidityPairFrom != address(0), "PangolinZapRouter::liquidityPairFrom address 0");
-        require(liquidityPairTo != address(0), "PangolinZapRouter::liquidityPairTo address 0");
-        require(liquidityPairTo != liquidityPairFrom, "PangolinZapRouter::cant convert to the same liquidity pairs");
-        address fromTokenA = IPangolinPair(liquidityPairFrom).token0();
-        address fromTokenB = IPangolinPair(liquidityPairFrom).token1();
-        address toTokenA = IPangolinPair(liquidityPairTo).token0();
-        address toTokenB = IPangolinPair(liquidityPairTo).token1();
-        TransferHelper.safeTransferFrom(liquidityPairFrom, msg.sender, address(this), amount);
-        (uint amountTokenA, uint amountTokenB) = IPangolinPair(liquidityPairFrom).burn(address(this));
-        uint amountOutTokenA;
-        uint amountOutTokenB;
+    function _convert(address fromTokenA, address fromTokenB, address toTokenA, address toTokenB, uint amountTokenA, uint amountTokenB) internal returns (uint amountOutTokenA, uint amountOutTokenB) {
+        uint deadline = block.timestamp;
         if (fromTokenA != toTokenA && fromTokenA != toTokenB) {
             // there's no token matching
             if (fromTokenB != toTokenA && fromTokenB != toTokenB) {
@@ -108,6 +100,61 @@ contract PangolinZapRouter {
                 amountOutTokenB = _simpleSwap(amountTokenB, fromTokenB, swapPair, deadline);
                 amountOutTokenA = amountTokenB;
             }
+        }
+    }
+
+    function _addLiquidity(address pairToken, address token0, address token1, uint amountIn0, uint amountIn1, address to) private returns (uint amount0, uint amount1, uint liquidityAmount) {
+        (uint112 reserve0, uint112 reserve1,) = IPangolinPair(pairToken).getReserves();
+        uint quote0 = amountIn0;
+        uint quote1 = PangolinLibrary.quote(amountIn0, reserve0, reserve1);
+        if (quote1 > amountIn1) {
+            quote1 = amountIn1;
+            quote0 = PangolinLibrary.quote(amountIn1, reserve1, reserve0);
+        }
+        
+        TransferHelper.safeTransfer(token0, pairToken, quote0);
+        TransferHelper.safeTransfer(token1, pairToken, quote1);
+        amount0 = amountIn0 - quote0;
+        amount1 = amountIn1 - quote1;
+        liquidityAmount = IPangolinPair(pairToken).mint(to);
+    }
+
+
+    function convertLiquidity(
+        address liquidityPairFrom,
+        address liquidityPairTo,
+        address to,
+        uint amount,
+        uint deadline
+    ) external ensure(deadline) {
+        require(liquidityPairFrom != address(0), "PangolinZapRouter::liquidityPairFrom address 0");
+        require(liquidityPairTo != address(0), "PangolinZapRouter::liquidityPairTo address 0");
+        require(liquidityPairTo != liquidityPairFrom, "PangolinZapRouter::cant convert to the same liquidity pairs");
+        TransferHelper.safeTransferFrom(liquidityPairFrom, msg.sender, address(this), amount);
+        _allowToken(liquidityPairFrom, address(swapRouter), amount);
+        TransferHelper.safeTransfer(liquidityPairFrom, liquidityPairFrom, amount);
+        (uint amountTokenA, uint amountTokenB) = IPangolinPair(liquidityPairFrom).burn(address(this));
+        (uint amountOutTokenA, uint amountOutTokenB) = _convert(
+            IPangolinPair(liquidityPairFrom).token0(), IPangolinPair(liquidityPairFrom).token1(),
+            IPangolinPair(liquidityPairTo).token0(), IPangolinPair(liquidityPairTo).token1(),
+            amountTokenA, amountTokenB
+        );
+        _allowToken(IPangolinPair(liquidityPairTo).token0(), address(swapRouter), amountOutTokenA);
+        _allowToken(IPangolinPair(liquidityPairTo).token1(), address(swapRouter), amountOutTokenB);
+        console.log(IPangolinERC20(IPangolinPair(liquidityPairTo).token0()).balanceOf(address(this)));
+        console.log(IPangolinERC20(IPangolinPair(liquidityPairTo).token1()).balanceOf(address(this)));
+        (uint changeAmount0, uint changeAmount1, ) = _addLiquidity(
+            liquidityPairTo,
+            IPangolinPair(liquidityPairTo).token0(), IPangolinPair(liquidityPairTo).token1(),
+            amountOutTokenA, amountOutTokenB, msg.sender
+        );
+        console.log(changeAmount0);
+        console.log(changeAmount1);
+        if (changeAmount0 > 0) {
+            TransferHelper.safeTransfer(IPangolinPair(liquidityPairTo).token0(), msg.sender, changeAmount0);
+        }
+        if (changeAmount1 > 0) {
+            TransferHelper.safeTransfer(IPangolinPair(liquidityPairTo).token1(), msg.sender, changeAmount1);
         }
     }
 }
