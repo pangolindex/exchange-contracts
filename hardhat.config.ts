@@ -1,13 +1,15 @@
-require("@nomiclabs/hardhat-waffle");
-require("@nomiclabs/hardhat-ethers");
-require('hardhat-contract-sizer');
-require("hardhat-gas-reporter");
-require("hardhat-tracer");
+import "@nomiclabs/hardhat-waffle";
+import "@nomiclabs/hardhat-ethers";
+import "hardhat-contract-sizer";
+import "hardhat-gas-reporter";
+import "hardhat-tracer";
+import { task, HardhatUserConfig } from "hardhat/config";
+import "ts-node/register";
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
-task("accounts", "Prints the list of accounts", async () => {
-  const accounts = await ethers.getSigners();
+task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
+  const accounts = await hre.ethers.getSigners();
 
   for (const account of accounts) {
     console.log(account.address);
@@ -17,7 +19,7 @@ task("accounts", "Prints the list of accounts", async () => {
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
-module.exports = {
+const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
@@ -32,11 +34,30 @@ module.exports = {
           optimizer: {
             enabled: true,
             runs: 1000
-          }
+          },
+          outputSelection: {
+            "*": {
+                "*": ["storageLayout"],
+            },
+          },
         }
       },
       {
         version: "0.7.0"
+      },
+      {
+        version: "0.7.6",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 1000
+          },
+          outputSelection: {
+            "*": {
+                "*": ["storageLayout"],
+            },
+          },
+        }
       },
       {
         version: "0.8.0",
@@ -44,9 +65,14 @@ module.exports = {
           optimizer: {
             enabled: true,
             runs: 1000
-          }
+          },
+          outputSelection: {
+            "*": {
+                "*": ["storageLayout"],
+            },
+          },
         }
-      }
+      },
     ]
   },
   networks: {
@@ -58,7 +84,7 @@ module.exports = {
     hardhat: {
       gasPrice: 470000000000,
       chainId: 43114,
-      //initialDate: "2020-10-10",
+      initialDate: "2020-10-10",
       forking: {
         url: 'https://api.avax.network/ext/bc/C/rpc', 
         enabled: true
@@ -96,5 +122,7 @@ module.exports = {
     enabled: true,
     showTimeSpent: true, 
     gasPrice: 225
-  }
+  },
 };
+
+export default config;

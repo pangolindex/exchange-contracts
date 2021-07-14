@@ -4,6 +4,5 @@ scripts/
 cache/
 node_modules/
 artifacts/
+temp/
 .vscode
-yarn.lock
-package-lock.json
