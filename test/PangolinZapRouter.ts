@@ -1,20 +1,23 @@
-const { expect } = require("chai")
-const { ethers } = require("hardhat")
-const { makeAccountGenerator, fundToken, fundWAVAX, getTokenContract, getPairContract, getWAVAXContract, getDeadline} = require("./utils")
-const fixture = require('./fixture.json')
-const hardhat = require("hardhat")
+import { expect } from "chai"
+import { ethers } from "hardhat"
+import { checkDust, makeAccountGenerator, fundLiquidityToken, getTokenContract, getPairContract, getWAVAXContract, getDeadline} from "./utils"
+import fixture from './fixture'
+import {run} from "hardhat"
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
+import { Contract } from "@ethersproject/contracts"
+import { BigNumber } from "ethers"
 
 
 describe("ZapRouter", async function() {
 
     before(async () => {
-        await hardhat.run("compile")
+        await run("compile")
     })
 
-    let accountGenerator;
-    let owner;
-    let WAVAX;
-    let account;
+    let accountGenerator: ()=>SignerWithAddress;
+    let owner: SignerWithAddress;
+    let WAVAX: Contract;
+    let account: SignerWithAddress;
 
     beforeEach(async () => {    
         accountGenerator = await makeAccountGenerator()
@@ -41,24 +44,10 @@ describe("ZapRouter", async function() {
         const factory = await ethers.getContractFactory("PangolinZapRouter")
         const zapRouter = await factory.connect(owner).deploy(fixture.Factory, fixture.Router)
         await zapRouter.deployed()
+        const bn10 = BigNumber.from(10)
+        const avaxAmount = bn10.pow(28)
 
-        const bn10 = ethers.BigNumber.from(10)
-        const amountAvax = bn10.pow(28)
-        // funds 10000000e28*2 WAVAX
-        await fundWAVAX(account, amountAvax.mul(2))
-        // uses half of the WAVAX(10000000e28) to fund BTC
-        let amountBTC = await fundToken(account, fixture.Tokens.AEB_WBTC, amountAvax)
-        let [reserves0, reserves1] = await AVAX_BTC_Pair.getReserves()
-        if (AVAX_BTC_Pair != fixture.Tokens.AEB_WBTC) [reserves0, reserves1] = [reserves1, reserves0]
-        expect(await BTCERC20.balanceOf(account.address)).to.equal(amountBTC)
-        expect(await WAVAX.balanceOf(account.address)).to.equal(amountAvax)
-
-        // funds the liquidity token
-        await BTCERC20.connect(account).transfer(AVAX_BTC_Pair.address, amountBTC)
-        await WAVAX.connect(account).transfer(AVAX_BTC_Pair.address, amountAvax)
-        await AVAX_BTC_Pair.connect(account).mint(account.address)
-        let liquidityAmount = await AVAX_BTC_Pair.balanceOf(account.address)
-        expect(liquidityAmount).to.gt(0)
+        let liquidityAmount = await fundLiquidityToken(account, AVAX_BTC_Pair.address, avaxAmount)
         
         let previousBTCBalance = await BTCERC20.balanceOf(account.address)
         let previousWAVAXBalance = await WAVAX.balanceOf(account.address)
@@ -78,11 +67,7 @@ describe("ZapRouter", async function() {
         //assert that the charge was sent back
         expect(BTCBalance).to.gte(previousBTCBalance)
         expect(WAVAXBalance).to.gte(previousWAVAXBalance)
-        //asert there's no dust on the contract
-        expect(await BTCERC20.balanceOf(zapRouter.address)).to.equal(0)
-        expect(await WAVAX.balanceOf(zapRouter.address)).to.equal(0)
-        expect(await AVAX_ETH_Pair.balanceOf(zapRouter.address)).to.equal(0)
-        expect(await AVAX_BTC_Pair.balanceOf(zapRouter.address)).to.equal(0)
+        checkDust([BTCERC20.address, WAVAX.address, AVAX_ETH_Pair.address, AVAX_BTC_Pair.address], zapRouter.address, 0)
     })
 
 });

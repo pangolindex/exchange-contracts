@@ -40,12 +40,15 @@ contract PangolinZapRouter {
         if (IPangolinPair(swapPair).token0() != fromToken) {
             (path[0], path[1]) = (path[1], path[0]);
         }
-        uint amountOut = PangolinLibrary.getAmountsOut(
-            address(factory),
-            amount,
-            path
-        )[1];
+        (uint reserve0, uint reserve1) = PangolinLibrary.getReserves(address(factory), path[0], path[1]);
+        uint amountOut = PangolinLibrary.getAmountOut(amount, reserve0, reserve1);
         _allowToken(fromToken, address(swapRouter), amount);
+        console.log(path[0]);
+        console.log(reserve0);
+        console.log(path[1]);
+        console.log(reserve1);
+        console.log(amountOut);
+        console.log(factory.getPair(path[0], path[1]));
         swapRouter.swapExactTokensForTokens(amount, amountOut, path, address(this), deadline);
         return amountOut;
     }
@@ -79,6 +82,7 @@ contract PangolinZapRouter {
                 if (fromTokenB == toTokenA) {
                     address swapPair = factory.getPair(fromTokenA, toTokenB);
                     require(swapPair != address(0), "PangolinZapRouter::Can't find the fromTokenA toTokenB swap pair to perform the conversion");
+                    console.log(amountTokenA);
                     amountOutTokenB = _simpleSwap(amountTokenA, fromTokenA, swapPair, deadline);
                     amountOutTokenA = amountTokenB;
                 } else {
@@ -119,7 +123,6 @@ contract PangolinZapRouter {
         liquidityAmount = IPangolinPair(pairToken).mint(to);
     }
 
-
     function convertLiquidity(
         address liquidityPairFrom,
         address liquidityPairTo,
@@ -146,7 +149,7 @@ contract PangolinZapRouter {
         (uint changeAmount0, uint changeAmount1, ) = _addLiquidity(
             liquidityPairTo,
             IPangolinPair(liquidityPairTo).token0(), IPangolinPair(liquidityPairTo).token1(),
-            amountOutTokenA, amountOutTokenB, msg.sender
+            amountOutTokenA, amountOutTokenB, to
         );
         console.log(changeAmount0);
         console.log(changeAmount1);
@@ -157,4 +160,5 @@ contract PangolinZapRouter {
             TransferHelper.safeTransfer(IPangolinPair(liquidityPairTo).token1(), msg.sender, changeAmount1);
         }
     }
+
 }
