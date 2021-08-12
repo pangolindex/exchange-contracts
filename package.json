@@ -24,7 +24,7 @@
   "dependencies": {
     "hardhat-tracer": "^1.0.0-alpha.5"
   },
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Contracts for the Pangolin Dex.",
   "main": "index.js",
   "repository": {
