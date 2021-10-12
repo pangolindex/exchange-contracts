@@ -6,8 +6,8 @@
     "chai": "^4.2.0",
     "ethereum-waffle": "^3.2.1",
     "ethereumjs-tx": "^2.1.2",
-    "ethers": "^5.0.24",
-    "hardhat": "^2.0.6"
+    "ethers": "^5.3.1",
+    "hardhat": "^2.4.1"
   },
   "version": "1.0.1",
   "description": "Contracts for the Pangolin Dex.",

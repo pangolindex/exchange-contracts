@@ -110,22 +110,7 @@ contract PangolinRoll is Ownable {
         view
         returns (address pair)
     {
-        (address token0, address token1) = PangolinLibrary.sortTokens(
-            tokenA,
-            tokenB
-        );
-        pair = address(
-            uint256(
-                keccak256(
-                    abi.encodePacked(
-                        hex"ff",
-                        oldRouter.factory(),
-                        keccak256(abi.encodePacked(token0, token1)),
-                        hex"40231f6b438bce0797c9ada29b718a87ea0a5cea3fe9a771abdd76bd41a3e545" // init code hash
-                    )
-                )
-            )
-        );
+        return IPangolinFactory(oldRouter.factory()).getPair(tokenA, tokenB);
     }
 
     function addLiquidity(

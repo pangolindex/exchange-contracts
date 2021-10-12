@@ -40,11 +40,21 @@ module.exports = {
       }
     ]
   },
+  mocha: {
+    timeout: false,
+  },
   networks: {
     hardhat: {
       gasPrice: 470000000000,
-      chainId: 43112,
-      initialDate: "2020-10-10",
+      chainId: 43114,
+      forking: {
+        url: 'https://api.avax.network/ext/bc/C/rpc',
+        enabled: true
+      },
+      accounts: {
+        accountsBalance: "1000000000000000000000000000000",
+        count: 50
+      }
     },
     avash: {
       url: 'http://localhost:9650/ext/bc/C/rpc',
