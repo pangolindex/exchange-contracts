@@ -16,11 +16,17 @@ contract PangolinRoll is Ownable {
 
     IPangolinRouter public oldRouter;
     IPangolinRouter public router;
-    IERC20 public pngToken = IERC20(0x60781C2586D68229fde47564546784ab3fACA982); // png token address
+    IERC20 public pngToken;
+    mapping(address => bool) public checkList;
 
-    constructor(IPangolinRouter _oldRouter, IPangolinRouter _router) public {
+    constructor(
+        IPangolinRouter _oldRouter,
+        IPangolinRouter _router,
+        IERC20 _pngToken
+    ) public {
         oldRouter = _oldRouter;
         router = _router;
+        pngToken = _pngToken;
     }
 
     function migrateWithPermit(
@@ -79,9 +85,9 @@ contract PangolinRoll is Ownable {
         // Transfer user a single PNG token if there are any remaining and user has not received one yet
         if (address(pngToken) != address(0)) {
             uint256 pngSupply = pngToken.balanceOf(address(this));
-            uint256 userSupply = pngToken.balanceOf(msg.sender);
-            if (pngSupply > 0 && userSupply == 0) {
+            if (pngSupply > 0 && !checkList[msg.sender]) {
                 pngToken.safeTransfer(msg.sender, 1e18);
+                checkList[msg.sender] = true;
             }
         }
     }

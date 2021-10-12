@@ -21,6 +21,7 @@ const TraderJoe = {
 }
 
 const Tokens = {
+    PNG: "0x60781C2586D68229fde47564546784ab3fACA982",
     WAVAX: "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
     USDT: "0xde3a24028580884448a5397872046a019649b084",
     DAI: "0xba7deebbfc5fa1100fb055a87773e1e99cd3507a",
@@ -50,7 +51,7 @@ describe("PangolinRoll", () => {
         joeRouter = await ethers.getContractAt("IPangolinRouter", TraderJoe.Router, owner)
 
         const PangolinRoll = await ethers.getContractFactory("PangolinRoll")
-        pangolinRoll = await PangolinRoll.deploy(joeRouter.address, pangolinRouter.address)
+        pangolinRoll = await PangolinRoll.deploy(joeRouter.address, pangolinRouter.address, Tokens.PNG)
         await pangolinRoll.deployed();
     });
 
