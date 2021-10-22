@@ -58,11 +58,71 @@ module.exports = {
       chainId: 43113,
       accounts: []
     },
-    mainnet: {
+    avalanche_mainnet: {
       url: 'https://api.avax.network/ext/bc/C/rpc',
       gasPrice: 470000000000,
       chainId: 43114,
       accounts: []
+    },
+    bsc_mainnet: {
+      url: 'https://bsc-dataseed.binance.org/ ',
+      gasPrice: 470000000000,
+      chainId: 56,
+      accounts: []
+    },
+    fantom_mainnet: {
+      url: 'https://rpc.ftm.tools/',
+      gasPrice: 470000000000,
+      chainId: 250,
+      accounts: []
+    },
+    fuse_mainnet: {
+      url: 'https://rpc.fuse.io ',
+      gasPrice: 470000000000,
+      chainId: 0x7a,
+      accounts: []
+    },
+    harmony_mainnet: {
+      url: 'https://api.harmony.one',
+      gasPrice: 470000000000,
+      chainId: 1666600000,
+      accounts: []
+    },
+    heco_mainnet: {
+      url: 'https://http-mainnet.hecochain.com',
+      gasPrice: 470000000000,
+      chainId: 128,
+      accounts: []
+    },
+    moonriver_mainnet: {
+      url: 'https://rpc.moonriver.moonbeam.network',
+      gasPrice: 470000000000,
+      chainId: 1285,
+      accounts: []
+    },
+    okex_mainnet: {
+      url: 'https://exchainrpc.okex.org',
+      gasPrice: 470000000000,
+      chainId: 66,
+      accounts: []
+    },
+    poa_mainnet: {
+      url: 'https://core.poanetwork.dev',
+      gasPrice: 470000000000,
+      chainId: 99,
+      accounts: []
+    },
+    polygon_mainnet: {
+      url: 'https://polygon-rpc.com/ ',
+      gasPrice: 470000000000,
+      chainId: 137,
+      accounts: []
+    },
+    xdai_mainnet: {
+      url: 'https://rpc.xdaichain.com/',
+      gasPrice: 470000000000,
+      chainId: 100,
+      accounts: [] 
     }
   }
 };
