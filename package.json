@@ -24,9 +24,9 @@
   "license": "MIT",
   "scripts": {
     "precompile": "rimraf ./build/",
-    "compile": "npx hardhat compile",
+    "compile": "export LANG=C && npx hardhat compile",
     "pretest": "yarn compile",
-    "test": "npx hardhat test",
+    "test": "export LANG=C && npx hardhat test",
     "lint": "prettier ./test/**/*.ts --check",
     "prepublishOnly": "yarn test"
   },
