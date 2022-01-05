@@ -8,7 +8,7 @@ contract Png {
     string public constant name = "Pangolin";
 
     /// @notice EIP-20 token symbol for this token
-    string public constant symbol = "PNG";
+    string public symbol;
 
     /// @notice EIP-20 token decimals for this token
     uint8 public constant decimals = 18;
@@ -65,9 +65,10 @@ contract Png {
      * @notice Construct a new PNG token
      * @param account The initial account to grant all the tokens
      */
-    constructor(address account) public {
+    constructor(address account, string memory _symbol) public {
         balances[account] = uint96(totalSupply);
         emit Transfer(address(0), account, totalSupply);
+        symbol = _symbol;
     }
 
     /**
