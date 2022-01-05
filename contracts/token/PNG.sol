@@ -14,7 +14,7 @@ contract Png {
     uint8 public constant decimals = 18;
 
     /// @notice Total number of tokens in circulation
-    uint public constant totalSupply = 538_000_000e18; // 538 million PNG
+    uint public constant totalSupply = 230_000_000e18; // 230 million PNG
 
     /// @notice Allowance amounts on behalf of others
     mapping (address => mapping (address => uint96)) internal allowances;
