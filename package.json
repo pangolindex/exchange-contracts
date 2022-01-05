@@ -3,6 +3,10 @@
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.1",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@boringcrypto/boring-solidity": "boringcrypto/BoringSolidity#e06e943",
+    "@openzeppelin/contracts": "^4.3.2",
+    "openzeppelin-contracts-legacy": "yarn:@openzeppelin/contracts@3.3.0",
+    "@pangolindex/exchange-contracts": "^1.0.1",
     "chai": "^4.2.0",
     "ethereum-waffle": "^3.2.1",
     "ethereumjs-tx": "^2.1.2",
@@ -29,5 +33,6 @@
   "bugs": {
     "url": "https://github.com/pangolindex/exchange-contracts/issues"
   },
-  "homepage": "https://pangolin.exchange"
+  "homepage": "https://pangolin.exchange",
+  "dependencies": {}
 }
