@@ -6,7 +6,7 @@ contract GovernorAlpha {
     string public constant name = "Pangolin Governor Alpha";
 
     /// @notice The number of votes required in order for a voter to become a proposer
-    function proposalThreshold() public pure returns (uint) { return 1_000_000e18; } // 1,000,000 PNG
+    uint public proposalThreshold;
 
     /// @notice The maximum number of actions that can be included in a proposal
     function proposalMaxOperations() public pure returns (uint) { return 10; } // 10 actions
@@ -130,10 +130,11 @@ contract GovernorAlpha {
     /// @notice An event emitted when a proposal has been executed in the Timelock
     event ProposalExecuted(uint id);
 
-    constructor(address timelock_, address png_, address guardian_) public {
+    constructor(address timelock_, address png_, address guardian_, uint threshold_) public {
         timelock = TimelockInterface(timelock_);
         png = PngInterface(png_);
         guardian = guardian_;
+        proposalThreshold = threshold_;
     }
 
     function propose(address[] memory targets, uint[] memory values, string[] memory signatures, bytes[] memory calldatas, string memory description) public returns (uint) {
