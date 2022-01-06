@@ -33,7 +33,7 @@ async function main() {
 
     // Deploy PNG
     const PNG = await ethers.getContractFactory("Png");
-    const png = await PNG.deploy(deployer.address);
+    const png = await PNG.deploy(deployer.address,pngSymbol,pngName);
     await png.deployed()
 
     // Deploy TreasuryVester

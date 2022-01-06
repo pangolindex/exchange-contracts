@@ -5,7 +5,7 @@ import "./libraries/SafeMath.sol";
 
 contract Png {
     /// @notice EIP-20 token name for this token
-    string public constant name = "Pangolin";
+    string public name;
 
     /// @notice EIP-20 token symbol for this token
     string public symbol;
@@ -65,10 +65,11 @@ contract Png {
      * @notice Construct a new PNG token
      * @param account The initial account to grant all the tokens
      */
-    constructor(address account, string memory _symbol) public {
+    constructor(address account, string memory _symbol, string memory _name) public {
         balances[account] = uint96(totalSupply);
         emit Transfer(address(0), account, totalSupply);
         symbol = _symbol;
+        name = _name;
     }
 
     /**
