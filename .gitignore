@@ -4,3 +4,4 @@ test/
 cache/
 node_modules/
 artifacts/
+.secret.env

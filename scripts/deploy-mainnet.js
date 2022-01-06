@@ -1,5 +1,18 @@
 const { ethers } = require('hardhat');
 const { BigNumber } = require('ethers');
+const { config } = require("dotenv");
+
+// get identifying network name from hardhat config
+const networkName = network.name.replace(/_(mainnet|testnet)$/,'');
+
+// chain specific env variables
+config({ path: `.${networkName}.env` });
+// fallback env variables
+config({ path: '.env' });
+
+// assign env variables
+const pngSymbol = process.env.PNG_SYMBOL;
+const pngName = process.env.PNG_NAME;
 
 async function main() {
 
