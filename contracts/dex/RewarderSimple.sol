@@ -17,6 +17,7 @@ contract RewarderSimple is IRewarder {
 
     constructor (uint256 _rewardMultiplier, address _rewardToken, uint256 _rewardDecimals, address _MASTERCHEF_V2) public {
         require(_rewardMultiplier > 0, "RewarderSimple::Invalid multiplier");
+        require(_rewardDecimals <= 77, "RewarderSimple::Invalid decimals");
         require(
             _rewardToken != address(0)
             && _MASTERCHEF_V2 != address(0),
@@ -29,8 +30,8 @@ contract RewarderSimple is IRewarder {
         MASTERCHEF_V2 = _MASTERCHEF_V2;
     }
 
-    function onSushiReward (uint256, address, address to, uint256 sushiAmount, uint256) onlyMCV2 override external {
-        uint256 pendingReward = sushiAmount.mul(rewardMultiplier) / REWARD_TOKEN_DIVISOR;
+    function onReward(uint256, address, address to, uint256 rewardAmount, uint256) onlyMCV2 override external {
+        uint256 pendingReward = rewardAmount.mul(rewardMultiplier) / REWARD_TOKEN_DIVISOR;
         uint256 rewardBal = rewardToken.balanceOf(address(this));
         if (pendingReward > rewardBal) {
             rewardToken.safeTransfer(to, rewardBal);
@@ -39,11 +40,11 @@ contract RewarderSimple is IRewarder {
         }
     }
 
-    function pendingTokens(uint256, address, uint256 sushiAmount) override external view returns (IERC20[] memory rewardTokens, uint256[] memory rewardAmounts) {
+    function pendingTokens(uint256, address, uint256 rewardAmount) override external view returns (IERC20[] memory rewardTokens, uint256[] memory rewardAmounts) {
         IERC20[] memory _rewardTokens = new IERC20[](1);
         _rewardTokens[0] = (rewardToken);
         uint256[] memory _rewardAmounts = new uint256[](1);
-        _rewardAmounts[0] = sushiAmount.mul(rewardMultiplier) / REWARD_TOKEN_DIVISOR;
+        _rewardAmounts[0] = rewardAmount.mul(rewardMultiplier) / REWARD_TOKEN_DIVISOR;
         return (_rewardTokens, _rewardAmounts);
     }
 
