@@ -16,6 +16,7 @@ const PNG_NAME = process.env.PNG_NAME;
 const FOUNDATION_MULTISIG_OWNERS = process.env.FOUNDATION_MULTISIG_OWNERS.split(',');
 const MULTISIG_OWNERS = process.env.MULTISIG_OWNERS.split(',');
 const PROPOSAL_THRESHOLD = ethers.utils.parseUnits(process.env.PROPOSAL_THRESHOLD, 18);
+const WRAPPED_NATIVE_TOKEN = process.env.WRAPPED_NATIVE_TOKEN; // assume it already exists on deployment environment
 
 async function main() {
 
@@ -48,6 +49,16 @@ async function main() {
     const Multisig = await ethers.getContractFactory("MultiSigWalletWithDailyLimit");
     const multisig = await Multisig.deploy(MULTISIG_OWNERS, MULTISIG_OWNERS.length,0);
     await multisig.deployed();
+
+    // Deploy LP Factory
+    const PangolinFactory = await ethers.getContractFactory("contracts/pangolin-core/PangolinFactory.sol:PangolinFactory");
+    const factory = await PangolinFactory.deploy(multisig.address);
+    await factory.deployed();
+
+    // Deploy Router
+    const PangolinRouter = await ethers.getContractFactory("PangolinRouter");
+    const router = await PangolinRouter.deploy(factory.address, WRAPPED_NATIVE_TOKEN);
+    await router.deployed();
 
     // Deploy MiniChefV2
     const MiniChef = await ethers.getContractFactory("contracts/dex/MiniChefV2.sol:MiniChefV2");
@@ -85,6 +96,8 @@ async function main() {
     await governor.deployed();
 
     console.log("PNG address:                ", png.address);
+    console.log("PangolinFactory address:    ", factory.address);
+    console.log("PangolinRouter address:     ", router.address);
     console.log("Foundation Multisig address:", foundation.address);
     console.log("Multisig address:           ", multisig.address);
     console.log("MiniChefV2 address:         ", chef.address)
