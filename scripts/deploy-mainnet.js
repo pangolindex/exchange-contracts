@@ -95,16 +95,26 @@ async function main() {
     const governor = await Governor.deploy(timelock.address, png.address, multisig.address, PROPOSAL_THRESHOLD);
     await governor.deployed();
 
+    /*******************************
+     * PNG STAKING & FEE COLLECTOR *
+     *******************************/
+
+    // Deploy Staking Rewards (PNG Staking)
+    const StakingRewards = await ethers.getContractFactory("StakingRewards");
+    const staking = await StakingRewards.deploy(png.address, png.address);
+    await staking.deployed();
+
     console.log("PNG address:                ", png.address);
     console.log("PangolinFactory address:    ", factory.address);
     console.log("PangolinRouter address:     ", router.address);
     console.log("Foundation Multisig address:", foundation.address);
     console.log("Multisig address:           ", multisig.address);
-    console.log("MiniChefV2 address:         ", chef.address)
-    console.log("TreasuryVester address:     ", vester.address)
-    console.log("CommunityTreasury address:  ", treasury.address)
-    console.log("TreasuryVesterProxy address:", proxy.address)
+    console.log("MiniChefV2 address:         ", chef.address);
+    console.log("TreasuryVester address:     ", vester.address);
+    console.log("CommunityTreasury address:  ", treasury.address);
+    console.log("TreasuryVesterProxy address:", proxy.address);
     //console.log("Airdrop address:            ", airdrop.address);
+    console.log("StakingRewards address:     ", staking.address);
     console.log("Timelock address:           ", timelock.address);
     console.log("GovernorAlpha address:      ", governor.address);
 

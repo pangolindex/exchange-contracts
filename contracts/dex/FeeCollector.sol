@@ -14,14 +14,14 @@ contract PangolinFeeCollector is Ownable {
     using SafeERC20 for IERC20;
     using Address for address;
 
-    address public constant PANGOLIN_ROUTER =
+    address public constant pangolinRouter =
     0xE54Ca86531e17Ef3616d22Ca28b0D458b6C89106;
-    address public constant MINICHEF =
+    address public constant miniChef =
     0x1f806f7C8dED893fd3caE279191ad7Aa3798E928;
-    address public constant GOVERNOR =
+    address public constant governor =
     0xb0Ff2b1047d9E8d294c2eD798faE3fA817F43Ee1;
 
-    address public constant WAVAX =
+    address public constant wrappedNativeToken =
     0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7;
     uint256 public constant FEE_DENOMINATOR = 10000;
     uint256 public constant MAX_INCENTIVE = 200;
@@ -60,7 +60,7 @@ contract PangolinFeeCollector is Ownable {
     /// @param _treasuryFee - New ratio in bips
     /// @dev Can only be called through a governance vote
     function setTreasuryFee(uint256 _treasuryFee) external {
-        require(msg.sender == GOVERNOR, "Governor only");
+        require(msg.sender == governor, "Governor only");
         require(harvestIncentive + _treasuryFee <= FEE_DENOMINATOR,
             "Total fees must <= 100");
         treasuryFee = _treasuryFee;
@@ -95,8 +95,8 @@ contract PangolinFeeCollector is Ownable {
     /// @param pair - The pair from which to retrieve liquidity
     /// @param balance - The amount to pull
     function _pullLiquidity(IPangolinPair pair, uint256 balance) internal {
-        pair.approve(PANGOLIN_ROUTER, balance);
-        IPangolinRouter(PANGOLIN_ROUTER).removeLiquidity(
+        pair.approve(pangolinRouter, balance);
+        IPangolinRouter(pangolinRouter).removeLiquidity(
             pair.token0(),
             pair.token1(),
             balance,
@@ -117,20 +117,20 @@ contract PangolinFeeCollector is Ownable {
 
         address[] memory path;
 
-        if (outputToken == WAVAX || token == WAVAX) {
+        if (outputToken == wrappedNativeToken || token == wrappedNativeToken) {
             path = new address[](2);
             path[0] = token;
             path[1] = outputToken;
         } else {
             path = new address[](3);
             path[0] = token;
-            path[1] = WAVAX;
+            path[1] = wrappedNativeToken;
             path[2] = outputToken;
         }
 
-        IERC20(token).safeApprove(PANGOLIN_ROUTER, 0);
-        IERC20(token).safeApprove(PANGOLIN_ROUTER, amount);
-        IPangolinRouter(PANGOLIN_ROUTER).swapExactTokensForTokens(
+        IERC20(token).safeApprove(pangolinRouter, 0);
+        IERC20(token).safeApprove(pangolinRouter, amount);
+        IPangolinRouter(pangolinRouter).swapExactTokensForTokens(
             amount,
             0,
             path,
@@ -180,7 +180,7 @@ contract PangolinFeeCollector is Ownable {
         address _outputToken = IStakingRewards(stakingRewards).rewardsToken();
 
         if (claimMiniChef) {
-            IMiniChef(MINICHEF).harvest(miniChefPoolId, address(this));
+            IMiniChef(miniChef).harvest(miniChefPoolId, address(this));
         }
 
         if (liquidityPairs.length > 0) {
