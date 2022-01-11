@@ -59,6 +59,7 @@ contract JointTreasury {
             require(msg.sender == admin, "sender not admin");
         }
         _numberOfBeneficiaries = uint8(newBeneficiaries.length);
+        require(_numberOfBeneficiaries > 0, "cannot set zero beneficiaries");
         uint256 allocations;
         for (uint8 i; i < _numberOfBeneficiaries; i++) {
             Beneficiary memory beneficiary = newBeneficiaries[i];
