@@ -14,30 +14,38 @@ contract PangolinFeeCollector is Ownable {
     using SafeERC20 for IERC20;
     using Address for address;
 
-    address public constant pangolinRouter =
-    0xE54Ca86531e17Ef3616d22Ca28b0D458b6C89106;
-    address public constant miniChef =
-    0x1f806f7C8dED893fd3caE279191ad7Aa3798E928;
-    address public constant governor =
-    0xb0Ff2b1047d9E8d294c2eD798faE3fA817F43Ee1;
+    address public immutable pangolinRouter;
+    address public immutable governor;
+    address public immutable wrappedNativeToken;
 
-    address public constant wrappedNativeToken =
-    0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7;
     uint256 public constant FEE_DENOMINATOR = 10000;
     uint256 public constant MAX_INCENTIVE = 200;
 
     address public stakingRewards;
-    // Pangolin multisig
-    address public treasury = 0xA4cB6e1971Ed8A1F76d9e8d50A5FC56DFA5cc1e6;
+    address public treasury; // Joint Treasury
     uint256 public harvestIncentive = 50;
     uint256 public treasuryFee = 0;
+    address public miniChef;
     uint256 public miniChefPoolId;
 
 
-    constructor(address _stakingRewards, uint256 _pid) public {
+    constructor(
+        address _stakingRewards,
+        address _router,
+        address _miniChef,
+        uint256 _pid,
+        address _governor,
+        address _wrappedToken,
+        address _treasury
+    ) {
         require(_stakingRewards != address(0), "Invalid address");
         stakingRewards = _stakingRewards;
+        pangolinRouter = _router;
+        miniChef = _miniChef;
         miniChefPoolId = _pid;
+        governor = _governor;
+        wrappedNativeToken = _wrappedToken;
+        treasury = _treasury;
     }
 
     /// @notice Change staking rewards contract address
@@ -71,6 +79,12 @@ contract PangolinFeeCollector is Ownable {
     function setTreasury(address _treasury) external onlyOwner {
         require(_treasury != address(0));
         treasury = _treasury;
+    }
+
+    /// @notice Sets the MiniChef address to collect rewards from
+    /// @param _miniChef - New MiniChef address
+    function setMiniChef(address _miniChef) external onlyOwner {
+        miniChef = _miniChef;
     }
 
     /// @notice Sets the MiniChef pool used to accumulate rewards from emissions
