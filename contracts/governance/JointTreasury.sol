@@ -9,7 +9,7 @@ contract JointTreasury {
     address public admin;
     uint256 public constant ALLOCATION_DENOMINATOR = 1000;
 
-    uint8 internal _numberOfBeneficiaries;
+    uint8 internal _beneficiariesLength;
 
     mapping(address => uint256) internal _allocations;
     mapping(uint8 => address) internal _beneficiaries;
@@ -26,8 +26,8 @@ contract JointTreasury {
 
     function getBeneficiaries() external view returns (Beneficiary[] memory) {
         Beneficiary[] memory beneficiaries =
-            new Beneficiary[](_numberOfBeneficiaries);
-        for (uint8 i; i < _numberOfBeneficiaries; i++) {
+            new Beneficiary[](_beneficiariesLength);
+        for (uint8 i; i < _beneficiariesLength; i++) {
             address account = _beneficiaries[i];
             beneficiaries[i] = Beneficiary({
                 account: account, allocation: _allocations[account]
@@ -38,7 +38,7 @@ contract JointTreasury {
 
     function distributeToken(address token) public {
         uint256 amount = IERC20(token).balanceOf(address(this));
-        for (uint8 i; i < _numberOfBeneficiaries; i++) {
+        for (uint8 i; i < _beneficiariesLength; i++) {
             address receiverAddress = _beneficiaries[i];
             IERC20(token).safeTransfer(
                 receiverAddress,
@@ -55,13 +55,13 @@ contract JointTreasury {
     }
 
     function setBeneficiaries(Beneficiary[] memory newBeneficiaries) public {
-        if (_numberOfBeneficiaries != 0) {
+        if (_beneficiariesLength != 0) {
             require(msg.sender == admin, "sender not admin");
         }
-        _numberOfBeneficiaries = uint8(newBeneficiaries.length);
-        require(_numberOfBeneficiaries > 0, "cannot set zero beneficiaries");
+        _beneficiariesLength = uint8(newBeneficiaries.length);
+        require(_beneficiariesLength > 0, "cannot set zero beneficiaries");
         uint256 allocations;
-        for (uint8 i; i < _numberOfBeneficiaries; i++) {
+        for (uint8 i; i < _beneficiariesLength; i++) {
             Beneficiary memory beneficiary = newBeneficiaries[i];
             _allocations[beneficiary.account] = beneficiary.allocation;
             _beneficiaries[i] = beneficiary.account;
