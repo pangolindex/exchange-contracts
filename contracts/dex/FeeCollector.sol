@@ -4,10 +4,10 @@ pragma solidity 0.8.9;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "../interfaces/Pangolin/IPangolinPair.sol";
-import "../interfaces/Pangolin/IPangolinRouter.sol";
-import "../interfaces/IStakingRewards.sol";
-import "../interfaces/IMiniChef.sol";
+import "./interfaces/IPangolinPair.sol";
+import "./interfaces/IPangolinRouter.sol";
+import "./interfaces/IStakingRewards.sol";
+import "./interfaces/IMiniChef.sol";
 
 contract PangolinFeeCollector is Ownable {
 
