@@ -84,6 +84,7 @@ contract PangolinFeeCollector is Ownable {
     /// @notice Sets the MiniChef address to collect rewards from
     /// @param _miniChef - New MiniChef address
     function setMiniChef(address _miniChef) external onlyOwner {
+        require(_miniChef != address(0));
         miniChef = _miniChef;
     }
 
