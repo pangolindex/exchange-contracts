@@ -63,6 +63,10 @@ contract RevenueDistributor {
         uint allocations;
         for (uint i; i < _beneficiariesLength; i++) {
             Beneficiary memory beneficiary = newBeneficiaries[i];
+            require(
+                beneficiary.account != address(0),
+                "cannot set zero address as beneficiary"
+            );
             _allocations[beneficiary.account] = beneficiary.allocation;
             _beneficiaries[i] = beneficiary.account;
             allocations += beneficiary.allocation;
