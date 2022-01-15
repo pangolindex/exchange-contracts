@@ -1,110 +1,156 @@
-pragma solidity ^0.7.6;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
 
-import "openzeppelin-contracts-legacy/math/SafeMath.sol";
-import "openzeppelin-contracts-legacy/access/Ownable.sol";
-import "openzeppelin-contracts-legacy/utils/ReentrancyGuard.sol";
-import "openzeppelin-contracts-legacy/token/ERC20/SafeERC20.sol";
-import "openzeppelin-contracts-legacy/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-/**
- * Contract to control the release of PNG.
- */
-contract TreasuryVester is Ownable, ReentrancyGuard {
-    using SafeMath for uint;
+contract TreasuryVester is Ownable {
     using SafeERC20 for IERC20;
 
-    address public png;
-    address public recipient;
+    struct Recipient{
+        address account;
+        uint allocation;
+    }
 
-    // Amount to distribute at each interval in wei
-    // 175,342.465 PNG
-    uint public vestingAmount = 175_342_465_000_000_000_000_000;
+    mapping(uint => Recipient) private _recipients;
 
-    // Interval to distribute in seconds
-    uint public vestingCliff = 86_400;
-
-    // Number of distribution intervals before the distribution amount halves
-    // Halving should occur once every four years (no leap day).
-    // At one distribution per day, that's 365 * 4 = 1460
-    uint public halvingPeriod = 1460;
-
-    // Countdown till the nest halving in seconds
-    uint public nextSlash;
+    address public admin;
 
     bool public vestingEnabled;
 
-    // Timestamp of latest distribution
+    IERC20 public immutable vestedToken;
+
+    uint public step;
     uint public lastUpdate;
 
-    // Amount of PNG required to start distributing denominated in wei
-    // Should be 512 million PNG
-    uint public startingBalance = 512_000_000_000_000_000_000_000_000;
+    uint private constant DENOMINATOR = 10000;
+    uint private constant STEPS_TO_SLASH = 30;
+    uint private constant VESTING_CLIFF = 86400;
+    uint private _startingBalance;
+    uint private _vestingAmount;
+    uint private _recipientsLength;
 
-    event VestingEnabled();
-    event TokensVested(uint amount, address recipient);
-    event RecipientChanged(address recipient);
+    /* The percentage of the 5 first months is constant, after this the percentage
+    * is decreased according to the algorithm.
+    * two decimals for percentage, 2000 = 20.00%, 505 = 5.05%, 65 = 0.65%
+    */
+    uint[5] private _initialVestingPercentages = [2500, 1400, 800, 530, 390];
 
-    // PNG Distribution plan:
-    // According to the Pangolin Litepaper, we initially will distribute
-    // 175342.465 PNG per day. Vesting period will be 24 hours: 86400 seconds.
-    // Halving will occur every four years. No leap day. 4 years: 1460 distributions
+    // Percentage of startingBalance to distribute during between slashes
+    uint private _vestingPercentage = _initialVestingPercentages[0];
 
-    constructor(address png_) {
-        png = png_;
+    constructor(
+        address newAdmin,
+        address _vestedToken,
+        Recipient[] memory newRecipients
+    ) {
+        admin = newAdmin;
+        vestedToken = IERC20(_vestedToken);
+        _vestingAmount = getVestingAmount();
+        setRecipients(newRecipients);
+    }
 
-        lastUpdate = 0;
-        nextSlash = halvingPeriod;
+    function getRecipients() external view returns (Recipient[] memory) {
+        require(_recipientsLength != 0, "no recipient exists");
+        Recipient[] memory recipients = new Recipient[](_recipientsLength);
+        for (uint i; i < _recipientsLength; i++) {
+            recipients[i] = Recipient({
+                account: _recipients[i].account,
+                allocation: _recipients[i].allocation
+            });
+        }
+        return recipients;
+    }
+
+    function getVestingAmount() private view returns (uint) {
+        return
+            _startingBalance *
+                _vestingPercentage /
+                DENOMINATOR /
+                STEPS_TO_SLASH;
+    }
+
+    function setAdmin(address newAdmin) public {
+        require(msg.sender == admin, "sender not admin");
+        admin = newAdmin;
+        emit AdminChanged(admin);
     }
 
     /**
-     * Enable distribution. A sufficient amount of PNG >= startingBalance must be transferred
-     * to the contract before enabling. The recipient must also be set. Can only be called by
-     * the owner.
+     * @dev Enable distribution. A sufficient amount of vestedToken
+     * must be transferred to the contract before enabling.
      */
-    function startVesting() external onlyOwner {
-        require(!vestingEnabled, 'TreasuryVester::startVesting: vesting already started');
-        require(IERC20(png).balanceOf(address(this)) >= startingBalance, 'TreasuryVester::startVesting: incorrect PNG supply');
-        require(recipient != address(0), 'TreasuryVester::startVesting: recipient not set');
+    function startVesting() external {
+        require(msg.sender == admin, "sender not admin");
+        require(!vestingEnabled, 'vesting already started');
+        require(_recipientsLength > 0, 'no recipients were set');
+        _startingBalance = vestedToken.balanceOf(address(this));
         vestingEnabled = true;
-
         emit VestingEnabled();
     }
 
-    /**
-     * Sets the recipient of the vested distributions. In the initial Pangolin scheme, this
-     * should be the address of the LiquidityPoolManager. Can only be called by the contract
-     * owner.
-     */
-    function setRecipient(address recipient_) external onlyOwner {
-        require(recipient_ != address(0), "TreasuryVester::setRecipient: Recipient can't be the zero address");
-        recipient = recipient_;
-        emit RecipientChanged(recipient);
+    function setRecipients(Recipient[] memory newRecipients) public {
+        if (_recipientsLength != 0) {
+            require(msg.sender == admin, "sender not admin");
+        }
+        _recipientsLength = newRecipients.length;
+        require(_recipientsLength > 0, "cannot set zero recipients");
+        require(_recipientsLength < 51, "cannot set more than 50 recipients");
+        uint allocations;
+        for (uint i; i < _recipientsLength; i++) {
+            Recipient memory recipient = newRecipients[i];
+            allocations += recipient.allocation;
+            _recipients[i].account = recipient.account;
+            _recipients[i].allocation = recipient.allocation;
+        }
+        require(
+            allocations == DENOMINATOR,
+            "total allocations do not equal to denominator"
+        );
+        emit RecipientsChanged(newRecipients);
     }
 
-    /**
-     * Vest the next PNG allocation. Requires vestingCliff seconds in between calls. PNG will
-     * be distributed to the recipient.
-     */
-    function claim() external nonReentrant returns (uint) {
-        require(vestingEnabled, 'TreasuryVester::claim: vesting not enabled');
-        require(msg.sender == recipient, 'TreasuryVester::claim: only recipient can claim');
-        require(block.timestamp >= lastUpdate + vestingCliff, 'TreasuryVester::claim: not time yet');
+    function distribute() public {
+        require(vestingEnabled, 'vesting not enabled');
+        require(
+            block.timestamp >= lastUpdate + VESTING_CLIFF,
+            'too early to distribute'
+        );
 
-        // If we've finished a halving period, reduce the amount
-        if (nextSlash == 0) {
-            nextSlash = halvingPeriod - 1;
-            vestingAmount = vestingAmount / 2;
-        } else {
-            nextSlash = nextSlash.sub(1);
+        lastUpdate = block.timestamp;
+        step++;
+
+        uint slash = step / STEPS_TO_SLASH;
+        if (step % STEPS_TO_SLASH == 0 && slash <= 29) {
+            if (slash < 5) {
+                _vestingPercentage = _initialVestingPercentages[slash];
+            } else if (slash < 12) {
+                _vestingPercentage -= 20;
+            } else if (slash < 20){
+                _vestingPercentage -= 15;
+            } else {
+                _vestingPercentage -= 10;
+            }
+            _vestingAmount = getVestingAmount();
         }
 
-        // Update the timelock
-        lastUpdate = block.timestamp;
+        uint balance = vestedToken.balanceOf(address(this));
+        if (_vestingAmount > balance) {
+            _vestingAmount = balance;
+        }
 
         // Distribute the tokens
-        IERC20(png).safeTransfer(recipient, vestingAmount);
-        emit TokensVested(vestingAmount, recipient);
-
-        return vestingAmount;
+        for (uint i; i < _recipientsLength; i++) {
+            Recipient memory recipient = _recipients[i];
+            uint amount = recipient.allocation * _vestingAmount / DENOMINATOR;
+            vestedToken.safeTransfer(recipient.account, amount);
+        }
+        emit TokensVested(_vestingAmount);
     }
+
+    event VestingEnabled();
+    event TokensVested(uint amount);
+    event RecipientsChanged(Recipient[] newRecipients);
+    event AdminChanged(address newAdmin);
 }
