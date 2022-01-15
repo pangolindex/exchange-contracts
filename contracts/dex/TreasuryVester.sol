@@ -121,15 +121,15 @@ contract TreasuryVester is Ownable {
         lastUpdate = block.timestamp;
         step++;
 
-        uint slash = step / STEPS_TO_SLASH;
-        if (step % STEPS_TO_SLASH == 0 && slash <= 29) {
+        if (step % STEPS_TO_SLASH == 0) {
+            uint slash = step / STEPS_TO_SLASH;
             if (slash < 5) {
                 _vestingPercentage = _initialVestingPercentages[slash];
             } else if (slash < 12) {
                 _vestingPercentage -= 20;
-            } else if (slash < 20){
+            } else if (slash < 20) {
                 _vestingPercentage -= 15;
-            } else {
+            } else if (slash < 30) {
                 _vestingPercentage -= 10;
             }
             _vestingAmount = getVestingAmount();
