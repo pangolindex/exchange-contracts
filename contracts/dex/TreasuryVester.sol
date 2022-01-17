@@ -41,11 +41,10 @@ contract TreasuryVester is Ownable {
     uint private _vestingPercentage = _initialVestingPercentages[0];
 
     constructor(
-        address newAdmin,
         address _vestedToken,
         Recipient[] memory newRecipients
     ) {
-        admin = newAdmin;
+        admin = msg.sender;
         vestedToken = IERC20(_vestedToken);
         _vestingAmount = getVestingAmount();
         setRecipients(newRecipients);
