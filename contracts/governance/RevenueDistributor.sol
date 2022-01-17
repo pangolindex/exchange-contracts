@@ -6,79 +6,75 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 contract RevenueDistributor {
     using SafeERC20 for IERC20;
 
-    address public admin;
-    uint public constant ALLOCATION_DENOMINATOR = 1000;
-
-    uint internal _beneficiariesLength;
-
-    mapping(address => uint) internal _allocations;
-    mapping(uint => address) internal _beneficiaries;
-
-    struct Beneficiary {
+    struct Recipient {
         address account;
         uint allocation;
     }
 
-    constructor(address newAdmin, Beneficiary[] memory newBeneficiaries) {
+    mapping(uint => Recipient) private _recipients;
+
+    address public admin;
+    uint public constant DENOMINATOR = 10000;
+    uint private _recipientsLength;
+
+    constructor(address newAdmin, Recipient[] memory newRecipients) {
         admin = newAdmin;
-        setBeneficiaries(newBeneficiaries);
+        setRecipients(newRecipients);
     }
 
-    function getBeneficiaries() external view returns (Beneficiary[] memory) {
-        Beneficiary[] memory beneficiaries =
-            new Beneficiary[](_beneficiariesLength);
-        for (uint i; i < _beneficiariesLength; i++) {
-            address account = _beneficiaries[i];
-            beneficiaries[i] = Beneficiary({
-                account: account, allocation: _allocations[account]
+    function getRecipients() external view returns (Recipient[] memory) {
+        require(_recipientsLength != 0, "No recipients exist");
+        Recipient[] memory recipients =
+            new Recipient[](_recipientsLength);
+        for (uint i; i < _recipientsLength; i++) {
+            recipients[i] = Recipient({
+                account: _recipients[i].account,
+                allocation: _recipients[i].allocation
             });
         }
-        return beneficiaries;
+        return recipients;
     }
 
     function distributeToken(address token) public {
         uint amount = IERC20(token).balanceOf(address(this));
-        for (uint i; i < _beneficiariesLength; i++) {
-            address receiverAddress = _beneficiaries[i];
+        for (uint i; i < _recipientsLength; i++) {
+            address receiverAddress = _recipients[i].account;
             IERC20(token).safeTransfer(
                 receiverAddress,
-                amount * _allocations[receiverAddress] / ALLOCATION_DENOMINATOR
+                amount * _recipients[i].allocation / DENOMINATOR
             );
         }
-        emit tokenDistributed(token, amount);
+        emit TokenDistributed(token, amount);
     }
 
     function setAdmin(address newAdmin) public {
         require(msg.sender == admin, "sender not admin");
         admin = newAdmin;
-        emit adminChanged(admin);
+        emit AdminChanged(admin);
     }
 
-    function setBeneficiaries(Beneficiary[] memory newBeneficiaries) public {
-        if (_beneficiariesLength != 0) {
+    function setRecipients(Recipient[] memory newRecipients) public {
+        if (_recipientsLength != 0) {
             require(msg.sender == admin, "sender not admin");
         }
-        _beneficiariesLength = newBeneficiaries.length;
-        require(_beneficiariesLength > 0, "cannot set zero beneficiaries");
+        _recipientsLength = newRecipients.length;
+        require(_recipientsLength > 0, "cannot set zero recipients");
+        require(_recipientsLength < 51, "cannot set more than 50 recipients");
         uint allocations;
-        for (uint i; i < _beneficiariesLength; i++) {
-            Beneficiary memory beneficiary = newBeneficiaries[i];
-            require(
-                beneficiary.account != address(0),
-                "cannot set zero address as beneficiary"
-            );
-            _allocations[beneficiary.account] = beneficiary.allocation;
-            _beneficiaries[i] = beneficiary.account;
-            allocations += beneficiary.allocation;
+        for (uint i; i < _recipientsLength; i++) {
+            Recipient memory recipient = newRecipients[i];
+            _recipients[i].account = recipient.account;
+            _recipients[i].allocation = recipient.allocation;
+            allocations += recipient.allocation;
         }
         require(
-            allocations == ALLOCATION_DENOMINATOR,
+            allocations == DENOMINATOR,
             "total allocations do not equal to denominator"
         );
-        emit beneficiariesChanged(newBeneficiaries);
+        emit RecipientsChanged(newRecipients);
     }
 
-    event tokenDistributed(address token, uint amount);
-    event beneficiariesChanged(Beneficiary[] newBeneficiaries);
-    event adminChanged(address newAdmin);
+    event TokenDistributed(address token, uint amount);
+    event RecipientsChanged(Recipient[] newRecipients);
+    event AdminChanged(address newAdmin);
 }
