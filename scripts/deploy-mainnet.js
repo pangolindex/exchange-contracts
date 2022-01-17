@@ -26,7 +26,7 @@ async function main() {
     console.log("Account balance:", initBalance.toString());
 
     // Timelock constants
-    const DELAY = 14 * 24 * 60 * 60 // 14 days
+    const DELAY = 3 * 24 * 60 * 60 // 3 days
 
     // Deploy WAVAX if not defined
     if (WRAPPED_NATIVE_TOKEN === undefined) {
@@ -63,7 +63,7 @@ async function main() {
 
     // Deploy Timelock
     const Timelock = await ethers.getContractFactory("Timelock");
-    const timelock = await Timelock.deploy(multisig.address, DELAY);
+    const timelock = await Timelock.deploy(DELAY); // sets msg.sender as temporary admin
     await timelock.deployed();
 
     // Deploy Governor
@@ -71,13 +71,16 @@ async function main() {
     const governor = await Governor.deploy(timelock.address, png.address, multisig.address, PROPOSAL_THRESHOLD);
     await governor.deployed();
 
+    // Transfer timelock administrator to governor
+    await timelock.initiate(governor.address);
+
     /*****************
      * AMM CONTRACTS *
      *****************/
 
     // Deploy LP Factory
     const PangolinFactory = await ethers.getContractFactory("contracts/pangolin-core/PangolinFactory.sol:PangolinFactory");
-    const factory = await PangolinFactory.deploy(deployer.address); // ownership to be transferred
+    const factory = await PangolinFactory.deploy(deployer.address); // feeToSetter transferred to multisig after fee collector setup
     await factory.deployed();
 
     // Deploy Router
@@ -91,13 +94,14 @@ async function main() {
 
     // Deploy MiniChefV2
     const MiniChef = await ethers.getContractFactory("contracts/dex/MiniChefV2.sol:MiniChefV2");
-    const chef = await MiniChef.deploy(png.address, deployer.address); // to be transferred to multisig
+    const chef = await MiniChef.deploy(png.address, deployer.address); // ownership is transferred to multisig after initial farms are setup
     await chef.deployed();
 
     // Deploy CommunityTreasury
     const CommunityTreasury = await ethers.getContractFactory('CommunityTreasury');
     const treasury = await CommunityTreasury.deploy(png.address);
     await treasury.deployed();
+    await treasury.transferOwnership(timelock.address);
 
     // Deploy Airdrop
     const Airdrop = await ethers.getContractFactory("Airdrop");

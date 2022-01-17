@@ -19,15 +19,16 @@ contract Timelock {
     address public admin;
     address public pendingAdmin;
     uint public delay;
+    bool public initiated;
 
     mapping (bytes32 => bool) public queuedTransactions;
 
 
-    constructor(address admin_, uint delay_) public {
+    constructor(uint delay_) public {
         require(delay_ >= MINIMUM_DELAY, "Timelock::constructor: Delay must exceed minimum delay.");
         require(delay_ <= MAXIMUM_DELAY, "Timelock::setDelay: Delay must not exceed maximum delay.");
 
-        admin = admin_;
+        admin = msg.sender;
         delay = delay_;
     }
 
@@ -40,6 +41,13 @@ contract Timelock {
         delay = delay_;
 
         emit NewDelay(delay);
+    }
+
+    function initiate(address admin_) public {
+        require(!initiated, "Timelock::initiate: Timelock already initiated.");
+        require(msg.sender == admin, "Timelock::initiate: Call must come from temporary admin.");
+        admin = admin_;
+        initiated = true;
     }
 
     function acceptAdmin() public {
