@@ -14,7 +14,7 @@ contract Png {
     uint8 public constant decimals = 18;
 
     /// @notice Total number of tokens in circulation
-    uint public constant totalSupply = 230_000_000e18; // 230 million PNG
+    uint public totalSupply;
 
     /// @notice Allowance amounts on behalf of others
     mapping (address => mapping (address => uint96)) internal allowances;
@@ -65,7 +65,8 @@ contract Png {
      * @notice Construct a new PNG token
      * @param account The initial account to grant all the tokens
      */
-    constructor(address account, string memory _symbol, string memory _name) public {
+    constructor(uint256 _totalSupply, address account, string memory _symbol, string memory _name) public {
+        totalSupply = _totalSupply;
         balances[account] = uint96(totalSupply);
         emit Transfer(address(0), account, totalSupply);
         symbol = _symbol;
