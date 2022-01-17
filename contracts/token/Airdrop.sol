@@ -2,17 +2,13 @@
 pragma solidity ^0.8.0;
 
 /**
- *  Contract for administering the Airdrop of PNG to UNI and SUSHI holders.
- *  26.9 million PNG will be made available in the airdrop. After the
+ *  Contract for administering the Airdrop of xPNG to PNG holders.
+ *  Arbitrary amount PNG will be made available in the airdrop. After the
  *  Airdrop period is over, all unclaimed PNG will be transferred to the
  *  community treasury.
  */
 contract Airdrop {
-    // token addresses
     address public png;
-    address public uni;
-    address public sushi;
-
     address public owner;
     address public remainderDestination;
 
@@ -23,7 +19,7 @@ contract Airdrop {
 
     bool public claimingAllowed;
 
-    uint constant public TOTAL_AIRDROP_SUPPLY = 26_000_000e18;
+    uint public airdropSupply;
 
     // Events
     event ClaimingAllowed();
@@ -35,20 +31,16 @@ contract Airdrop {
      * destination. Claiming period is not enabled.
      *
      * @param png_ the PNG token contract address
-     * @param uni_ the UNI token contract address
-     * @param sushi_ the SUSHI token contract address
      * @param owner_ the privileged contract owner
      * @param remainderDestination_ address to transfer remaining PNG to when
      *     claiming ends. Should be community treasury.
      */
-    constructor(address png_,
-                address uni_,
-                address sushi_,
+    constructor(uint supply_,
+                address png_,
                 address owner_,
                 address remainderDestination_) {
+        airdropSupply = supply_;
         png = png_;
-        uni = uni_;
-        sushi = sushi_;
         owner = owner_;
         remainderDestination = remainderDestination_;
         claimingAllowed = false;
@@ -84,7 +76,7 @@ contract Airdrop {
      * before claiming is enabled. Only callable by the owner.
      */
     function allowClaiming() external {
-        require(IPNG(png).balanceOf(address(this)) >= TOTAL_AIRDROP_SUPPLY, 'Airdrop::allowClaiming: incorrect PNG supply');
+        require(IPNG(png).balanceOf(address(this)) >= airdropSupply, 'Airdrop::allowClaiming: incorrect PNG supply');
         require(msg.sender == owner, 'Airdrop::allowClaiming: unauthorized');
         claimingAllowed = true;
         emit ClaimingAllowed();
@@ -107,19 +99,15 @@ contract Airdrop {
     }
 
     /**
-     * Withdraw your PNG. In order to qualify for a withdrawl, the caller's address
-     * must be whitelisted. In addition, the calling address must have one whole UNI
-     * or SUSHI token. All PNG must be claimed at once. Only the full amount can be
-     * claimed and only one claim is allowed per user.
+     * Withdraw your PNG. In order to qualify for a withdrawl, the
+     * caller's address must be whitelisted. All PNG must be claimed at
+     * once. Only the full amount can be claimed and only one claim is
+     * allowed per user.
      */
     function claim() external {
         // tradeoff: if you only transfer one but you held both, you can't claim
         require(claimingAllowed, 'Airdrop::claim: Claiming is not allowed');
         require(withdrawAmount[msg.sender] > 0, 'Airdrop::claim: No PNG to claim');
-
-        uint oneToken = 1e18;
-        require(IUni(uni).balanceOf(msg.sender) >= oneToken || ISushi(sushi).balanceOf(msg.sender) >= oneToken,
-            'Airdrop::claim: Insufficient UNI or SUSHI balance');
 
         uint amountToClaim = withdrawAmount[msg.sender];
         withdrawAmount[msg.sender] = 0;
@@ -130,11 +118,11 @@ contract Airdrop {
     }
 
     /**
-     * Whitelist an address to claim PNG. Specify the amount of PNG to be allocated.
-     * That address will then be able to claim that amount of PNG during the claiming
-     * period if it has sufficient UNI and SUSHI balance. The transferrable amount of
-     * PNG must be nonzero. Total amount allocated must be less than or equal to the
-     * total airdrop supply. Whitelisting must occur before the claiming period is
+     * Whitelist an address to claim PNG. Specify the amount of PNG to be
+     * allocated. That address will then be able to claim that amount of PNG
+     * during the claiming period. The transferrable amount of PNG must be
+     * nonzero. Total amount allocated must be less than or equal to the total
+     * airdrop supply. Whitelisting must occur before the claiming period is
      * enabled. Addresses may only be added one time. Only called by the owner.
      *
      * @param addr address that may claim PNG
@@ -149,7 +137,7 @@ contract Airdrop {
         withdrawAmount[addr] = pngOut;
 
         totalAllocated = totalAllocated + pngOut;
-        require(totalAllocated <= TOTAL_AIRDROP_SUPPLY, 'Airdrop::whitelistAddress: Exceeds PNG allocation');
+        require(totalAllocated <= airdropSupply, 'Airdrop::whitelistAddress: Exceeds PNG allocation');
     }
 
     /**
@@ -170,12 +158,4 @@ contract Airdrop {
 interface IPNG {
     function balanceOf(address account) external view returns (uint);
     function transfer(address dst, uint rawAmount) external returns (bool);
-}
-
-interface IUni {
-    function balanceOf(address account) external view returns (uint);
-}
-
-interface ISushi {
-    function balanceOf(address account) external view returns (uint);
 }
