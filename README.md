@@ -13,11 +13,7 @@ If you need to use any of the contract ABIs, you can install this repo as an npm
 These contracts were adapted from these Uniswap repos: [uniswap-v2-core](https://github.com/Uniswap/uniswap-v2-core), [uniswap-v2-periphery](https://github.com/Uniswap/uniswap-v2-core), and [uniswap-lib](https://github.com/Uniswap/uniswap-lib).
 
 # Contracts
-- [ ] Multisig https://cchain.explorer.avax.network/address/0xf30D72705962fF7b3722164AAA9776f6b7314387/contracts 
-
-Order of execution:
-- [ ] MultiSigWalletWithDailyLimitFactory
-- [ ] MiniChef v2
-- [ ] TreasuryVester
-- [ ] Token
-
+To deploy use the following command:
+```bash
+npx hardhat --network aurora_mainnet run scripts/deploy-mainnet.js 
+```
