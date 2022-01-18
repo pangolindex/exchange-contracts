@@ -3,7 +3,7 @@ exports.PNG_SYMBOL = "aurPNG";
 exports.PNG_NAME = "Pangolin";
 exports.TOTAL_SUPPLY = "230000000"; // 230M
 exports.MULTISIG_OWNERS = [
-  "0x735296881A38242B4cB6CCeE775619019Ccb64a1" // Trollip
+  "0x72C397908Cb93d1B569BBB0Ff8d3D26B7b21d730" // Trollip
 ];
 exports.PROPOSAL_THRESHOLD = "100000"; // 100K
 exports.INITIAL_FARMS = [

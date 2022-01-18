@@ -17,3 +17,6 @@ To deploy use the following command:
 ```bash
 npx hardhat --network aurora_mainnet run scripts/deploy-mainnet.js 
 ```
+
+## TODO
+- [ ] Manually transfer contracts ownership to local multisig

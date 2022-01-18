@@ -96,7 +96,7 @@ module.exports = {
     },
     aurora_testnet: {
       url: 'https://testnet.aurora.dev/',
-      gasPrice: 470000000000,
+      gasPrice: 4700000000,
       chainId: 1313161555,
       accounts: []
     },
