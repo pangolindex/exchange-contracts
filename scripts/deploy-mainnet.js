@@ -18,6 +18,8 @@ const {
 
 async function main() {
 
+    let tx;
+
     const [deployer] = await ethers.getSigners();
 
     console.log("Deploying contracts with the account:",deployer.address);
@@ -34,7 +36,7 @@ async function main() {
     if (WRAPPED_NATIVE_TOKEN === undefined) {
         const WAVAX = await ethers.getContractFactory("WAVAX");
         const wavax = await WAVAX.deploy();
-        await wavax.deployed;
+        await wavax.deployed();
         var nativeToken = wavax.address;
         console.log("Deployed new wrapped token contract to", nativeToken);
     } else {
@@ -81,7 +83,8 @@ async function main() {
 
     // Transfer timelock administrator to governor
     //await timelock.initiate(governor.address);
-    await timelock.initiate(multisig.address);
+    tx = await timelock.initiate(multisig.address);
+    await tx.wait();
     console.log("Transferred timelock administrator to multisig.");
 
     /*****************
@@ -115,7 +118,8 @@ async function main() {
     const treasury = await CommunityTreasury.deploy(png.address);
     await treasury.deployed();
     console.log("Community Treasury address is: " + treasury.address);
-    await treasury.transferOwnership(timelock.address);
+    tx = await treasury.transferOwnership(timelock.address);
+    await tx.wait();
     console.log("Community Treasury ownership was transferred to timelock");
 
     // Deploy Airdrop
@@ -152,11 +156,13 @@ async function main() {
         (ethers.utils.parseUnits(TOTAL_SUPPLY, 18))
             .sub(ethers.utils.parseUnits(AIRDROP_AMOUNT, 18))
     );
-    console.log((TOTAL_SUPPLY - AIRDROP_AMOUNT), PNG_SYMBOL, "was transferred to Treasury Vester");
+    console.log((TOTAL_SUPPLY - AIRDROP_AMOUNT).toString(), PNG_SYMBOL, "was transferred to Treasury Vester");
 
     // Start vesting and transfer ownership to timelock
-    await vester.startVesting();
-    await vester.setAdmin(timelock.address);
+    tx = await vester.startVesting();
+    await tx.wait();
+    tx = await vester.setAdmin(timelock.address);
+    await tx.wait();
     console.log("Vesting started.")
 
     /*******************************
@@ -195,7 +201,8 @@ async function main() {
         revenueDistributor.address
     );
     await feeCollector.deployed();
-    await feeCollector.transferOwnership(multisig.address);
+    tx = await feeCollector.transferOwnership(multisig.address);
+    await tx.wait();
     console.log("Fee Collector deployed at: " + feeCollector.address);
 
     // Deploy DummyERC20 for diverting some PNG emissions to PNG staking
@@ -206,26 +213,32 @@ async function main() {
         deployer.address,
         100 // arbitrary amount
     );
-    await dummyERC20.renounceOwnership();
+    tx = await dummyERC20.renounceOwnership();
+    await tx.wait();
     console.log("Dummy PGL for Fee Collector deployed at: " + dummyERC20.address);
 
     // add dummy PGL to minichef with 5 weight (use 500)
-    await chef.addPool(500,dummyERC20.address,ethers.constants.AddressZero);
+    tx = await chef.addPool(500,dummyERC20.address,ethers.constants.AddressZero);
+    await tx.wait();
     console.log("Added minichef pool 0 for the fee collector");
 
     // deposit dummy PGL for the fee collector
-    await dummyERC20.approve(chef.address, 100);
-    await chef.deposit(
+    tx = await dummyERC20.approve(chef.address, 100);
+    await tx.wait();
+    tx = await chef.deposit(
         0,                   // minichef pid
         100,                 // amount
         feeCollector.address // deposit to address
     );
+    await tx.wait();
     console.log("Deposited Dummy PGL to mini chef in the name of fee collector");
 
     // change swap fee recipient to fee collector
-    await factory.setFeeTo(feeCollector.address);
+    tx = await factory.setFeeTo(feeCollector.address);
+    await tx.wait();
     console.log("Set Fee Collector as swap fee recipient");
-    await factory.setFeeToSetter(multisig.address);
+    tx = await factory.setFeeToSetter(multisig.address);
+    await tx.wait();
     console.log("Transferred Pangolin Factory administrator to multisig");
 
     /********************
@@ -237,11 +250,13 @@ async function main() {
     const pangolinLibrary = await PangolinLibrary.deploy();
     await pangolinLibrary.deployed()
 
-    await factory.createPair(png.address,nativeToken);
+    tx = await factory.createPair(png.address,nativeToken);
+    await tx.wait();
     var pngPair = await pangolinLibrary.pairFor(factory.address,png.address,nativeToken);
 
     // add png-native to minichef with 30 weight (use 3000)
-    await chef.addPool(3000,pngPair,ethers.constants.AddressZero);
+    tx = await chef.addPool(3000,pngPair,ethers.constants.AddressZero);
+    await tx.wait();
 
     // create native token paired farms for tokens in INITIAL_FARMS
     for (let i = 0; i < INITIAL_FARMS.length; i++) {
@@ -249,13 +264,16 @@ async function main() {
         let tokenB = INITIAL_FARMS[i]["tokenB"];
         let weight = INITIAL_FARMS[i]["weight"];
         let pair = await pangolinLibrary.pairFor(factory.address,tokenA,tokenB);
-        await factory.createPair(tokenA,tokenB);
-        await chef.addPool(weight,pair,ethers.constants.AddressZero);
+        tx = await factory.createPair(tokenA,tokenB);
+        await tx.wait();
+        tx = await chef.addPool(weight,pair,ethers.constants.AddressZero);
+        await tx.wait();
     }
     const pools = await chef.poolInfos();
 
     // transfer minichef ownership from deployer to multisig
-    await chef.transferOwnership(multisig.address);
+    tx = await chef.transferOwnership(multisig.address);
+    await tx.wait();
     console.log("Deployed farms and transferred MiniChefV2 to multisig.");
 
     /***** THE HAPPY END *****/

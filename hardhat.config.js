@@ -1,5 +1,6 @@
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
+require('dotenv').config();
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -60,159 +61,133 @@ module.exports = {
   },
   networks: {
     hardhat: {
-      gasPrice: 470000000000,
       chainId: 43112,
       initialDate: "2020-10-10",
     },
     ethereum: {
       url: 'https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161',
-      gasPrice: 470000000000,
       chainId: 1,
       accounts: ["0x56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027"]
     },
     avash: {
       url: 'http://localhost:9650/ext/bc/C/rpc',
-      gasPrice: 470000000000,
       chainId: 43112,
       accounts: ["0x56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027"]
     },
     fuji: {
       url: 'https://api.avax-test.network/ext/bc/C/rpc',
-      gasPrice: 470000000000,
       chainId: 43113,
-      accounts: []
+      accounts: [process.env.PRIVATE_KEY]
     },
     arbitrum_mainnet: {
       url: 'https://arb1.arbitrum.io/rpc',
-      gasPrice: 470000000000,
       chainId: 42161,
-      accounts: []
+      accounts: [process.env.PRIVATE_KEY]
     },
     aurora_mainnet: {
       url: 'https://mainnet.aurora.dev',
-      gasPrice: 470000000000,
       chainId: 1313161554,
-      accounts: []
+      accounts: [process.env.PRIVATE_KEY]
     },
     aurora_testnet: {
       url: 'https://testnet.aurora.dev/',
-      gasPrice: 4700000000,
       chainId: 1313161555,
-      accounts: []
+      accounts: [process.env.PRIVATE_KEY]
     },
     avalanche_mainnet: {
       url: 'https://api.avax.network/ext/bc/C/rpc',
-      gasPrice: 470000000000,
       chainId: 43114,
-      accounts: []
+      accounts: [process.env.PRIVATE_KEY]
     },
     bsc_mainnet: {
       url: 'https://bsc-dataseed.binance.org/',
-      gasPrice: 470000000000,
       chainId: 56,
-      accounts: []
+      accounts: [process.env.PRIVATE_KEY]
     },
     bsc_testnet: {
       url: 'https://data-seed-prebsc-1-s1.binance.org:8545/',
-      gasPrice: 470000000000,
       chainId: 97,
-      accounts: []
+      accounts: [process.env.PRIVATE_KEY]
     },
     cronos_mainnet: {
       url: 'https://evm-cronos.crypto.org/',
-      gasPrice: 470000000000,
       chainId: 25,
-      accounts: []
+      accounts: [process.env.PRIVATE_KEY]
     },
     cronos_testnet: {
       url: 'https://cronos-testnet-3.crypto.org:8545/',
-      gasPrice: 470000000000,
       chainId: 338,
-      accounts: []
+      accounts: [process.env.PRIVATE_KEY]
     },
     fantom_mainnet: {
       url: 'https://rpc.ftm.tools/',
-      gasPrice: 470000000000,
       chainId: 250,
-      accounts: []
+      accounts: [process.env.PRIVATE_KEY]
     },
     fantom_testnet: {
       url: 'https://rpc.testnet.fantom.network/',
-      gasPrice: 470000000000,
       chainId: 0xfa2,
-      accounts: []
+      accounts: [process.env.PRIVATE_KEY]
     },
     fuse_mainnet: {
       url: 'https://rpc.fuse.io ',
-      gasPrice: 470000000000,
       chainId: 0x7a,
-      accounts: []
+      accounts: [process.env.PRIVATE_KEY]
     },
     harmony_mainnet: {
       url: 'https://api.harmony.one',
-      gasPrice: 470000000000,
       chainId: 1666600000,
-      accounts: []
+      accounts: [process.env.PRIVATE_KEY]
     },
     harmony_testnet: {
       url: 'https://api.s0.b.hmny.io',
-      gasPrice: 470000000000,
       chainId: 1666700000,
-      accounts: []
+      accounts: [process.env.PRIVATE_KEY]
     },
     heco_mainnet: {
       url: 'https://http-mainnet.hecochain.com',
-      gasPrice: 470000000000,
       chainId: 128,
-      accounts: []
+      accounts: [process.env.PRIVATE_KEY]
     },
     klaytn_mainnet: {
       url: '	https://kaikas.cypress.klaytn.net:8651',
-      gasPrice: 470000000000,
       chainId: 8217,
-      accounts: []
+      accounts: [process.env.PRIVATE_KEY]
     },
     moonriver_mainnet: {
       url: 'https://rpc.moonriver.moonbeam.network',
-      gasPrice: 470000000000,
       chainId: 1285,
-      accounts: []
+      accounts: [process.env.PRIVATE_KEY]
     },
     moonbeam_mainnet: {
       url: 'https://rpc.api.moonbeam.network',
-      gasPrice: 470000000000,
       chainId: 1284,
-      accounts: []
+      accounts: [process.env.PRIVATE_KEY]
     },
     okex_mainnet: {
       url: 'https://exchainrpc.okex.org',
-      gasPrice: 470000000000,
       chainId: 66,
-      accounts: []
+      accounts: [process.env.PRIVATE_KEY]
     },
     poa_mainnet: {
       url: 'https://core.poanetwork.dev',
-      gasPrice: 470000000000,
       chainId: 99,
-      accounts: []
+      accounts: [process.env.PRIVATE_KEY]
     },
     polygon_mainnet: {
       url: 'https://polygon-rpc.com/ ',
-      gasPrice: 470000000000,
       chainId: 137,
-      accounts: []
+      accounts: [process.env.PRIVATE_KEY]
     },
     polygon_testnet: {
       url: 'https://rpc-mumbai.maticvigil.com/',
-      gasPrice: 470000000000,
       chainId: 80001,
-      accounts: []
+      accounts: [process.env.PRIVATE_KEY]
     },
     xdai_mainnet: {
       url: 'https://rpc.xdaichain.com/',
-      gasPrice: 470000000000,
       chainId: 100,
-      accounts: []
+      accounts: [process.env.PRIVATE_KEY]
     }
   }
 };
