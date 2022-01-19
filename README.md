@@ -29,5 +29,7 @@ Currently on Aurora you need to get funds into Goerli and then bridge across. Yo
 ## Harmony
 To get Harmony tokens on the testnet please go here https://faucet.pops.one/. **Please note** the Metamask address is different to your Harmony address, so you'll need to go to the Explorer to convert https://explorer.pops.one/
 
+## BSC
+Faucet: https://testnet.binance.org/faucet-smart
 ## Cronos
 Testnet faucet can be found here https://cronos.crypto.org/faucet
