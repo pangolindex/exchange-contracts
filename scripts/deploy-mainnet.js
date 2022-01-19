@@ -78,6 +78,7 @@ async function main() {
 
     // Transfer timelock administrator to governor
     //await timelock.initiate(governor.address);
+    await timelock.initiate(multisig.address);
 
     /*****************
      * AMM CONTRACTS *
@@ -178,7 +179,7 @@ async function main() {
         router.address,
         chef.address,
         0, // chef pid for dummy PGL
-        governor.address,
+        timelock.address,
         nativeToken,
         revenueDistributor.address
     );
