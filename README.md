@@ -26,10 +26,10 @@ Currently on Aurora you need to get funds into Goerli and then bridge across. Yo
 - Get some ETH from Chainlink Faucet https://faucets.chain.link/goerli
 - Send ETH to Aurora via Rainbow Bridge https://testnet.rainbowbridge.app/
 
-## Harmony
-To get Harmony tokens on the testnet please go here https://faucet.pops.one/. **Please note** the Metamask address is different to your Harmony address, so you'll need to go to the Explorer to convert https://explorer.pops.one/
-
 ## BSC
 Faucet: https://testnet.binance.org/faucet-smart
 ## Cronos
 Testnet faucet can be found here https://cronos.crypto.org/faucet
+
+## Harmony
+To get Harmony tokens on the testnet please go here https://faucet.pops.one/. **Please note** the Metamask address is different to your Harmony address, so you'll need to go to the Explorer to convert https://explorer.pops.one/

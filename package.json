@@ -35,5 +35,7 @@
     "url": "https://github.com/pangolindex/exchange-contracts/issues"
   },
   "homepage": "https://pangolin.exchange",
-  "dependencies": {}
+  "dependencies": {
+    "dotenv": "^14.2.0"
+  }
 }

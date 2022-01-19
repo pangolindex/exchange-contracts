@@ -1,26 +1,26 @@
-const WETH = "0x9D29f395524B3C817ed86e2987A14c1897aFF849";
-exports.WRAPPED_NATIVE_TOKEN = WETH;
-exports.PNG_SYMBOL = "aurPNG";
+const WONE = "0x93edfa74e518c02c45ea258580ebce828169173aecfdb3aedad38b83a51fff5e";
+exports.WRAPPED_NATIVE_TOKEN = WONE;
+exports.PNG_SYMBOL = "harPNG";
 exports.PNG_NAME = "Pangolin";
 exports.TOTAL_SUPPLY = "230000000"; // 230M
 exports.MULTISIG_OWNERS = [
-  "0x72C397908Cb93d1B569BBB0Ff8d3D26B7b21d730" // Trollip
+  "0xDA315a838E918026E51A864c43766f5AE86be8c6" // shung
 ];
 exports.PROPOSAL_THRESHOLD = "100000"; // 100K
 exports.INITIAL_FARMS = [
   {
-    tokenA: "	0x5B8eEA476a17d47A3d40A0239707be9E8bc02015", // REY
-    tokenB: WETH,
+    tokenA: "0x04068DA6C83AFCFA0e13ba15A6696662335D5B75", // USDC
+    tokenB: WONE,
     weight: 2000
   },
   {
-    tokenA: "0x23601aE38B8aBB28Bd538EE83dFcfd23987Bd1f9", // MATIC
-    tokenB: WETH,
+    tokenA: "0x049d68029688eAbF473097a2fC38ef61633A3C7A", // fUSDT
+    tokenB: WONE,
     weight: 1000
   },
   {
-    tokenA: "0x0f1695B78b14F31bD8E621083c1A82637A190284", // AVAX
-    tokenB: WETH,
+    tokenA: "0x8D11eC38a3EB5E956B052f67Da8Bdc9bef8Abf3E", // DAI
+    tokenB: WONE,
     weight: 1000
   }
 ];
