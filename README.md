@@ -13,10 +13,10 @@ If you need to use any of the contract ABIs, you can install this repo as an npm
 These contracts were adapted from these Uniswap repos: [uniswap-v2-core](https://github.com/Uniswap/uniswap-v2-core), [uniswap-v2-periphery](https://github.com/Uniswap/uniswap-v2-core), and [uniswap-lib](https://github.com/Uniswap/uniswap-lib).
 
 # Contracts
-To deploy use the following command:
+To deploy to any chain you want, you need to complete the following steps:
+- [ ] Update `hardhat.config.js` Chain with your private key
+- [ ] Create a new configuration under `constants/**chainname**_testnet.js`
+- [ ] Run the following command
 ```bash
-npx hardhat --network aurora_mainnet run scripts/deploy-mainnet.js 
+npx hardhat --network **chainname**_mainnet run scripts/deploy-mainnet.js 
 ```
-
-## TODO
-- [ ] Manually transfer contracts ownership to local multisig
