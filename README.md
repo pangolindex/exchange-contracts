@@ -20,3 +20,8 @@ To deploy to any chain you want, you need to complete the following steps:
 ```bash
 npx hardhat --network **chainname**_mainnet run scripts/deploy-mainnet.js 
 ```
+
+## Aurora
+Currently on Aurora you need to get funds into Goerli and then bridge across. You can do this by following these steps:
+- Get some ETH from Chainlink Faucet https://faucets.chain.link/goerli
+- Send ETH to Aurora via Rainbow Bridge https://testnet.rainbowbridge.app/
