@@ -124,6 +124,12 @@ module.exports = {
       chainId: 25,
       accounts: []
     },
+    cronos_testnet: {
+      url: 'https://cronos-testnet-3.crypto.org:8545/',
+      gasPrice: 470000000000,
+      chainId: 338,
+      accounts: []
+    },
     fantom_mainnet: {
       url: 'https://rpc.ftm.tools/',
       gasPrice: 470000000000,

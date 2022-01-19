@@ -25,3 +25,9 @@ npx hardhat --network **chainname**_mainnet run scripts/deploy-mainnet.js
 Currently on Aurora you need to get funds into Goerli and then bridge across. You can do this by following these steps:
 - Get some ETH from Chainlink Faucet https://faucets.chain.link/goerli
 - Send ETH to Aurora via Rainbow Bridge https://testnet.rainbowbridge.app/
+
+## Harmony
+To get Harmony tokens on the testnet please go here https://faucet.pops.one/. **Please note** the Metamask address is different to your Harmony address, so you'll need to go to the Explorer to convert https://explorer.pops.one/
+
+## Cronos
+Testnet faucet can be found here https://cronos.crypto.org/faucet
