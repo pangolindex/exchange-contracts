@@ -148,6 +148,12 @@ module.exports = {
       chainId: 1666600000,
       accounts: []
     },
+    harmony_testnet: {
+      url: 'https://api.s0.b.hmny.io',
+      gasPrice: 470000000000,
+      chainId: 1666700000,
+      accounts: []
+    },
     heco_mainnet: {
       url: 'https://http-mainnet.hecochain.com',
       gasPrice: 470000000000,
