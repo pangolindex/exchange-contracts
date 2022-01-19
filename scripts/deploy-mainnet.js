@@ -51,28 +51,33 @@ async function main() {
         PNG_NAME
     );
     await png.deployed()
+    console.log("PNG token deployed at: " + png.address);
 
     // Deploy this chain multisig
     const Multisig = await ethers.getContractFactory("MultiSigWalletWithDailyLimit");
     const multisig = await Multisig.deploy(MULTISIG_OWNERS, MULTISIG_OWNERS.length, 0);
     await multisig.deployed();
+    console.log("Multisig deployed at: " + multisig.address);
 
     // Deploy foundation multisig
     const foundation = await Multisig.deploy(FOUNDATION_MULTISIG_OWNERS, 5, 0);
     await foundation.deployed();
+    console.log("Foundation multisig deployed at: " + foundation.address);
 
     // Deploy Timelock
     const Timelock = await ethers.getContractFactory("Timelock");
     const timelock = await Timelock.deploy(DELAY); // sets msg.sender as temporary admin
+
     await timelock.deployed();
+    console.log("Timelock deployed at: " + timelock.address);
 
     // Deploy Governor
-    const Governor = await ethers.getContractFactory("GovernorAlpha");
-    const governor = await Governor.deploy(timelock.address, png.address, multisig.address, PROPOSAL_THRESHOLD);
-    await governor.deployed();
+    //const Governor = await ethers.getContractFactory("GovernorAlpha");
+    //const governor = await Governor.deploy(timelock.address, png.address, multisig.address, PROPOSAL_THRESHOLD);
+    //await governor.deployed();
 
     // Transfer timelock administrator to governor
-    await timelock.initiate(governor.address);
+    //await timelock.initiate(governor.address);
 
     /*****************
      * AMM CONTRACTS *
@@ -82,11 +87,13 @@ async function main() {
     const PangolinFactory = await ethers.getContractFactory("contracts/pangolin-core/PangolinFactory.sol:PangolinFactory");
     const factory = await PangolinFactory.deploy(deployer.address); // feeToSetter transferred to multisig after fee collector setup
     await factory.deployed();
+    console.log("Pangolin Factory deployed at: " + factory.address);
 
     // Deploy Router
     const PangolinRouter = await ethers.getContractFactory("PangolinRouter");
     const router = await PangolinRouter.deploy(factory.address, nativeToken);
     await router.deployed();
+    console.log("Pangolin Router deployed at: " + router.address);
 
     /**********************
      * TOKEN DISTRIBUTION *
@@ -96,12 +103,14 @@ async function main() {
     const MiniChef = await ethers.getContractFactory("contracts/dex/MiniChefV2.sol:MiniChefV2");
     const chef = await MiniChef.deploy(png.address, deployer.address); // ownership is transferred to multisig after initial farms are setup
     await chef.deployed();
+    console.log("MiniChefV2 deployed at: " + chef.address);
 
     // Deploy CommunityTreasury
     const CommunityTreasury = await ethers.getContractFactory('CommunityTreasury');
     const treasury = await CommunityTreasury.deploy(png.address);
     await treasury.deployed();
     await treasury.transferOwnership(timelock.address);
+    console.log("Treasury address is: " + treasury.address);
 
     // Deploy Airdrop
     const Airdrop = await ethers.getContractFactory("Airdrop");
@@ -112,6 +121,7 @@ async function main() {
         treasury.address
     );
     await airdrop.deployed();
+    console.log("Airdrop address is: " + airdrop.address)
 
     // Deploy TreasuryVester
     var vesterAllocations = [];
@@ -127,6 +137,7 @@ async function main() {
         vesterAllocations
     );
     await vester.deployed();
+    console.log("Treasury Vester deployed at: " + vester.address)
 
     // Transfer PNG to 5% airdrop and 95% treasury vester
     await png.transfer(airdrop.address,ethers.utils.parseUnits(AIRDROP_AMOUNT, 18));
@@ -173,6 +184,7 @@ async function main() {
     );
     await feeCollector.deployed();
     await feeCollector.transferOwnership(multisig.address);
+    console.log("Fee Collector deployed at: " + feeCollector.address);
 
     // Deploy DummyERC20 for diverting some PNG emissions to PNG staking
     const DummyERC20 = await ethers.getContractFactory("DummyERC20");
