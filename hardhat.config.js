@@ -84,6 +84,11 @@ module.exports = {
       chainId: 42161,
       accounts: [process.env.PRIVATE_KEY]
     },
+    abritrum_testnet: {
+      url: 'https://rinkeby.arbitrum.io/rpc',
+      chainId: 421611,
+      accounts: [process.env.PRIVATE_KEY]
+    },
     aurora_mainnet: {
       url: 'https://mainnet.aurora.dev',
       chainId: 1313161554,
@@ -162,6 +167,11 @@ module.exports = {
     moonbeam_mainnet: {
       url: 'https://rpc.api.moonbeam.network',
       chainId: 1284,
+      accounts: [process.env.PRIVATE_KEY]
+    },
+    moonbase_testnet: {
+      url: 'https://rpc.api.moonbase.moonbeam.network',
+      chainId: 1287,
       accounts: [process.env.PRIVATE_KEY]
     },
     okex_mainnet: {

@@ -33,3 +33,6 @@ Testnet faucet can be found here https://cronos.crypto.org/faucet
 
 ## Harmony
 To get Harmony tokens on the testnet please go here https://faucet.pops.one/. **Please note** the Metamask address is different to your Harmony address, so you'll need to go to the Explorer to convert https://explorer.pops.one/
+
+## Polygon (MATIC)
+Faucet: https://faucet.polygon.technology/
