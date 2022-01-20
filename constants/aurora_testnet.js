@@ -9,7 +9,7 @@ exports.MULTISIG_OWNERS = [
 exports.PROPOSAL_THRESHOLD = "100000"; // 100K
 exports.INITIAL_FARMS = [
   {
-    tokenA: "	0x5B8eEA476a17d47A3d40A0239707be9E8bc02015", // REY
+    tokenA: "0x5B8eEA476a17d47A3d40A0239707be9E8bc02015", // REY
     tokenB: WETH,
     weight: 2000
   },
