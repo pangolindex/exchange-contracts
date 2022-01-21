@@ -43,7 +43,6 @@ async function main() {
         while (remainingTries--) {
             try {
                 newTxCount = await ethers.provider.getTransactionCount(deployer.address);
-                console.log(newTxCount,txCount);
                 if (newTxCount != ( txCount + 1)) {
                     console.log(`Wrong tx count. Rechecking in 10 secs`);
                     await delay(30000);
