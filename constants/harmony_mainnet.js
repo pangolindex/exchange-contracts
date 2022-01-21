@@ -3,6 +3,7 @@ exports.WRAPPED_NATIVE_TOKEN = WONE;
 exports.PNG_SYMBOL = "harPNG";
 exports.PNG_NAME = "Pangolin";
 exports.TOTAL_SUPPLY = "230000000"; // 230M
+exports.TIMELOCK_DELAY = 3 * 24 * 60 * 60; // 3 days
 exports.MULTISIG_OWNERS = [
   "0xDA315a838E918026E51A864c43766f5AE86be8c6" // shung
 ];

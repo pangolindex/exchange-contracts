@@ -13,7 +13,8 @@ const {
     WRAPPED_NATIVE_TOKEN,
     INITIAL_FARMS,
     AIRDROP_AMOUNT,
-    VESTER_ALLOCATIONS
+    VESTER_ALLOCATIONS,
+    TIMELOCK_DELAY
 } = require( `../constants/${network.name}.js`);
 
 function delay(timeout) {
@@ -31,9 +32,6 @@ async function main() {
 
     const initBalance = await deployer.getBalance();
     console.log("Account balance:", initBalance.toString());
-
-    // Timelock constants
-    const DELAY = 3 * 24 * 60 * 60 // 3 days
 
     // dirty hack to circumvent duplicate nonce submission error
     var txCount = await ethers.provider.getTransactionCount(deployer.address);
@@ -104,7 +102,7 @@ async function main() {
 
     // Deploy Timelock
     const Timelock = await ethers.getContractFactory("Timelock");
-    const timelock = await Timelock.deploy(DELAY); // sets msg.sender as temporary admin
+    const timelock = await Timelock.deploy(TIMELOCK_DELAY); // sets msg.sender as temporary admin
     await timelock.deployed();
     await confirmTransactionCount();
     console.log("Timelock deployed at: " + timelock.address);

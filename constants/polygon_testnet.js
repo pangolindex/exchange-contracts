@@ -2,6 +2,7 @@ exports.WRAPPED_NATIVE_TOKEN;
 exports.PNG_SYMBOL = "matPNG";
 exports.PNG_NAME = "Pangolin";
 exports.TOTAL_SUPPLY = "230000000"; // 230M
+exports.TIMELOCK_DELAY = 3 * 24 * 60 * 60; // 3 days
 exports.MULTISIG_OWNERS = [
   "0x72C397908Cb93d1B569BBB0Ff8d3D26B7b21d730" // Trollip
 ];
