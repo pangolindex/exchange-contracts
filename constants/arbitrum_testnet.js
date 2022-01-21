@@ -2,12 +2,13 @@ const WETH = "0x9D29f395524B3C817ed86e2987A14c1897aFF849";
 exports.WRAPPED_NATIVE_TOKEN = WETH;
 exports.PNG_SYMBOL = "arbPNG";
 exports.PNG_NAME = "Pangolin";
-exports.TOTAL_SUPPLY = "230000000"; // 230M
+exports.TOTAL_SUPPLY = 230000000; // 230M
+exports.AIRDROP_AMOUNT = 11500000; // 11.5M or 5% of max supply
 exports.TIMELOCK_DELAY = 3 * 24 * 60 * 60; // 3 days
 exports.MULTISIG_OWNERS = [
   "0x72C397908Cb93d1B569BBB0Ff8d3D26B7b21d730" // Trollip
 ];
-exports.PROPOSAL_THRESHOLD = "100000"; // 100K
+exports.PROPOSAL_THRESHOLD = 100000; // 100K
 exports.PNG_STAKING_ALLOCATION = 500, // 5x weight in minichef
 exports.WETH_PNG_FARM_ALLOCATION = 3000, // 30x weight
 exports.INITIAL_FARMS = [
@@ -27,7 +28,6 @@ exports.INITIAL_FARMS = [
     weight: 1000 // 10x
   }
 ];
-exports.AIRDROP_AMOUNT = "11500000"; // 11.5M or 5% of max supply
 exports.VESTER_ALLOCATIONS = [
   {
     recipient: "treasury", // community treasury
