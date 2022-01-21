@@ -273,7 +273,7 @@ async function main() {
     await confirmTransactionCount();
     console.log("Dummy PGL for Fee Collector deployed at: " + dummyERC20.address);
 
-    // add dummy PGL to minichef with 5 weight (use 500)
+    // add dummy PGL to minichef
     tx = await chef.addPool(
         PNG_STAKING_ALLOCATION,
         dummyERC20.address,
@@ -321,7 +321,7 @@ async function main() {
     await confirmTransactionCount();
     var pngPair = await pangolinLibrary.pairFor(factory.address,png.address,nativeToken);
 
-    // add png-native to minichef with 30 weight (use 3000)
+    // add png-native to minichef
     tx = await chef.addPool(
         WETH_PNG_FARM_ALLOCATION,
         pngPair,
