@@ -31,11 +31,11 @@ export function getAmountOut(amountIn: BigNumber, reserveIn: BigNumber, reserveO
 }
 
 export async function getTokenContract(tokenAddress: string): Promise<Contract> {
-    return await ethers.getContractAt("IPangolinERC20", tokenAddress)
+    return await ethers.getContractAt("IBeeTradeERC20", tokenAddress)
 }
 
 export async function getPairContract(pairAddress: string): Promise<Contract> {
-    return await ethers.getContractAt("IPangolinPair", pairAddress)
+    return await ethers.getContractAt("IBeeTradePair", pairAddress)
 }
 
 export async function getWAVAXContract(): Promise<Contract> {
@@ -58,7 +58,7 @@ export async function fundToken(account: SignerWithAddress, tokenToFund: string,
     const tokenSymbol = await tokenContract.symbol() as TokenSymbol
     if (!(tokenSymbol in fixture.Pairs.AVAX)) throw `No valid pair for AVAX-${tokenSymbol} required to fund the account with 1INCH from WAVAX`
     const pairAddress: string = fixture.Pairs.AVAX[tokenSymbol]
-    const fundPairContract = await ethers.getContractAt("IPangolinPair", pairAddress)
+    const fundPairContract = await ethers.getContractAt("IBeeTradePair", pairAddress)
     let [reserves0, reserves1] = await fundPairContract.getReserves()
     const token0: string = await fundPairContract.token0()
     if (token0 != fixture.Tokens.WAVAX) [reserves0, reserves1] = [reserves1, reserves0]

@@ -25,13 +25,13 @@
     "hardhat-tracer": "^1.0.0-alpha.5"
   },
   "version": "1.0.2",
-  "description": "Contracts for the Pangolin Dex.",
+  "description": "Contracts for the BeeTrade Dex.",
   "main": "index.js",
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/pangolindex/exchange-contracts.git"
+    "url": "git+ssh://git@github.com:Bee-Trade-Finance/exchange-contracts.git"
   },
-  "author": "Connor Daly <connor.daly@avalabs.org>",
+  "author": "Dakup Nengak <nengakdakup@github.com>",
   "license": "MIT",
   "scripts": {
     "precompile": "rimraf ./build/",
@@ -44,7 +44,7 @@
     "prepublishOnly": "yarn test"
   },
   "bugs": {
-    "url": "https://github.com/pangolindex/exchange-contracts/issues"
+    "url": "https://github.com/Bee-Trade-Finance/exchange-contracts/issues"
   },
-  "homepage": "https://pangolin.exchange"
+  "homepage": "https://app.beetrade.finance"
 }
