@@ -14,7 +14,9 @@ const {
     INITIAL_FARMS,
     AIRDROP_AMOUNT,
     VESTER_ALLOCATIONS,
-    TIMELOCK_DELAY
+    TIMELOCK_DELAY,
+    PNG_STAKING_ALLOCATION,
+    WETH_PNG_FARM_ALLOCATION
 } = require( `../constants/${network.name}.js`);
 
 function delay(timeout) {
@@ -272,7 +274,11 @@ async function main() {
     console.log("Dummy PGL for Fee Collector deployed at: " + dummyERC20.address);
 
     // add dummy PGL to minichef with 5 weight (use 500)
-    tx = await chef.addPool(500,dummyERC20.address,ethers.constants.AddressZero);
+    tx = await chef.addPool(
+        PNG_STAKING_ALLOCATION,
+        dummyERC20.address,
+        ethers.constants.AddressZero
+    );
     await tx.wait();
     await confirmTransactionCount();
     console.log("Added minichef pool 0 for the fee collector");
@@ -316,7 +322,11 @@ async function main() {
     var pngPair = await pangolinLibrary.pairFor(factory.address,png.address,nativeToken);
 
     // add png-native to minichef with 30 weight (use 3000)
-    tx = await chef.addPool(3000,pngPair,ethers.constants.AddressZero);
+    tx = await chef.addPool(
+        WETH_PNG_FARM_ALLOCATION,
+        pngPair,
+        ethers.constants.AddressZero
+    );
     await tx.wait();
     await confirmTransactionCount();
 

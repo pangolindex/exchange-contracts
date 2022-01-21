@@ -8,6 +8,8 @@ exports.MULTISIG_OWNERS = [
   "0x72C397908Cb93d1B569BBB0Ff8d3D26B7b21d730" // Trollip
 ];
 exports.PROPOSAL_THRESHOLD = "100000"; // 100K
+exports.PNG_STAKING_ALLOCATION = 500, // 5x weight in minichef
+exports.WETH_PNG_FARM_ALLOCATION = 3000, // 30x weight
 exports.INITIAL_FARMS = [
   {
     tokenA: "0x04068DA6C83AFCFA0e13ba15A6696662335D5B75", // USDC

@@ -8,21 +8,23 @@ exports.MULTISIG_OWNERS = [
   "0x72C397908Cb93d1B569BBB0Ff8d3D26B7b21d730" // Trollip
 ];
 exports.PROPOSAL_THRESHOLD = "100000"; // 100K
+exports.PNG_STAKING_ALLOCATION = 500, // 5x weight in minichef
+exports.WETH_PNG_FARM_ALLOCATION = 3000, // 30x weight
 exports.INITIAL_FARMS = [
   {
     tokenA: "0x04068DA6C83AFCFA0e13ba15A6696662335D5B75", // USDC
     tokenB: WETH,
-    weight: 2000
+    weight: 2000 // 20x
   },
   {
     tokenA: "0x049d68029688eAbF473097a2fC38ef61633A3C7A", // fUSDT
     tokenB: WETH,
-    weight: 1000
+    weight: 1000 // 10x
   },
   {
     tokenA: "0x8D11eC38a3EB5E956B052f67Da8Bdc9bef8Abf3E", // DAI
     tokenB: WETH,
-    weight: 1000
+    weight: 1000 // 10x
   }
 ];
 exports.AIRDROP_AMOUNT = "11500000"; // 11.5M or 5% of max supply

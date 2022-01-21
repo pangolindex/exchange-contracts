@@ -7,6 +7,8 @@ exports.MULTISIG_OWNERS = [
   "0xDA315a838E918026E51A864c43766f5AE86be8c6" // shung
 ];
 exports.PROPOSAL_THRESHOLD = "1000000"; // 1M
+exports.PNG_STAKING_ALLOCATION = 500, // 5x weight in minichef
+exports.WETH_PNG_FARM_ALLOCATION = 3000, // 30x weight
 exports.INITIAL_FARMS = [
 ];
 exports.AIRDROP_AMOUNT = "11500000"; // 11.5M or 5% of max supply
