@@ -1,6 +1,5 @@
-const { WRAPPED_NATIVE_TOKEN } = require("./harmony_mainnet");
-
-exports.WRAPPED_NATIVE_TOKEN;
+const WONE = "0xcF664087a5bB0237a0BAd6742852ec6c8d69A27a";
+exports.WRAPPED_NATIVE_TOKEN = WONE;
 exports.PNG_SYMBOL = "harPNG";
 exports.PNG_NAME = "Pangolin";
 exports.TOTAL_SUPPLY = "230000000"; // 230M
@@ -11,21 +10,20 @@ exports.PROPOSAL_THRESHOLD = "100000"; // 100K
 exports.INITIAL_FARMS = [
   {
     tokenA: "0x04068DA6C83AFCFA0e13ba15A6696662335D5B75", // USDC
-    tokenB: WRAPPED_NATIVE_TOKEN,
+    tokenB: WONE,
     weight: 2000
   },
   {
     tokenA: "0x049d68029688eAbF473097a2fC38ef61633A3C7A", // fUSDT
-    tokenB: WRAPPED_NATIVE_TOKEN,
+    tokenB: WONE,
     weight: 1000
   },
   {
     tokenA: "0x8D11eC38a3EB5E956B052f67Da8Bdc9bef8Abf3E", // DAI
-    tokenB: WRAPPED_NATIVE_TOKEN,
+    tokenB: WONE,
     weight: 1000
   }
 ];
-
 exports.AIRDROP_AMOUNT = "11500000"; // 11.5M or 5% of max supply
 exports.VESTER_ALLOCATIONS = [
   {
