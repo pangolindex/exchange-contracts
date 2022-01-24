@@ -5,9 +5,14 @@ exports.PNG_NAME = "Pangolin";
 exports.TOTAL_SUPPLY = 230000000; // 230M
 exports.AIRDROP_AMOUNT = 11500000; // 11.5M or 5% of max supply
 exports.TIMELOCK_DELAY = 3 * 24 * 60 * 60; // 3 days
-exports.MULTISIG_OWNERS = [
-  "0xDA315a838E918026E51A864c43766f5AE86be8c6" // shung
-];
+exports.MULTISIG = {
+  owners: [
+    "0x72C397908Cb93d1B569BBB0Ff8d3D26B7b21d730", // Trollip
+    "0xDA315a838E918026E51A864c43766f5AE86be8c6"  // Shung
+  ],
+  threshold: 2
+};
+exports.USE_GNOSIS_SAFE = false;
 exports.PROPOSAL_THRESHOLD = 100000; // 100K
 exports.PNG_STAKING_ALLOCATION = 500, // 5x weight in minichef
 exports.WETH_PNG_FARM_ALLOCATION = 3000, // 30x weight

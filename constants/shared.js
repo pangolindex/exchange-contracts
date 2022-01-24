@@ -1,4 +1,5 @@
-exports.FOUNDATION_MULTISIG_OWNERS = [
+exports.FOUNDATION_MULTISIG = {
+  owners: [
   "0x72c397908cb93d1b569bbb0ff8d3d26b7b21d730",
   "0x5e5b04a92890dee8921c2355220f09551fadb296",
   "0x0de046423099cfd8c2fe02c7e1155b018cdc9992",
@@ -9,4 +10,6 @@ exports.FOUNDATION_MULTISIG_OWNERS = [
   "0xac2ecd9e4208e97c335fdddbbf49ee219c0e7da6",
   "0xc8643b1aba4d6ebde90a74ea311dfe235129be31",
   "0xec9b9ec0ec4cb499bb7c246e38ab43e4a5e1f1ce"
-];
+  ],
+  threshold: 5
+};

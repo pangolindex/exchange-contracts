@@ -1,12 +1,11 @@
 const { ethers } = require('hardhat');
-
-const { FOUNDATION_MULTISIG_OWNERS } = require("../constants/shared.js");
-
+const { FOUNDATION_MULTISIG } = require("../constants/shared.js");
 const {
     PNG_SYMBOL,
     PNG_NAME,
     TOTAL_SUPPLY,
-    MULTISIG_OWNERS,
+    MULTISIG,
+    USE_GNOSIS_SAFE,
     PROPOSAL_THRESHOLD,
     WRAPPED_NATIVE_TOKEN,
     INITIAL_FARMS,
@@ -16,6 +15,9 @@ const {
     PNG_STAKING_ALLOCATION,
     WETH_PNG_FARM_ALLOCATION
 } = require( `../constants/${network.name}.js`);
+if (USE_GNOSIS_SAFE) {
+    var { EthersAdapter, SafeFactory } = require('@gnosis.pm/safe-core-sdk');
+}
 
 function delay(timeout) {
 	return new Promise(resolve => {
@@ -33,6 +35,22 @@ async function main() {
     const initBalance = await deployer.getBalance();
     console.log("Account balance:", initBalance.toString());
 
+    console.log("\n===================\n DEPLOYMENT CONFIG \n===================");
+    if (USE_GNOSIS_SAFE) {
+        console.log("✅ Using Gnosis Safe for multisig accounts.");
+    } else {
+        console.log("Using regular multisig wallets instead of Gnosis Safe.");
+    }
+    console.log("Using Timelock + Multisig instead of full governance.");
+    if (WRAPPED_NATIVE_TOKEN === undefined || WRAPPED_NATIVE_TOKEN == "") {
+        console.log("⚠️  No wrapped token contract is defined.");
+    } else {
+        console.log("✅ An existing wrapped token contract is defined.");
+    }
+    if (INITIAL_FARMS.length === 0 || INITIAL_FARMS === undefined) {
+        console.log("⚠️  No initial farm is defined.");
+    }
+
     // dirty hack to circumvent duplicate nonce submission error
     var txCount = await ethers.provider.getTransactionCount(deployer.address);
     async function confirmTransactionCount() {
@@ -42,7 +60,7 @@ async function main() {
             try {
                 newTxCount = await ethers.provider.getTransactionCount(deployer.address);
                 if (newTxCount != ( txCount + 1)) {
-                    console.log(`Wrong tx count. Rechecking in 10 secs`);
+                    console.log(`⚠️  Wrong tx count. Rechecking in 10 secs`);
                     await delay(30000);
                     continue;
                 };
@@ -87,17 +105,38 @@ async function main() {
     await confirmTransactionCount();
     console.log("PNG token deployed at: " + png.address);
 
-    // Deploy this chain multisig
-    const Multisig = await ethers.getContractFactory("MultiSigWalletWithDailyLimit");
-    const multisig = await Multisig.deploy(MULTISIG_OWNERS, MULTISIG_OWNERS.length, 0);
-    await multisig.deployed();
-    await confirmTransactionCount();
+    // Deploy this chain’s multisig
+    if (USE_GNOSIS_SAFE) {
+        const ethAdapter = new EthersAdapter({
+          ethers,
+          signer: deployer
+        });
+        var Multisig = await SafeFactory.create({ ethAdapter });
+        var multisig = await Multisig.deploySafe(MULTISIG);
+        await confirmTransactionCount();
+        multisig.address = multisig.getAddress();
+    } else {
+        var Multisig = await ethers.getContractFactory("MultiSigWalletWithDailyLimit");
+        var multisig = await Multisig.deploy(MULTISIG.owners, MULTISIG.threshold, 0);
+        await multisig.deployed();
+        await confirmTransactionCount();
+    }
     console.log("Multisig deployed at: " + multisig.address);
 
     // Deploy foundation multisig
-    const foundation = await Multisig.deploy(FOUNDATION_MULTISIG_OWNERS, 5, 0);
-    await foundation.deployed();
-    await confirmTransactionCount();
+    if (USE_GNOSIS_SAFE) {
+        var foundation = await Multisig.deploySafe(FOUNDATION_MULTISIG);
+        await confirmTransactionCount();
+        foundation.address = foundation.getAddress();
+    } else {
+        var foundation = await Multisig.deploy(
+            FOUNDATION_MULTISIG.owners,
+            FOUNDATION_MULTISIG.threshold,
+            0
+        );
+        await foundation.deployed();
+        await confirmTransactionCount();
+    }
     console.log("Foundation multisig deployed at: " + foundation.address);
 
     // Deploy Timelock
@@ -130,8 +169,10 @@ async function main() {
      *****************/
 
     // Deploy LP Factory
-    const PangolinFactory = await ethers.getContractFactory("contracts/pangolin-core/PangolinFactory.sol:PangolinFactory");
-    const factory = await PangolinFactory.deploy(deployer.address); // feeToSetter transferred to multisig after fee collector setup
+    const PangolinFactory = await ethers.getContractFactory(
+        "contracts/pangolin-core/PangolinFactory.sol:PangolinFactory"
+    );
+    const factory = await PangolinFactory.deploy(deployer.address);
     await factory.deployed();
     await confirmTransactionCount();
     console.log("Pangolin Factory deployed at: " + factory.address);
@@ -148,8 +189,10 @@ async function main() {
      **********************/
 
     // Deploy MiniChefV2
-    const MiniChef = await ethers.getContractFactory("contracts/dex/MiniChefV2.sol:MiniChefV2");
-    const chef = await MiniChef.deploy(png.address, deployer.address); // ownership is transferred to multisig after initial farms are setup
+    const MiniChef = await ethers.getContractFactory(
+        "contracts/dex/MiniChefV2.sol:MiniChefV2"
+    );
+    const chef = await MiniChef.deploy(png.address, deployer.address);
     await chef.deployed();
     await confirmTransactionCount();
     console.log("MiniChefV2 deployed at: " + chef.address);
@@ -208,7 +251,11 @@ async function main() {
     );
     await tx.wait();
     await confirmTransactionCount();
-    console.log((TOTAL_SUPPLY - AIRDROP_AMOUNT), PNG_SYMBOL, "was transferred to Treasury Vester");
+    console.log(
+        (TOTAL_SUPPLY - AIRDROP_AMOUNT),
+        PNG_SYMBOL,
+        "was transferred to Treasury Vester"
+    );
 
     // Start vesting and transfer ownership to timelock
     tx = await vester.startVesting();
@@ -231,9 +278,23 @@ async function main() {
     console.log("PNG Staking address is: " + staking.address)
 
     // Deploy 2/2 Joint Multisig
-    const jointMultisig = await Multisig.deploy([multisig.address, foundation.address], 2, 0);
-    await jointMultisig.deployed();
-    await confirmTransactionCount();
+    if (USE_GNOSIS_SAFE) {
+        var jointMultisig = await Multisig.deploySafe({
+            owners: [
+                multisig.address,
+                foundation.address
+            ],
+            threshold: 2
+        });
+        await confirmTransactionCount();
+        jointMultisig.address = jointMultisig.getAddress();
+    } else {
+        var jointMultisig = await Multisig.deploy(
+            [multisig.address, foundation.address], 2, 0
+        );
+        await jointMultisig.deployed();
+        await confirmTransactionCount();
+    }
     console.log("Joint multisig deployed at: " + jointMultisig.address)
 
     // Deploy Revenue Distributor (Joint treasury of PNG and FPNG)
