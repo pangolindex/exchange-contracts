@@ -1,5 +1,4 @@
 const { ethers } = require('hardhat');
-const { BigNumber } = require('ethers');
 
 const { FOUNDATION_MULTISIG_OWNERS } = require("../constants/shared.js");
 
