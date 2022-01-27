@@ -39,7 +39,7 @@ async function main() {
     if (USE_GNOSIS_SAFE) {
         console.log("✅ Using Gnosis Safe for multisig accounts.");
     } else {
-        console.log("Using regular multisig wallets instead of Gnosis Safe.");
+        console.log("Using legacy multisig instead of Gnosis Safe.");
     }
     console.log("Using Timelock + Multisig instead of full governance.");
     if (WRAPPED_NATIVE_TOKEN === undefined || WRAPPED_NATIVE_TOKEN == "") {

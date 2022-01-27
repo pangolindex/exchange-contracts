@@ -1,6 +1,5 @@
 contracts/TestERC20.sol
 contracts/WAVAX.sol
-test/
 cache/
 node_modules/
 artifacts/

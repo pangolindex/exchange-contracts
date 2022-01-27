@@ -14,57 +14,70 @@ contract RevenueDistributor {
     mapping(uint => Recipient) private _recipients;
 
     address public admin;
-    uint public constant DENOMINATOR = 10000;
     uint private _recipientsLength;
+    uint private constant DENOMINATOR = 10000;
 
-    constructor(address newAdmin, Recipient[] memory newRecipients) {
+    constructor(
+        address newAdmin,
+        Recipient[] memory newRecipients
+    ) {
         admin = newAdmin;
         setRecipients(newRecipients);
     }
 
     function getRecipients() external view returns (Recipient[] memory) {
-        require(_recipientsLength != 0, "No recipients exist");
+        require(_recipientsLength != 0, "no recipient exists");
         Recipient[] memory recipients =
             new Recipient[](_recipientsLength);
-        for (uint i; i < _recipientsLength; i++) {
-            recipients[i] = Recipient({
-                account: _recipients[i].account,
-                allocation: _recipients[i].allocation
-            });
+        for (uint i; i < _recipientsLength; ++i) {
+            recipients[i] = _recipients[i];
         }
         return recipients;
     }
 
-    function distributeToken(address token) public {
+    function distributeToken(address token) external {
         uint amount = IERC20(token).balanceOf(address(this));
-        for (uint i; i < _recipientsLength; i++) {
-            address receiverAddress = _recipients[i].account;
+        require(amount != 0, "cannot distribute zero");
+        // distribute to all but last recipient
+        for (uint i; i < _recipientsLength - 1; ++i) {
             IERC20(token).safeTransfer(
-                receiverAddress,
+                _recipients[i].account,
                 amount * _recipients[i].allocation / DENOMINATOR
             );
         }
+        // distribute the remaining to the last recipient
+        IERC20(token).safeTransfer(
+            _recipients[_recipientsLength - 1].account,
+            IERC20(token).balanceOf(address(this))
+        );
         emit TokenDistributed(token, amount);
     }
 
-    function setAdmin(address newAdmin) public {
-        require(msg.sender == admin, "sender not admin");
+    function setAdmin(address newAdmin) external {
+        require(msg.sender == admin, "sender is not admin");
+        require(newAdmin != address(0), "invalid new admin");
         admin = newAdmin;
         emit AdminChanged(admin);
     }
 
     function setRecipients(Recipient[] memory newRecipients) public {
         if (_recipientsLength != 0) {
-            require(msg.sender == admin, "sender not admin");
+            require(msg.sender == admin, "sender is not admin");
         }
         _recipientsLength = newRecipients.length;
-        require(_recipientsLength > 0, "cannot set zero recipients");
-        require(_recipientsLength < 51, "cannot set more than 50 recipients");
+        require(
+            _recipientsLength != 0 && _recipientsLength < 21,
+            "invalid recipient number"
+        );
         uint allocations;
-        for (uint i; i < _recipientsLength; i++) {
+        for (uint i; i < _recipientsLength; ++i) {
             Recipient memory recipient = newRecipients[i];
-            _recipients[i].account = recipient.account;
-            _recipients[i].allocation = recipient.allocation;
+            require(
+                recipient.account != address(0),
+                "invalid recipient address"
+            );
+            require(recipient.allocation != 0, "invalid recipient allocation");
+            _recipients[i] = recipient;
             allocations += recipient.allocation;
         }
         require(
