@@ -11,6 +11,7 @@ const {
     INITIAL_FARMS,
     AIRDROP_AMOUNT,
     VESTER_ALLOCATIONS,
+    REVENUE_DISTRIBUTION,
     TIMELOCK_DELAY,
     PNG_STAKING_ALLOCATION,
     WETH_PNG_FARM_ALLOCATION
@@ -298,10 +299,17 @@ async function main() {
     console.log("Joint multisig deployed at: " + jointMultisig.address)
 
     // Deploy Revenue Distributor (Joint treasury of PNG and FPNG)
+    var revenueDistribution = [];
+    for (let i = 0; i < REVENUE_DISTRIBUTION.length; i++) {
+        revenueDistribution.push([
+            eval(REVENUE_DISTRIBUTION[i].recipient + '.address'),
+            REVENUE_DISTRIBUTION[i].allocation
+        ]);
+    };
     const RevenueDistributor = await ethers.getContractFactory("RevenueDistributor");
     const revenueDistributor = await RevenueDistributor.deploy(
         jointMultisig.address,
-        [[multisig.address,8000],[foundation.address,2000]]
+        revenueDistribution
     );
     await revenueDistributor.deployed();
     await confirmTransactionCount();
@@ -434,6 +442,11 @@ async function main() {
     console.log("Fee Collector address:      ", feeCollector.address);
     console.log("Dummy PGL address:          ", dummyERC20.address);
     console.log("RevenueDistributor address: ", revenueDistributor.address);
+    for (let i = 0; i < REVENUE_DISTRIBUTION.length; i++) {
+        console.log("                             " +
+            REVENUE_DISTRIBUTION[i].recipient + ": " +
+            (REVENUE_DISTRIBUTION[i].allocation / 100 ) + "%");
+    };
     console.log("Timelock address:           ", timelock.address);
     //console.log("GovernorAlpha address:      ", governor.address);
     console.log("MiniChefV2 address:         ", chef.address);
