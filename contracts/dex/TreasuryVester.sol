@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract TreasuryVester {
@@ -14,30 +13,23 @@ contract TreasuryVester {
 
     mapping(uint => Recipient) private _recipients;
 
-    address public admin;
+    uint[5] private _initialVestingPercentages = [2500, 1400, 800, 530, 390];
 
-    bool public vestingEnabled;
+    address public admin;
 
     IERC20 public immutable vestedToken;
 
-    uint public step;
-    uint public lastUpdate;
+    bool public vestingEnabled;
 
-    uint private constant DENOMINATOR = 10000;
-    uint private constant STEPS_TO_SLASH = 30;
-    uint private constant VESTING_CLIFF = 86400;
+    uint public lastUpdate;
     uint private _startingBalance;
     uint private _vestingAmount;
     uint private _recipientsLength;
-
-    /* The percentage of the 5 first months is constant, after this the percentage
-    * is decreased according to the algorithm.
-    * two decimals for percentage, 2000 = 20.00%, 505 = 5.05%, 65 = 0.65%
-    */
-    uint[5] private _initialVestingPercentages = [2500, 1400, 800, 530, 390];
-
-    // Percentage of startingBalance to distribute during between slashes
+    uint private _step;
     uint private _vestingPercentage = _initialVestingPercentages[0];
+    uint private constant DENOMINATOR = 10000;
+    uint private constant STEPS_TO_SLASH = 30;
+    uint private constant VESTING_CLIFF = 86400;
 
     constructor(
         address _vestedToken,
@@ -45,23 +37,19 @@ contract TreasuryVester {
     ) {
         admin = msg.sender;
         vestedToken = IERC20(_vestedToken);
-        _vestingAmount = getVestingAmount();
         setRecipients(newRecipients);
     }
 
     function getRecipients() external view returns (Recipient[] memory) {
         require(_recipientsLength != 0, "no recipient exists");
         Recipient[] memory recipients = new Recipient[](_recipientsLength);
-        for (uint i; i < _recipientsLength; i++) {
-            recipients[i] = Recipient({
-                account: _recipients[i].account,
-                allocation: _recipients[i].allocation
-            });
+        for (uint i; i < _recipientsLength; ++i) {
+            recipients[i] = _recipients[i];
         }
         return recipients;
     }
 
-    function getVestingAmount() private view returns (uint) {
+    function getVestingAmount() public view returns (uint) {
         return
             _startingBalance *
                 _vestingPercentage /
@@ -69,58 +57,16 @@ contract TreasuryVester {
                 STEPS_TO_SLASH;
     }
 
-    function setAdmin(address newAdmin) public {
-        require(msg.sender == admin, "sender not admin");
-        admin = newAdmin;
-        emit AdminChanged(admin);
-    }
-
-    /**
-     * @dev Enable distribution. A sufficient amount of vestedToken
-     * must be transferred to the contract before enabling.
-     */
-    function startVesting() external {
-        require(msg.sender == admin, "sender not admin");
-        require(!vestingEnabled, 'vesting already started');
-        require(_recipientsLength > 0, 'no recipients were set');
-        _startingBalance = vestedToken.balanceOf(address(this));
-        vestingEnabled = true;
-        emit VestingEnabled();
-    }
-
-    function setRecipients(Recipient[] memory newRecipients) public {
-        if (_recipientsLength != 0) {
-            require(msg.sender == admin, "sender not admin");
-        }
-        _recipientsLength = newRecipients.length;
-        require(_recipientsLength > 0, "cannot set zero recipients");
-        require(_recipientsLength < 51, "cannot set more than 50 recipients");
-        uint allocations;
-        for (uint i; i < _recipientsLength; i++) {
-            Recipient memory recipient = newRecipients[i];
-            allocations += recipient.allocation;
-            _recipients[i].account = recipient.account;
-            _recipients[i].allocation = recipient.allocation;
-        }
-        require(
-            allocations == DENOMINATOR,
-            "total allocations do not equal to denominator"
-        );
-        emit RecipientsChanged(newRecipients);
-    }
-
     function distribute() public {
-        require(vestingEnabled, 'vesting not enabled');
+        require(vestingEnabled, "vesting not enabled");
         require(
             block.timestamp >= lastUpdate + VESTING_CLIFF,
-            'too early to distribute'
+            "too early to distribute"
         );
-
         lastUpdate = block.timestamp;
-        step++;
-
-        if (step % STEPS_TO_SLASH == 0) {
-            uint slash = step / STEPS_TO_SLASH;
+        _step++;
+        if (_step % STEPS_TO_SLASH == 0) {
+            uint slash = _step / STEPS_TO_SLASH;
             if (slash < 5) {
                 _vestingPercentage = _initialVestingPercentages[slash];
             } else if (slash < 12) {
@@ -132,19 +78,66 @@ contract TreasuryVester {
             }
             _vestingAmount = getVestingAmount();
         }
-
         uint balance = vestedToken.balanceOf(address(this));
         if (_vestingAmount > balance) {
             _vestingAmount = balance;
         }
-
         // Distribute the tokens
         for (uint i; i < _recipientsLength; i++) {
             Recipient memory recipient = _recipients[i];
-            uint amount = recipient.allocation * _vestingAmount / DENOMINATOR;
-            vestedToken.safeTransfer(recipient.account, amount);
+            vestedToken.safeTransfer(
+                recipient.account,
+                recipient.allocation * _vestingAmount / DENOMINATOR
+            );
         }
         emit TokensVested(_vestingAmount);
+    }
+
+    function setRecipients(Recipient[] memory newRecipients) public onlyAdmin {
+        _recipientsLength = newRecipients.length;
+        require(
+            _recipientsLength != 0 && _recipientsLength < 21,
+            "invalid recipient number"
+        );
+        uint allocations;
+        for (uint i; i < _recipientsLength; ++i) {
+            Recipient memory recipient = newRecipients[i];
+            require(
+                recipient.account != address(0),
+                "invalid recipient address"
+            );
+            require(recipient.allocation != 0, "invalid recipient allocation");
+            _recipients[i] = recipient;
+            allocations += recipient.allocation;
+        }
+        require(
+            allocations == DENOMINATOR,
+            "total allocations do not equal to denominator"
+        );
+        emit RecipientsChanged(newRecipients);
+    }
+
+    /// @notice enable distribution
+    /// @dev sufficient amount of vestedToken must exist
+    function startVesting() external onlyAdmin {
+        require(!vestingEnabled, "vesting already started");
+        require(_recipientsLength > 0, "no recipients were set");
+        _startingBalance = vestedToken.balanceOf(address(this));
+        _vestingAmount = getVestingAmount();
+        require(_vestingAmount > 0, "insufficient amount of vestedToken");
+        vestingEnabled = true;
+        emit VestingEnabled();
+    }
+
+    function setAdmin(address newAdmin) external onlyAdmin {
+        require(msg.sender == admin, "sender not admin");
+        admin = newAdmin;
+        emit AdminChanged(admin);
+    }
+
+    modifier onlyAdmin() {
+        require(msg.sender == admin, "unpriviledged message sender");
+        _;
     }
 
     event VestingEnabled();

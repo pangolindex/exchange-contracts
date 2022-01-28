@@ -21,14 +21,14 @@ contract RevenueDistributor {
         address newAdmin,
         Recipient[] memory newRecipients
     ) {
+        require(newAdmin != address(0), "invalid new admin");
         admin = newAdmin;
         setRecipients(newRecipients);
     }
 
     function getRecipients() external view returns (Recipient[] memory) {
         require(_recipientsLength != 0, "no recipient exists");
-        Recipient[] memory recipients =
-            new Recipient[](_recipientsLength);
+        Recipient[] memory recipients = new Recipient[](_recipientsLength);
         for (uint i; i < _recipientsLength; ++i) {
             recipients[i] = _recipients[i];
         }
