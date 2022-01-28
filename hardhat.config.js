@@ -194,6 +194,11 @@ module.exports = {
       chainId: 80001,
       accounts: [process.env.PRIVATE_KEY]
     },
+    wagmi_mainnet: {
+      url: 'https://api.trywagmi.xyz/rpc',
+      chainId: 11111,
+      accounts: [process.env.PRIVATE_KEY]
+    },
     xdai_mainnet: {
       url: 'https://rpc.xdaichain.com/',
       chainId: 100,
