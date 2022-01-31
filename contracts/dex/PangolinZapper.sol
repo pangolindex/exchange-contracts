@@ -79,9 +79,10 @@ contract MiniChefV2Zapper {
         address tokenIn,
         uint256 tokenInAmount,
         uint256 tokenAmountOutMin,
+        uint256 deadline,
         uint8 v, bytes32 r, bytes32 s
     ) external {
-        IPangolinPair(pairAddress).permit(msg.sender, address(this), tokenInAmount, block.timestamp, v, r, s);
+        IPangolinPair(pairAddress).permit(msg.sender, address(this), tokenInAmount, deadline, v, r, s);
         zapIn(pairAddress, tokenIn, tokenInAmount, tokenAmountOutMin);
     }
 
@@ -107,9 +108,10 @@ contract MiniChefV2Zapper {
         uint256 tokenInAmount,
         uint256 tokenAmountOutMin,
         uint256 pid,
+        uint256 deadline,
         uint8 v, bytes32 r, bytes32 s
     ) external {
-        IPangolinPair(tokenIn).permit(msg.sender, address(this), tokenInAmount, block.timestamp, v, r, s);
+        IPangolinPair(tokenIn).permit(msg.sender, address(this), tokenInAmount, deadline, v, r, s);
         zapInAndFarm(pairAddress, tokenIn, tokenInAmount, tokenAmountOutMin, pid);
     }
 
@@ -121,9 +123,10 @@ contract MiniChefV2Zapper {
     function zapOutViaPermit(
         address pairAddress,
         uint256 withdrawAmount,
+        uint256 deadline,
         uint8 v, bytes32 r, bytes32 s
     ) external {
-        IPangolinPair(pairAddress).permit(msg.sender, address(this), withdrawAmount, block.timestamp, v, r, s);
+        IPangolinPair(pairAddress).permit(msg.sender, address(this), withdrawAmount, deadline, v, r, s);
         zapOut(pairAddress, withdrawAmount);
     }
 
@@ -163,9 +166,10 @@ contract MiniChefV2Zapper {
         uint256 withdrawAmount,
         address desiredToken,
         uint256 desiredTokenOutMin,
+        uint256 deadline,
         uint8 v, bytes32 r, bytes32 s
     ) external {
-        IPangolinPair(pairAddress).permit(msg.sender, address(this), withdrawAmount, block.timestamp, v, r, s);
+        IPangolinPair(pairAddress).permit(msg.sender, address(this), withdrawAmount, deadline, v, r, s);
         zapOutAndSwap(pairAddress, withdrawAmount, desiredToken, desiredTokenOutMin);
     }
 
