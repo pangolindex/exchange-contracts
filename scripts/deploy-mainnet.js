@@ -232,7 +232,9 @@ async function main() {
     const TreasuryVester = await ethers.getContractFactory("TreasuryVester");
     const vester = await TreasuryVester.deploy(
         png.address, // vested token
-        vesterAllocations
+        ethers.utils.parseUnits((TOTAL_SUPPLY - AIRDROP_AMOUNT).toString(), 18),
+        vesterAllocations,
+        multisig.address
     );
     await vester.deployed();
     await confirmTransactionCount();
@@ -259,13 +261,13 @@ async function main() {
     );
 
     // Start vesting and transfer ownership to timelock
-    tx = await vester.startVesting();
-    await tx.wait();
-    await confirmTransactionCount();
+    //tx = await vester.startVesting();
+    //await tx.wait();
+    //await confirmTransactionCount();
     tx = await vester.setAdmin(timelock.address);
     await tx.wait();
     await confirmTransactionCount();
-    console.log("Vesting started.")
+    console.log("TreasuryVester ownership was transferred to Timelock");
 
     /*******************************
      * PNG STAKING & FEE COLLECTOR *

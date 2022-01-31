@@ -41,11 +41,6 @@ describe("RevenueDistributor.sol", function () {
     // Get addresses that might send transactions
     [ this.admin, this.unprivileged ] = await ethers.getSigners();
 
-    // Deploy WAVAX
-    let WAVAX = await ethers.getContractFactory("WAVAX");
-    this.wavax = await WAVAX.deploy();
-    await this.wavax.deployed();
-
     // Deploy Dummy ERC20
     let Token = await ethers.getContractFactory("DummyERC20");
     this.token = await Token.deploy(
@@ -68,9 +63,6 @@ describe("RevenueDistributor.sol", function () {
       this.recipients
     );
     await this.distributor.deployed();
-
-    this.distributor1 = await this.distributor.connect(this.admin);
-    this.distributor2 = await this.distributor.connect(this.unprivileged);
 
   });
 
@@ -164,7 +156,6 @@ describe("RevenueDistributor.sol", function () {
     for (let i = 1; i <= 20; i++) {
 
       describe("distributes tokens to " + i + " recipients", function () {
-
         before(async function() {
           this.recipients = generateRecipients(i);
           this.amount = BigNumber.from(chance.integer({ min: 0 }));

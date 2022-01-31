@@ -33,18 +33,9 @@ exports.VESTER_ALLOCATIONS = [
   {
     recipient: "chef", // MiniChef
     allocation: 6053, // 57.5% LPs & PNG Staking
+    isMiniChef: true
   }
 ];
-exports.REVENUE_DISTRIBUTION = [
-  {
-    recipient: "foundation", // Pangolin Foundation
-    allocation: 2000,        // 20%
-  },
-  {
-    recipient: "multisig", // New team
-    allocation: 8000,      // 80%
-  }
-]
 exports.REVENUE_DISTRIBUTION = [
   {
     recipient: "foundation", // Pangolin Foundation
