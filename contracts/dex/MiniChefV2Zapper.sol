@@ -115,6 +115,32 @@ contract MiniChefV2Zapper {
         zapInAndFarm(pairAddress, tokenIn, tokenInAmount, tokenAmountOutMin, pid);
     }
 
+    function zapOutAndSwapAVAX(
+        address pairAddress,
+        uint256 withdrawAmount,
+        uint256 desiredAVAXOutMin,
+        address to
+    ) public {
+        zapOutAndSwap(pairAddress, withdrawAmount, WAVAX, desiredAVAXOutMin, address(this));
+
+        uint256 balance = IWAVAX(WAVAX).balanceOf(address(this));
+        IWAVAX(WAVAX).withdraw(balance);
+
+        TransferHelper.safeTransferAVAX(to, balance);
+    }
+
+    function zapOutAndSwapAVAXViaPermit(
+        address pairAddress,
+        uint256 withdrawAmount,
+        uint256 desiredAVAXOutMin,
+        address to,
+        uint256 deadline,
+        uint8 v, bytes32 r, bytes32 s
+    ) external {
+        IPangolinPair(pairAddress).permit(msg.sender, address(this), withdrawAmount, deadline, v, r, s);
+        zapOutAndSwapAVAX(pairAddress, withdrawAmount, desiredAVAXOutMin, to);
+    }
+
     function zapOut(address pairAddress, uint256 withdrawAmount, address to) public {
         TransferHelper.safeTransferFrom(pairAddress, msg.sender, address(this), withdrawAmount);
         _removeLiquidity(pairAddress, to);
