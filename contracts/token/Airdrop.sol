@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
+interface IPNG {
+    function balanceOf(address account) external view returns (uint);
+    function transfer(address dst, uint rawAmount) external returns (bool);
+}
+
 /**
  *  Contract for administering the Airdrop of xPNG to PNG holders.
  *  Arbitrary amount PNG will be made available in the airdrop. After the
@@ -8,24 +13,18 @@ pragma solidity ^0.8.0;
  *  community treasury.
  */
 contract Airdrop {
-    address public png;
-    address public whitelister;
+    address public immutable png;
     address public owner;
+    address public whitelister;
     address public remainderDestination;
 
     // amount of PNG to transfer
-    mapping (address => uint96) public withdrawAmount;
+    mapping (address => uint) public withdrawAmount;
 
     uint public totalAllocated;
-
-    bool public claimingAllowed;
-
     uint public airdropSupply;
 
-    // Events
-    event ClaimingAllowed();
-    event ClaimingOver();
-    event PngClaimed(address claimer, uint amount);
+    bool public claimingAllowed;
 
     /**
      * Initializes the contract. Sets token addresses, owner, and leftover token
@@ -36,16 +35,16 @@ contract Airdrop {
      * @param remainderDestination_ address to transfer remaining PNG to when
      *     claiming ends. Should be community treasury.
      */
-    constructor(uint supply_,
-                address png_,
-                address owner_,
-                address remainderDestination_) {
+    constructor(
+        uint supply_,
+        address png_,
+        address owner_,
+        address remainderDestination_
+    ) {
         airdropSupply = supply_;
         png = png_;
         owner = owner_;
         remainderDestination = remainderDestination_;
-        claimingAllowed = false;
-        totalAllocated = 0;
     }
 
     /**
@@ -56,7 +55,10 @@ contract Airdrop {
      *     claiming ends.
      */
     function setRemainderDestination(address remainderDestination_) external {
-        require(msg.sender == owner, 'Airdrop::setRemainderDestination: unauthorized');
+        require(
+            msg.sender == owner,
+            'Airdrop::setRemainderDestination: unauthorized'
+        );
         remainderDestination = remainderDestination_;
     }
 
@@ -65,19 +67,36 @@ contract Airdrop {
      *
      * @param owner_ new contract owner address
      */
-    function setowner(address owner_) external {
-        require(msg.sender == owner, 'Airdrop::setowner: unauthorized');
+    function setOwner(address owner_) external {
+        require(owner_ != address(0), 'Airdrop::setOwner: invalid new owner');
+        require(msg.sender == owner, 'Airdrop::setOwner: unauthorized');
         owner = owner_;
     }
 
     /**
-     * Enable the claiming period and allow user to claim PNG. Before activation,
-     * this contract must have a PNG balance equal to the total airdrop PNG
-     * supply of 16.9 million PNG. All claimable PNG tokens must be whitelisted
-     * before claiming is enabled. Only callable by the owner.
+     *  Optionally set a secondary address to manage whitelisting (e.g. a bot)
+     */
+    function setWhitelister(address addr) external {
+        require(msg.sender == owner, 'Airdrop::setWhitelister: unauthorized');
+        whitelister = addr;
+    }
+
+    function setAirdropSupply(uint supply) external {
+        require(msg.sender == owner, 'Airdrop::setWhitelister: unauthorized');
+        airdropSupply = supply;
+    }
+
+    /**
+     * Enable the claiming period and allow user to claim PNG. Before
+     * activation, this contract must have a PNG balance equal to airdropSupply
+     * All claimable PNG tokens must be whitelisted before claiming is enabled.
+     * Only callable by the owner.
      */
     function allowClaiming() external {
-        require(IPNG(png).balanceOf(address(this)) >= airdropSupply, 'Airdrop::allowClaiming: incorrect PNG supply');
+        require(IPNG(png).balanceOf(
+            address(this)) >= airdropSupply,
+            'Airdrop::allowClaiming: incorrect PNG supply'
+        );
         require(msg.sender == owner, 'Airdrop::allowClaiming: unauthorized');
         claimingAllowed = true;
         emit ClaimingAllowed();
@@ -92,81 +111,76 @@ contract Airdrop {
         require(claimingAllowed, "Airdrop::endClaiming: Claiming not started");
 
         claimingAllowed = false;
-        emit ClaimingOver();
 
         // Transfer remainder
         uint amount = IPNG(png).balanceOf(address(this));
-        require(IPNG(png).transfer(remainderDestination, amount), 'Airdrop::endClaiming: Transfer failed');
+        require(
+            IPNG(png).transfer(remainderDestination, amount),
+            'Airdrop::endClaiming: Transfer failed'
+        );
+
+        emit ClaimingOver();
     }
 
     /**
-     * Withdraw your PNG. In order to qualify for a withdrawl, the
+     * Withdraw your PNG. In order to qualify for a withdrawal, the
      * caller's address must be whitelisted. All PNG must be claimed at
      * once. Only the full amount can be claimed and only one claim is
      * allowed per user.
      */
     function claim() external {
-        // tradeoff: if you only transfer one but you held both, you can't claim
         require(claimingAllowed, 'Airdrop::claim: Claiming is not allowed');
-        require(withdrawAmount[msg.sender] > 0, 'Airdrop::claim: No PNG to claim');
+        require(
+            withdrawAmount[msg.sender] > 0,
+            'Airdrop::claim: No PNG to claim'
+        );
 
         uint amountToClaim = withdrawAmount[msg.sender];
         withdrawAmount[msg.sender] = 0;
 
+        require(
+            IPNG(png).transfer(msg.sender, amountToClaim),
+            'Airdrop::claim: Transfer failed'
+        );
+
         emit PngClaimed(msg.sender, amountToClaim);
-
-        require(IPNG(png).transfer(msg.sender, amountToClaim), 'Airdrop::claim: Transfer failed');
     }
 
     /**
-     *  Set an EOA to simply handle whitelisting addresses
+     * Whitelist multiple addresses in one call.
+     * All parameters are arrays. Each array must be the same length. Each index
+     * corresponds to one (address, png) tuple. Callable by the owner or whitelister.
      */
-    function setWhitelister(address addr) external {
-        require(msg.sender == owner, 'Airdrop::setWhitelister: unauthorized');
-        whitelister = addr;
-    }
-
-    /**
-     * Whitelist an address to claim PNG. Specify the amount of PNG to be
-     * allocated. That address will then be able to claim that amount of PNG
-     * during the claiming period. The transferrable amount of PNG must be
-     * nonzero. Total amount allocated must be less than or equal to the total
-     * airdrop supply. Whitelisting must occur before the claiming period is
-     * enabled. Addresses may only be added one time. Only called by the owner.
-     *
-     * @param addr address that may claim PNG
-     * @param pngOut the amount of PNG that addr may withdraw
-     */
-    function whitelistAddress(address addr, uint96 pngOut) public {
+    function whitelistAddresses(
+        address[] memory addrs,
+        uint[] memory pngOuts
+    ) external {
+        require(
+            !claimingAllowed,
+            'Airdrop::whitelistAddress: claiming in session'
+        );
         require(
             msg.sender == owner || msg.sender == whitelister,
             'Airdrop::whitelistAddress: unauthorized'
         );
-        require(!claimingAllowed, 'Airdrop::whitelistAddress: claiming in session');
-        require(pngOut > 0, 'Airdrop::whitelistAddress: No PNG to allocated');
-        require(withdrawAmount[addr] == 0, 'Airdrop::whitelistAddress: address already added');
-
-        withdrawAmount[addr] = pngOut;
-
-        totalAllocated = totalAllocated + pngOut;
-        require(totalAllocated <= airdropSupply, 'Airdrop::whitelistAddress: Exceeds PNG allocation');
-    }
-
-    /**
-     * Whitelist multiple addresses in one call. Wrapper around whitelistAddress.
-     * All parameters are arrays. Each array must be the same length. Each index
-     * corresponds to one (address, png) tuple. Only callable by the owner.
-     */
-    function whitelistAddresses(address[] memory addrs, uint96[] memory pngOuts) external {
-        require(addrs.length == pngOuts.length,
-                'Airdrop::whitelistAddresses: incorrect array length');
+        require(
+            addrs.length == pngOuts.length,
+            'Airdrop::whitelistAddresses: incorrect array length'
+        );
         for (uint i = 0; i < addrs.length; i++) {
-            whitelistAddress(addrs[i], pngOuts[i]);
+            address addr = addrs[i];
+            uint pngOut = pngOuts[i];
+            totalAllocated = totalAllocated + pngOut - withdrawAmount[addr];
+            withdrawAmount[addr] = pngOut;
         }
+        require(
+            totalAllocated <= airdropSupply,
+            'Airdrop::whitelistAddresses: Exceeds PNG allocation'
+        );
     }
-}
 
-interface IPNG {
-    function balanceOf(address account) external view returns (uint);
-    function transfer(address dst, uint rawAmount) external returns (bool);
+    // Events
+    event ClaimingAllowed();
+    event ClaimingOver();
+    event PngClaimed(address claimer, uint amount);
 }
