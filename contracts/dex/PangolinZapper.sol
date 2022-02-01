@@ -115,26 +115,28 @@ contract MiniChefV2Zapper {
         zapInAndFarm(pairAddress, tokenIn, tokenInAmount, tokenAmountOutMin, pid);
     }
 
-    function zapOut(address pairAddress, uint256 withdrawAmount) public {
+    function zapOut(address pairAddress, uint256 withdrawAmount, address to) public {
         TransferHelper.safeTransferFrom(pairAddress, msg.sender, address(this), withdrawAmount);
-        _removeLiquidity(pairAddress, msg.sender);
+        _removeLiquidity(pairAddress, to);
     }
 
     function zapOutViaPermit(
         address pairAddress,
         uint256 withdrawAmount,
+        address to,
         uint256 deadline,
         uint8 v, bytes32 r, bytes32 s
     ) external {
         IPangolinPair(pairAddress).permit(msg.sender, address(this), withdrawAmount, deadline, v, r, s);
-        zapOut(pairAddress, withdrawAmount);
+        zapOut(pairAddress, withdrawAmount, to);
     }
 
     function zapOutAndSwap(
         address pairAddress,
         uint256 withdrawAmount,
         address desiredToken,
-        uint256 desiredTokenOutMin
+        uint256 desiredTokenOutMin,
+        address to
     ) public {
         IPangolinPair pair = IPangolinPair(pairAddress);
 
@@ -160,7 +162,7 @@ contract MiniChefV2Zapper {
             block.timestamp
         );
 
-        _returnAssets(path);
+        _returnAssets(path, to);
     }
 
     function zapOutAndSwapViaPermit(
@@ -168,11 +170,12 @@ contract MiniChefV2Zapper {
         uint256 withdrawAmount,
         address desiredToken,
         uint256 desiredTokenOutMin,
+        address to,
         uint256 deadline,
         uint8 v, bytes32 r, bytes32 s
     ) external {
         IPangolinPair(pairAddress).permit(msg.sender, address(this), withdrawAmount, deadline, v, r, s);
-        zapOutAndSwap(pairAddress, withdrawAmount, desiredToken, desiredTokenOutMin);
+        zapOutAndSwap(pairAddress, withdrawAmount, desiredToken, desiredTokenOutMin, to);
     }
 
     function _removeLiquidity(address pair, address to) private {
@@ -240,15 +243,15 @@ contract MiniChefV2Zapper {
         }
 
         // Return any dust
-        _returnAssets(path);
+        _returnAssets(path, msg.sender);
     }
 
-    function _returnAssets(address[] memory tokens) private {
+    function _returnAssets(address[] memory tokens, address to) private {
         uint256 balance;
         for (uint256 i; i < tokens.length; i++) {
             balance = IERC20(tokens[i]).balanceOf(address(this));
             if (balance > 0) {
-                TransferHelper.safeTransfer(tokens[i], msg.sender, balance);
+                TransferHelper.safeTransfer(tokens[i], to, balance);
             }
         }
     }
