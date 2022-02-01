@@ -9,6 +9,7 @@ pragma solidity ^0.8.0;
  */
 contract Airdrop {
     address public png;
+    address public whitelister;
     address public owner;
     address public remainderDestination;
 
@@ -118,6 +119,14 @@ contract Airdrop {
     }
 
     /**
+     *  Set an EOA to simply handle whitelisting addresses
+     */
+    function setWhitelister(address addr) external {
+        require(msg.sender == owner, 'Airdrop::setWhitelister: unauthorized');
+        whitelister = addr;
+    }
+
+    /**
      * Whitelist an address to claim PNG. Specify the amount of PNG to be
      * allocated. That address will then be able to claim that amount of PNG
      * during the claiming period. The transferrable amount of PNG must be
@@ -129,7 +138,10 @@ contract Airdrop {
      * @param pngOut the amount of PNG that addr may withdraw
      */
     function whitelistAddress(address addr, uint96 pngOut) public {
-        require(msg.sender == owner, 'Airdrop::whitelistAddress: unauthorized');
+        require(
+            msg.sender == owner || msg.sender == whitelister,
+            'Airdrop::whitelistAddress: unauthorized'
+        );
         require(!claimingAllowed, 'Airdrop::whitelistAddress: claiming in session');
         require(pngOut > 0, 'Airdrop::whitelistAddress: No PNG to allocated');
         require(withdrawAmount[addr] == 0, 'Airdrop::whitelistAddress: address already added');
@@ -146,7 +158,6 @@ contract Airdrop {
      * corresponds to one (address, png) tuple. Only callable by the owner.
      */
     function whitelistAddresses(address[] memory addrs, uint96[] memory pngOuts) external {
-        require(msg.sender == owner, 'Airdrop::whitelistAddresses: unauthorized');
         require(addrs.length == pngOuts.length,
                 'Airdrop::whitelistAddresses: incorrect array length');
         for (uint i = 0; i < addrs.length; i++) {
