@@ -35,7 +35,7 @@ The deployment script transfers the amount specified in the config to the Airdro
 
 ### Treasury Vester
 
-The deployment script transfers all the PNG (except what went to Airdrop) to `TreasuryVester`. After the deployment, the multisig **must** call `startVesting()` function of `TreasuryVester`. Then, a bot **must** be set up the ensure `distribute()` function of `TreasuryVester` is called every 24 hours. Vester allocation can only be changed with a timelock transaction (timelock+multisig by default).
+The deployment script transfers all the PNG (except what went to Airdrop) to `TreasuryVester`. After the deployment, the multisig **must** call `startVesting()` function of `TreasuryVester`. Then, a bot **must** be set up the ensure `distribute()` function of `TreasuryVester` is called every 24 hours. Vester allocation can only be changed through governance (timelock+multisig by default).
 
 ### PNG Staking
 
