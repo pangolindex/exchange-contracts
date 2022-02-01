@@ -156,9 +156,11 @@ contract MiniChefV2Zapper {
             IERC20(swapToken).balanceOf(address(this)),
             desiredTokenOutMin,
             path,
-            msg.sender,
+            address(this),
             block.timestamp
         );
+
+        _returnAssets(path);
     }
 
     function zapOutAndSwapViaPermit(
