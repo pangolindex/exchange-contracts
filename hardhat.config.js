@@ -1,6 +1,18 @@
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
+require("@nomiclabs/hardhat-etherscan");
+const { CHAINS } = require("@pangolindex/sdk");
 require('dotenv').config();
+
+//let networksFromSdk = {};
+//
+//for(let i = 0; i < CHAINS.length; i++) {
+//  networksFromSdk[CHAINS[i].id] = {
+//    url: CHAINS[i].rpc_uri,
+//    chainId: CHAINS[i].chain_id,
+//    accounts: [process.env.PRIVATE_KEY]
+//  };
+//};
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -203,6 +215,12 @@ module.exports = {
       url: 'https://rpc.xdaichain.com/',
       chainId: 100,
       accounts: [process.env.PRIVATE_KEY]
+    }
+  },
+  etherscan: {
+    apiKey: {
+        avalanche: [process.env.SNOWTRACE_API_KEY],
+        avalancheFujiTestnet: [process.env.SNOWTRACE_API_KEY],
     }
   }
 };
