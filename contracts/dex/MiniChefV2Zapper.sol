@@ -82,7 +82,7 @@ contract MiniChefV2Zapper {
         uint256 deadline,
         uint8 v, bytes32 r, bytes32 s
     ) external {
-        IPangolinPair(pairAddress).permit(msg.sender, address(this), tokenInAmount, deadline, v, r, s);
+        IPangolinPair(tokenIn).permit(msg.sender, address(this), tokenInAmount, deadline, v, r, s);
         zapIn(pairAddress, tokenIn, tokenInAmount, tokenAmountOutMin);
     }
 
