@@ -12,11 +12,16 @@ exports.MULTISIG = {
   ],
   threshold: 2
 };
-exports.USE_GNOSIS_SAFE = false;
+exports.USE_GNOSIS_SAFE = true;
 exports.PROPOSAL_THRESHOLD = 100000; // 100K
 exports.PNG_STAKING_ALLOCATION = 500, // 5x weight in minichef
 exports.WETH_PNG_FARM_ALLOCATION = 3000, // 30x weight
 exports.INITIAL_FARMS = [
+  {
+    tokenA: "0x085416975fe14C2A731a97eC38B9bF8135231F62", // Axelar UST
+    tokenB: WETH,
+    weight: 1000
+  }
 ];
 exports.VESTER_ALLOCATIONS = [
   {

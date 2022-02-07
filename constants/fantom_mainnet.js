@@ -32,6 +32,11 @@ exports.INITIAL_FARMS = [
     tokenB: WFTM,
     weight: 1000
   }
+  {
+    tokenA: "0x2B9d3F168905067D88d93F094C938BACEe02b0cB", // Axelar UST
+    tokenB: WFTM,
+    weight: 1000
+  }
 ];
 exports.VESTER_ALLOCATIONS = [
   {

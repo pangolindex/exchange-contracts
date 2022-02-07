@@ -17,6 +17,11 @@ exports.PROPOSAL_THRESHOLD = 100000; // 100K
 exports.PNG_STAKING_ALLOCATION = 500, // 5x weight in minichef
 exports.WETH_PNG_FARM_ALLOCATION = 3000, // 30x weight
 exports.INITIAL_FARMS = [
+  {
+    tokenA: "0xeDDc6eDe8F3AF9B4971e1Fa9639314905458bE87", // Axelar UST
+    tokenB: WMATIC,
+    weight: 1000
+  }
 ];
 exports.VESTER_ALLOCATIONS = [
   {
