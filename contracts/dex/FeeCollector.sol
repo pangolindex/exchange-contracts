@@ -24,7 +24,7 @@ contract PangolinFeeCollector is Ownable {
     address public stakingRewards;
     address public treasury; // Joint Treasury
     uint256 public harvestIncentive = 50;
-    uint256 public treasuryFee = 0;
+    uint256 public treasuryFee = 1500;
     address public miniChef;
     uint256 public miniChefPoolId;
 
