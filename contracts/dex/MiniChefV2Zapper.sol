@@ -274,7 +274,7 @@ contract MiniChefV2Zapper {
 
     function _returnAssets(address[] memory tokens, address to) private {
         uint256 balance;
-        for (uint256 i; i < tokens.length; i++) {
+        for (uint256 i; i < tokens.length; ++i) {
             balance = IERC20(tokens[i]).balanceOf(address(this));
             if (balance > 0) {
                 TransferHelper.safeTransfer(tokens[i], to, balance);
