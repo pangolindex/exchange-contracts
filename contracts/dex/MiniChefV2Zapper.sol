@@ -297,7 +297,7 @@ contract MiniChefV2Zapper {
         address pairAddress,
         address tokenIn,
         uint256 fullInvestmentIn
-    ) public view returns(uint256 swapAmountIn, uint256 swapAmountOut, address swapTokenOut) {
+    ) external view returns(uint256 swapAmountIn, uint256 swapAmountOut, address swapTokenOut) {
         IPangolinPair pair = IPangolinPair(pairAddress);
 
         bool isInputA = pair.token0() == tokenIn;
