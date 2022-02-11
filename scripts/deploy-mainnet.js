@@ -423,6 +423,9 @@ async function main() {
     const pools = await chef.poolInfos();
 
     // transfer minichef ownership from deployer to multisig
+    tx = await chef.addFunder(vester.address);
+    await tx.wait();
+    await confirmTransactionCount();
     tx = await chef.transferOwnership(multisig.address);
     await tx.wait();
     await confirmTransactionCount();

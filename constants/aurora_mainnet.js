@@ -12,7 +12,7 @@ exports.MULTISIG = {
   ],
   threshold: 2
 };
-exports.USE_GNOSIS_SAFE = false;
+exports.USE_GNOSIS_SAFE = true;
 exports.PROPOSAL_THRESHOLD = 100000; // 100K
 exports.PNG_STAKING_ALLOCATION = 500, // 5x weight in minichef
 exports.WETH_PNG_FARM_ALLOCATION = 3000, // 30x weight

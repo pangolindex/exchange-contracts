@@ -1,6 +1,6 @@
-const WFTM = "0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83";
-exports.WRAPPED_NATIVE_TOKEN = WFTM;
-exports.PNG_SYMBOL = "fanPNG";
+const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+exports.WRAPPED_NATIVE_TOKEN = WETH;
+exports.PNG_SYMBOL = "ethPNG";
 exports.PNG_NAME = "Pangolin";
 exports.TOTAL_SUPPLY = 230000000; // 230M
 exports.AIRDROP_AMOUNT = 11500000; // 11.5M or 5% of max supply
@@ -12,29 +12,14 @@ exports.MULTISIG = {
   ],
   threshold: 2
 };
-exports.USE_GNOSIS_SAFE = false;
+exports.USE_GNOSIS_SAFE = true;
 exports.PROPOSAL_THRESHOLD = 100000; // 100K
 exports.PNG_STAKING_ALLOCATION = 500, // 5x weight in minichef
 exports.WETH_PNG_FARM_ALLOCATION = 3000, // 30x weight
 exports.INITIAL_FARMS = [
   {
-    tokenA: "0x04068DA6C83AFCFA0e13ba15A6696662335D5B75", // USDC
-    tokenB: WFTM,
-    weight: 2000
-  },
-  {
-    tokenA: "0x049d68029688eAbF473097a2fC38ef61633A3C7A", // fUSDT
-    tokenB: WFTM,
-    weight: 1000
-  },
-  {
-    tokenA: "0x8D11eC38a3EB5E956B052f67Da8Bdc9bef8Abf3E", // DAI
-    tokenB: WFTM,
-    weight: 1000
-  }
-  {
-    tokenA: "0x2B9d3F168905067D88d93F094C938BACEe02b0cB", // Axelar UST
-    tokenB: WFTM,
+    tokenA: "0x085416975fe14C2A731a97eC38B9bF8135231F62", // Axelar UST
+    tokenB: WETH,
     weight: 1000
   }
 ];
