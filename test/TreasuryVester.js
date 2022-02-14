@@ -109,20 +109,20 @@ describe("TreasuryVester.sol", function () {
       it("cannot start vesting with insufficient balance", async function() {
         await expect(this.vester.startVesting())
           .to.be.revertedWith(
-            this.vester,
             "contract holds insufficient amount of vestedToken"
           );
       });
 
       it("cannot distribute when vesting disabled", async function() {
         await expect(this.vester.distribute())
-          .to.be.revertedWith(this.vester, "vesting not enabled");
+          .to.be.revertedWith("vesting not enabled");
       });
 
     });
 
+    // cannot run submodules separately
     describe("when vesting is enabled", function () {
-      before(async function () {
+      it("transfers png to vester address", async function () {
         await this.png.transfer(this.vester.address, this.startingBalance);
       });
       it("starts vesting with sufficient balance", async function () {
@@ -137,7 +137,7 @@ describe("TreasuryVester.sol", function () {
         await expect(vester.distribute()).to.emit(vester, "TokensVested");
         await network.provider.send("evm_increaseTime", [86398]);
         await expect(vester.distribute())
-          .to.be.revertedWith(vester, "too early to distribute");
+          .to.be.revertedWith("too early to distribute");
       });
 
     });
@@ -197,8 +197,9 @@ describe("TreasuryVester.sol", function () {
 
   });
 
+  // cannot run submodules separately
   describe("Semi-Random Vesting Simulation", function () {
-    before(async function () {
+    it("sets up contract for vesting", async function () {
       this.recipients = generateRecipients(
         chance.integer({ min: 1, max: 20 }).toString(),
       );
@@ -260,7 +261,7 @@ describe("TreasuryVester.sol", function () {
 
     it("fails vesting after 30th month", async function () {
       await expect(this.vester.distribute())
-        .to.be.revertedWith(this.vester, "too little to distribute");
+        .to.be.revertedWith("too little to distribute");
       let balance = await this.png.balanceOf(this.vester.address);
       expect(Math.floor(ethers.utils.formatUnits(balance, 15))).to.equal(0);
     });
