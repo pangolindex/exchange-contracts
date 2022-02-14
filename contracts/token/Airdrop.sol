@@ -82,7 +82,15 @@ contract Airdrop {
     }
 
     function setAirdropSupply(uint supply) external {
-        require(msg.sender == owner, 'Airdrop::setWhitelister: unauthorized');
+        require(msg.sender == owner, 'Airdrop::setAirdropSupply: unauthorized');
+        require(
+            !claimingAllowed,
+            'Airdrop::setAirdropSupply: claiming in session'
+        );
+        require(
+            supply >= totalAllocated,
+            'Airdrop::setAirdropSupply: supply less than total allocated'
+        );
         airdropSupply = supply;
     }
 
@@ -157,11 +165,11 @@ contract Airdrop {
     ) external {
         require(
             !claimingAllowed,
-            'Airdrop::whitelistAddress: claiming in session'
+            'Airdrop::whitelistAddresses: claiming in session'
         );
         require(
             msg.sender == owner || msg.sender == whitelister,
-            'Airdrop::whitelistAddress: unauthorized'
+            'Airdrop::whitelistAddresses: unauthorized'
         );
         require(
             addrs.length == pngOuts.length,
