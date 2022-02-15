@@ -226,7 +226,8 @@ async function main() {
     for (let i = 0; i < VESTER_ALLOCATIONS.length; i++) {
         vesterAllocations.push([
             eval(VESTER_ALLOCATIONS[i].recipient + '.address'),
-            VESTER_ALLOCATIONS[i].allocation
+            VESTER_ALLOCATIONS[i].allocation,
+            VESTER_ALLOCATIONS[i].isMiniChef
         ]);
     };
     const TreasuryVester = await ethers.getContractFactory("TreasuryVester");
