@@ -54,8 +54,8 @@ describe("TreasuryVester.sol", function () {
 
     // Deploy PNG
     this.png = await this.Png.deploy(
-      this.totalSupply,
-      this.admin.address, // PNG receiver
+      this.totalSupply, // max supply
+      0, // initial mint
       "PNG",
       "Pangolin"
     );
@@ -69,6 +69,8 @@ describe("TreasuryVester.sol", function () {
         ethers.Wallet.createRandom().address // guardian
       );
     await this.vester.deployed();
+
+    await this.png.setMinter(this.vester.address);
 
   });
 
@@ -106,13 +108,6 @@ describe("TreasuryVester.sol", function () {
 
   describe("Flow Control", function () {
     describe("when vesting is disabled", function () {
-      it("cannot start vesting with insufficient balance", async function() {
-        await expect(this.vester.startVesting())
-          .to.be.revertedWith(
-            "contract holds insufficient amount of vestedToken"
-          );
-      });
-
       it("cannot distribute when vesting disabled", async function() {
         await expect(this.vester.distribute())
           .to.be.revertedWith("vesting not enabled");
@@ -122,10 +117,7 @@ describe("TreasuryVester.sol", function () {
 
     // cannot run submodules separately
     describe("when vesting is enabled", function () {
-      it("transfers png to vester address", async function () {
-        await this.png.transfer(this.vester.address, this.startingBalance);
-      });
-      it("starts vesting with sufficient balance", async function () {
+      it("starts vesting", async function () {
         await expect(this.vester.startVesting())
           .to.emit(
             this.vester,
@@ -209,8 +201,8 @@ describe("TreasuryVester.sol", function () {
         );
       // Deploy PNG
       this.png = await this.Png.deploy(
-        this.totalSupply,
-        this.admin.address, // PNG receiver
+        this.totalSupply, // max supply
+        0, // initial mint
         "PNG",
         "Pangolin"
       );
@@ -228,7 +220,7 @@ describe("TreasuryVester.sol", function () {
           ethers.Wallet.createRandom().address // guardian
         );
       await this.vester.deployed();
-      await this.png.transfer(this.vester.address, this.totalSupply);
+      await this.png.setMinter(this.vester.address);
       await this.chef.addFunder(this.vester.address);
       await expect(this.vester.startVesting())
         .to.emit(
@@ -246,14 +238,14 @@ describe("TreasuryVester.sol", function () {
           await network.provider.send("evm_increaseTime", [86400]);
         };
         if (month == 0) {
-          this.expectedBalance = this.totalSupply;
+          this.expectedBalance = BigNumber.from("0");
         }
-        this.expectedBalance = this.expectedBalance.sub(
+        this.expectedBalance = this.expectedBalance.add(
           this.totalSupply
             .mul(distributionSchedule[month])
             .div(this.denominator)
         );
-        let balance = await this.png.balanceOf(this.vester.address);
+        let balance = await this.png.totalSupply();
         expect(Math.floor(ethers.utils.formatUnits(this.expectedBalance, 15)))
           .to.equal(Math.floor(ethers.utils.formatUnits(balance, 15)));
       });
@@ -261,7 +253,7 @@ describe("TreasuryVester.sol", function () {
 
     it("fails vesting after 30th month", async function () {
       await expect(this.vester.distribute())
-        .to.be.revertedWith("too little to distribute");
+        .to.be.revertedWith("Png::_mintTokens: mint result exceeds max supply");
       let balance = await this.png.balanceOf(this.vester.address);
       expect(Math.floor(ethers.utils.formatUnits(balance, 15))).to.equal(0);
     });

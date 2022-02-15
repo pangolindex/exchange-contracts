@@ -7,8 +7,12 @@ interface IMiniChefV2 {
     function fundRewards(uint256 newFunding, uint256 duration) external;
 }
 
+interface IPng is IERC20 {
+    function mint(address dst, uint rawAmount) external returns (bool);
+}
+
 contract TreasuryVester {
-    using SafeERC20 for IERC20;
+    using SafeERC20 for IPng;
 
     struct Recipient{
         address account;
@@ -23,7 +27,7 @@ contract TreasuryVester {
     address public admin;
     address public guardian;
 
-    IERC20 public immutable vestedToken;
+    IPng public immutable vestedToken;
 
     bool public vestingEnabled;
 
@@ -47,7 +51,7 @@ contract TreasuryVester {
         require(guardian_ != address(0), "invalid guardian address");
         guardian = guardian_;
         admin = msg.sender;
-        vestedToken = IERC20(vestedToken_);
+        vestedToken = IPng(vestedToken_);
         _startingBalance = startingBalance_;
         setRecipients(newRecipients);
     }
@@ -90,26 +94,17 @@ contract TreasuryVester {
             _vestingAmount = getVestingAmount();
         }
         _step++;
-        uint balance = vestedToken.balanceOf(address(this));
-        require(balance >= DENOMINATOR, "too little to distribute");
-        if (_vestingAmount > balance) {
-            _vestingAmount = balance;
-        }
-        // Distribute the tokens. Leaves dust but who cares.
         for (uint i; i < _recipientsLength; i++) {
             Recipient memory recipient = _recipients[i];
-            uint allocation =
-                recipient.allocation * _vestingAmount / DENOMINATOR;
+            uint amount = recipient.allocation * _vestingAmount / DENOMINATOR;
             if (!recipient.isMiniChef) {
-                vestedToken.safeTransfer(
-                    recipient.account,
-                    allocation
-                );
+                vestedToken.mint(recipient.account, amount);
             } else {
-                vestedToken.approve(recipient.account, allocation);
+                vestedToken.mint(address(this), amount);
+                vestedToken.approve(recipient.account, amount);
                 IMiniChefV2(recipient.account)
                     .fundRewards(
-                        allocation,
+                        amount,
                         VESTING_CLIFF
                     );
             }
@@ -149,10 +144,6 @@ contract TreasuryVester {
             "unprivileged message sender"
         );
         require(!vestingEnabled, "vesting already started");
-        require(
-            vestedToken.balanceOf(address(this)) >= _startingBalance,
-            "contract holds insufficient amount of vestedToken"
-        );
         _vestingAmount = getVestingAmount();
         vestingEnabled = true;
         emit VestingEnabled();

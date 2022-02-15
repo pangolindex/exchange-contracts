@@ -98,7 +98,7 @@ async function main() {
     const PNG = await ethers.getContractFactory("Png");
     const png = await PNG.deploy(
         ethers.utils.parseUnits(TOTAL_SUPPLY.toString(), 18),
-        deployer.address, // PNG receiver
+        ethers.utils.parseUnits(AIRDROP_AMOUNT.toString(), 18),
         PNG_SYMBOL,
         PNG_NAME
     );
@@ -171,7 +171,7 @@ async function main() {
 
     // Deploy LP Factory
     const PangolinFactory = await ethers.getContractFactory(
-        "contracts/pangolin-core/PangolinFactory.sol:PangolinFactory"
+        "contracts/amm/pangolin-core/PangolinFactory.sol:PangolinFactory"
     );
     const factory = await PangolinFactory.deploy(deployer.address);
     await factory.deployed();
@@ -240,7 +240,19 @@ async function main() {
     await confirmTransactionCount();
     console.log("Treasury Vester deployed at: " + vester.address);
 
-    // Transfer PNG to 5% airdrop and 95% treasury vester
+    // Set vester as the minter of PNG
+    tx = await png.setMinter(vester.address);
+    await tx.wait();
+    await confirmTransactionCount();
+    console.log("TreasuryVester was set as the sole minter of PNG");
+
+    // transfer PNG ownership to governance
+    tx = await png.setAdmin(timelock.address);
+    await tx.wait();
+    await confirmTransactionCount();
+    console.log("PNG ownership was transferred to timelock");
+
+    // Transfer 5% max supply of PNG to airdrop
     tx = await png.transfer(
         airdrop.address,
         ethers.utils.parseUnits(AIRDROP_AMOUNT.toString(), 18)
@@ -248,22 +260,7 @@ async function main() {
     await tx.wait();
     await confirmTransactionCount();
     console.log(AIRDROP_AMOUNT, PNG_SYMBOL, "was transferred to Airdrop address");
-    tx = await png.transfer(
-        vester.address,
-        ethers.utils.parseUnits((TOTAL_SUPPLY - AIRDROP_AMOUNT).toString(), 18)
-    );
-    await tx.wait();
-    await confirmTransactionCount();
-    console.log(
-        (TOTAL_SUPPLY - AIRDROP_AMOUNT),
-        PNG_SYMBOL,
-        "was transferred to Treasury Vester"
-    );
 
-    // Start vesting and transfer ownership to timelock
-    //tx = await vester.startVesting();
-    //await tx.wait();
-    //await confirmTransactionCount();
     tx = await vester.setAdmin(timelock.address);
     await tx.wait();
     await confirmTransactionCount();

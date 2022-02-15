@@ -10,11 +10,23 @@ contract Png {
     /// @notice EIP-20 token symbol for this token
     string public symbol;
 
+    /// @notice Contract administrator (e.g. governance)
+    address public admin;
+
+    /// @notice Only address that can mint (e.g. vesting contract)
+    address public minter;
+
     /// @notice EIP-20 token decimals for this token
     uint8 public constant decimals = 18;
 
+    /// @notice Maximum number of tokens that can be in circulation
+    uint public maxSupply;
+
     /// @notice Total number of tokens in circulation
     uint public totalSupply;
+
+    /// @notice Total number of tokens that has been burned
+    uint public burnedSupply;
 
     /// @notice Allowance amounts on behalf of others
     mapping (address => mapping (address => uint96)) internal allowances;
@@ -63,12 +75,15 @@ contract Png {
 
     /**
      * @notice Construct a new PNG token
-     * @param account The initial account to grant all the tokens
+     * @param _maxSupply Maximum number of tokens that can be in circulation
+     * @param initialSupply Number of tokens to mint to the message sender
+     * @param _symbol EIP-20 token symbol for this token
+     * @param _name EIP-20 token name for this token
      */
-    constructor(uint256 _totalSupply, address account, string memory _symbol, string memory _name) public {
-        totalSupply = _totalSupply;
-        balances[account] = uint96(totalSupply);
-        emit Transfer(address(0), account, totalSupply);
+    constructor(uint _maxSupply, uint initialSupply, string memory _symbol, string memory _name) public {
+        maxSupply = _maxSupply;
+        admin = msg.sender;
+        _mintTokens(admin, uint96(initialSupply));
         symbol = _symbol;
         name = _name;
     }
@@ -146,6 +161,19 @@ contract Png {
     }
 
     /**
+     * @notice Mint `amount` tokens to `dst`
+     * @param dst The address of the destination account
+     * @param rawAmount The number of tokens to mint
+     * @return Whether or not the transfer succeeded
+     */
+    function mint(address dst, uint rawAmount) external returns (bool) {
+        require(msg.sender == minter, "Png::mint: unauthorized");
+        uint96 amount = safe96(rawAmount, "Png::mint: amount exceeds 96 bits");
+        _mintTokens(dst, amount);
+        return true;
+    }
+
+    /**
      * @notice Transfer `amount` tokens from `msg.sender` to `dst`
      * @param dst The address of the destination account
      * @param rawAmount The number of tokens to transfer
@@ -177,6 +205,74 @@ contract Png {
         }
 
         _transferTokens(src, dst, amount);
+        return true;
+    }
+
+    /**
+     * @notice Burn `amount` tokens of `msg.sender`
+     * @param rawAmount The number of tokens to burn
+     * @return Whether or not the burn succeeded
+     */
+    function burn(uint rawAmount) external returns (bool) {
+        uint96 amount = safe96(rawAmount, "Png::burn: amount exceeds 96 bits");
+        _burnTokens(msg.sender, amount);
+        return true;
+    }
+
+    /**
+     * @notice Burn `amount` tokens of `src`
+     * @param src The address of the source account
+     * @param rawAmount The number of tokens to burn
+     * @return Whether or not the transfer succeeded
+     */
+    function burnFrom(address src, uint rawAmount) external returns (bool) {
+        address spender = msg.sender;
+        uint96 spenderAllowance = allowances[src][spender];
+        uint96 amount = safe96(rawAmount, "Png::burnFrom: amount exceeds 96 bits");
+
+        if (spender != src && spenderAllowance != uint96(-1)) {
+            uint96 newAllowance = sub96(spenderAllowance, amount, "Png::burnFrom: burn amount exceeds spender allowance");
+            allowances[src][spender] = newAllowance;
+
+            emit Approval(src, spender, newAllowance);
+        }
+
+        _burnTokens(src, amount);
+        return true;
+    }
+
+    /**
+     * @notice Make `newMinter` the only address that can mint this token
+     * @param newMinter The address that will have sole minting privileges
+     * @return Whether or not the minter was set successfully
+     */
+    function setMinter(address newMinter) external returns (bool) {
+        require(msg.sender == admin, "Png::setMinter: unauthorized");
+        minter = newMinter;
+        return true;
+    }
+
+    /**
+     * @notice Change the administrator of the contract
+     * @param newAdmin The address that will be the new administrator
+     * @return Whether or not the admin was set successfully
+     */
+    function setAdmin(address newAdmin) external returns (bool) {
+        require(msg.sender == admin, "Png::setAdmin: unauthorized");
+        require(newAdmin != address(0), "Png::setAdmin: cannot make zero address the admin");
+        admin = newAdmin;
+        return true;
+    }
+
+    /**
+     * @notice Change the maximum supply
+     * @param newMaxSupply The maximum number of tokens that can exist
+     * @return Whether or not the maximum supply was changed
+     */
+    function setMaxSupply(uint newMaxSupply) external returns (bool) {
+        require(msg.sender == admin, "Png::setMaxSupply: unauthorized");
+        require(newMaxSupply >= totalSupply, "Png::setMaxSupply: circulating supply exceeds new max supply");
+        maxSupply = newMaxSupply;
         return true;
     }
 
@@ -278,6 +374,27 @@ contract Png {
         emit Transfer(src, dst, amount);
 
         _moveDelegates(delegates[src], delegates[dst], amount);
+    }
+
+    function _burnTokens(address src, uint96 amount) internal {
+        require(src != address(0), "Png::_burnTokens: cannot burn from the zero address");
+
+        balances[src] = sub96(balances[src], amount, "Png::_burnTokens: burn amount exceeds balance");
+        totalSupply = SafeMath.sub(totalSupply, uint(amount));
+        burnedSupply = SafeMath.add(burnedSupply, uint(amount));
+        emit Transfer(src, address(0), amount);
+
+        _moveDelegates(delegates[src], address(0), amount);
+    }
+
+    function _mintTokens(address dst, uint96 amount) internal {
+        require(dst != address(0), "Png::_mintTokens: cannot mint to the zero address");
+
+        totalSupply = SafeMath.add(totalSupply, uint(amount));
+        balances[dst] = add96(balances[dst], amount, "Png::_mintTokens: mint amount overflows");
+        emit Transfer(address(0), dst, amount);
+
+        require(totalSupply <= maxSupply, "Png::_mintTokens: mint result exceeds max supply");
     }
 
     function _moveDelegates(address srcRep, address dstRep, uint96 amount) internal {
