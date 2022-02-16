@@ -1,4 +1,4 @@
-const WONE = "0xcF664087a5bB0237a0BAd6742852ec6c8d69A27a";
+const WONE = "0x3Ee7094DADda15810F191DD6AcF7E4FFa37571e4";
 exports.WRAPPED_NATIVE_TOKEN = WONE;
 exports.PNG_SYMBOL = "wagmiPNG";
 exports.PNG_NAME = "Pangolin";
