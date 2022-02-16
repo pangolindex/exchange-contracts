@@ -18,19 +18,9 @@ exports.PNG_STAKING_ALLOCATION = 500, // 5x weight in minichef
 exports.WETH_PNG_FARM_ALLOCATION = 3000, // 30x weight
 exports.INITIAL_FARMS = [
   {
-    tokenA: "0x04068DA6C83AFCFA0e13ba15A6696662335D5B75", // USDC
+    tokenA: "0xf1db872E6454D553686b088c1Ea3889cF2FE3ABe", // OG
     tokenB: WONE,
     weight: 2000
-  },
-  {
-    tokenA: "0x049d68029688eAbF473097a2fC38ef61633A3C7A", // fUSDT
-    tokenB: WONE,
-    weight: 1000
-  },
-  {
-    tokenA: "0x8D11eC38a3EB5E956B052f67Da8Bdc9bef8Abf3E", // DAI
-    tokenB: WONE,
-    weight: 1000
   }
 ];
 exports.VESTER_ALLOCATIONS = [
