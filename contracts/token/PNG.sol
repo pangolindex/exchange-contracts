@@ -170,6 +170,7 @@ contract Png {
      * @return Whether or not the transfer succeeded
      */
     function mint(address dst, uint rawAmount) external returns (bool) {
+        require(minter != address(0), "Png::mint: minter unset");
         require(msg.sender == minter, "Png::mint: unauthorized");
         uint96 amount = safe96(rawAmount, "Png::mint: amount exceeds 96 bits");
         _mintTokens(dst, amount);
