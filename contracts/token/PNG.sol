@@ -28,6 +28,9 @@ contract Png {
     /// @notice Total number of tokens that has been burned
     uint public burnedSupply;
 
+    /// @notice Disables changing max supply when true
+    bool public hardcapped;
+
     /// @notice Allowance amounts on behalf of others
     mapping (address => mapping (address => uint96)) internal allowances;
 
@@ -270,9 +273,20 @@ contract Png {
      * @return Whether or not the maximum supply was changed
      */
     function setMaxSupply(uint newMaxSupply) external returns (bool) {
+        require(!hardcapped, "Png::setMaxSupply: function was disabled");
         require(msg.sender == admin, "Png::setMaxSupply: unauthorized");
         require(newMaxSupply >= totalSupply, "Png::setMaxSupply: circulating supply exceeds new max supply");
         maxSupply = newMaxSupply;
+        return true;
+    }
+
+    /**
+     * @notice Make the token hardcapped by irreversibly disabling setMaxSupply
+     * @return Whether or not the hardcap was enabled
+     */
+    function disableSetMaxSupply() external returns (bool) {
+        require(msg.sender == admin, "Png::disableSetMaxSupply: unauthorized");
+        hardcapped = true;
         return true;
     }
 
