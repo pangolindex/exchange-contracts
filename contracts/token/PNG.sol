@@ -28,6 +28,9 @@ contract Png {
     /// @notice Total number of tokens that has been burned
     uint public burnedSupply;
 
+    /// @notice Disables changing max supply when true
+    bool public hardcapped;
+
     /// @notice Allowance amounts on behalf of others
     mapping (address => mapping (address => uint96)) internal allowances;
 
@@ -66,6 +69,18 @@ contract Png {
 
     /// @notice An event thats emitted when a delegate account's vote balance changes
     event DelegateVotesChanged(address indexed delegate, uint previousBalance, uint newBalance);
+
+    /// @notice An event thats emitted when the minter address changes
+    event MinterChanged(address indexed oldMinter, address indexed newMinter);
+
+    /// @notice An event thats emitted when the admin address changes
+    event AdminChanged(address indexed oldAdmin, address indexed newAdmin);
+
+    /// @notice An event thats emitted when the maxSupply changed
+    event MaxSupplyChanged(uint oldMaxSupply, uint newMaxSupply);
+
+    /// @notice An event thats emitted when maxSupply becomes immutable
+    event HardcapEnabled();
 
     /// @notice The standard EIP-20 transfer event
     event Transfer(address indexed from, address indexed to, uint256 amount);
@@ -167,7 +182,7 @@ contract Png {
      * @return Whether or not the transfer succeeded
      */
     function mint(address dst, uint rawAmount) external returns (bool) {
-        require(msg.sender == minter, "Png::mint: unauthorized");
+        require(msg.sender == minter && minter != address(0), "Png::mint: unauthorized");
         uint96 amount = safe96(rawAmount, "Png::mint: amount exceeds 96 bits");
         _mintTokens(dst, amount);
         return true;
@@ -248,6 +263,7 @@ contract Png {
      */
     function setMinter(address newMinter) external returns (bool) {
         require(msg.sender == admin, "Png::setMinter: unauthorized");
+        emit MinterChanged(minter, newMinter);
         minter = newMinter;
         return true;
     }
@@ -260,6 +276,7 @@ contract Png {
     function setAdmin(address newAdmin) external returns (bool) {
         require(msg.sender == admin, "Png::setAdmin: unauthorized");
         require(newAdmin != address(0), "Png::setAdmin: cannot make zero address the admin");
+        emit AdminChanged(admin, newAdmin);
         admin = newAdmin;
         return true;
     }
@@ -270,9 +287,23 @@ contract Png {
      * @return Whether or not the maximum supply was changed
      */
     function setMaxSupply(uint newMaxSupply) external returns (bool) {
+        require(!hardcapped, "Png::setMaxSupply: function was disabled");
         require(msg.sender == admin, "Png::setMaxSupply: unauthorized");
         require(newMaxSupply >= totalSupply, "Png::setMaxSupply: circulating supply exceeds new max supply");
+        safe96(newMaxSupply, "Png::setMaxSupply: new max supply exceeds 96 bits");
+        emit MaxSupplyChanged(maxSupply, newMaxSupply);
         maxSupply = newMaxSupply;
+        return true;
+    }
+
+    /**
+     * @notice Make the token hardcapped by irreversibly disabling setMaxSupply
+     * @return Whether or not the hardcap was enabled
+     */
+    function disableSetMaxSupply() external returns (bool) {
+        require(msg.sender == admin, "Png::disableSetMaxSupply: unauthorized");
+        hardcapped = true;
+        emit HardcapEnabled();
         return true;
     }
 
