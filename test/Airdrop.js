@@ -21,7 +21,7 @@ describe('Airdrop', function () {
     });
 
     beforeEach(async function () {
-        this.png = await this.PNG.deploy(TOTAL_SUPPLY, this.admin.address, "PNG", "Pangolin");
+        this.png = await this.PNG.deploy(TOTAL_SUPPLY, AIRDROP_SUPPLY, "PNG", "Pangolin");
         await this.png.deployed();
         this.airdrop = await this.Airdrop.deploy(AIRDROP_SUPPLY, this.png.address, this.admin.address, TREASURY);
         await this.airdrop.deployed();
