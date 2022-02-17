@@ -226,7 +226,8 @@ async function main() {
     for (let i = 0; i < VESTER_ALLOCATIONS.length; i++) {
         vesterAllocations.push([
             eval(VESTER_ALLOCATIONS[i].recipient + '.address'),
-            VESTER_ALLOCATIONS[i].allocation
+            VESTER_ALLOCATIONS[i].allocation,
+            VESTER_ALLOCATIONS[i].isMiniChef
         ]);
     };
     const TreasuryVester = await ethers.getContractFactory("TreasuryVester");
@@ -384,16 +385,10 @@ async function main() {
      * MINICHEFv2 FARMS *
      ********************/
 
-    // Deploy library for getting pairs address (can replace this with JS library to save gas)
-    const PangolinLibrary = await ethers.getContractFactory("PangolinLibraryProxy");
-    const pangolinLibrary = await PangolinLibrary.deploy();
-    await pangolinLibrary.deployed();
-    await confirmTransactionCount();
-
     tx = await factory.createPair(png.address,nativeToken);
     await tx.wait();
     await confirmTransactionCount();
-    var pngPair = await pangolinLibrary.pairFor(factory.address,png.address,nativeToken);
+    var pngPair = await factory.getPair(png.address,nativeToken);
 
     // add png-native to minichef
     tx = await chef.addPool(
@@ -409,10 +404,10 @@ async function main() {
         let tokenA = INITIAL_FARMS[i]["tokenA"];
         let tokenB = INITIAL_FARMS[i]["tokenB"];
         let weight = INITIAL_FARMS[i]["weight"];
-        let pair = await pangolinLibrary.pairFor(factory.address,tokenA,tokenB);
         tx = await factory.createPair(tokenA,tokenB);
         await tx.wait();
         await confirmTransactionCount();
+        let pair = await factory.getPair(tokenA,tokenB);
         tx = await chef.addPool(weight,pair,ethers.constants.AddressZero);
         await tx.wait();
         await confirmTransactionCount();
