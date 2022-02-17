@@ -17,7 +17,6 @@ describe('Airdrop', function () {
         [ this.admin, ] = await ethers.getSigners();
         this.Airdrop = await ethers.getContractFactory("Airdrop");
         this.PNG = await ethers.getContractFactory("Png");
-        this.MockContract = await ethers.getContractFactory("MockContract");
     });
 
     beforeEach(async function () {
