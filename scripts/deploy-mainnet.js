@@ -171,7 +171,7 @@ async function main() {
 
     // Deploy LP Factory
     const PangolinFactory = await ethers.getContractFactory(
-        "contracts/amm/pangolin-core/PangolinFactory.sol:PangolinFactory"
+        "contracts/pangolin-core/PangolinFactory.sol:PangolinFactory"
     );
     const factory = await PangolinFactory.deploy(deployer.address);
     await factory.deployed();

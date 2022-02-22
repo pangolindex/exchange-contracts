@@ -1,4 +1,4 @@
-const WONE = "0xcF664087a5bB0237a0BAd6742852ec6c8d69A27a";
+const WONE = "0x3Ee7094DADda15810F191DD6AcF7E4FFa37571e4";
 exports.WRAPPED_NATIVE_TOKEN = WONE;
 exports.PNG_SYMBOL = "wagmiPNG";
 exports.PNG_NAME = "Pangolin";
@@ -18,19 +18,14 @@ exports.PNG_STAKING_ALLOCATION = 500, // 5x weight in minichef
 exports.WETH_PNG_FARM_ALLOCATION = 3000, // 30x weight
 exports.INITIAL_FARMS = [
   {
-    tokenA: "0x04068DA6C83AFCFA0e13ba15A6696662335D5B75", // USDC
+    tokenA: "0x21cf0eB2E3Ab483a67C900b27dA8F34185991982", // WAVAX
     tokenB: WONE,
     weight: 2000
   },
   {
-    tokenA: "0x049d68029688eAbF473097a2fC38ef61633A3C7A", // fUSDT
+    tokenA: "0xf1db872E6454D553686b088c1Ea3889cF2FE3ABe", // OG
     tokenB: WONE,
-    weight: 1000
-  },
-  {
-    tokenA: "0x8D11eC38a3EB5E956B052f67Da8Bdc9bef8Abf3E", // DAI
-    tokenB: WONE,
-    weight: 1000
+    weight: 2000
   }
 ];
 exports.VESTER_ALLOCATIONS = [
