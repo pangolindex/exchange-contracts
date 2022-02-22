@@ -262,7 +262,7 @@ async function main() {
     await confirmTransactionCount();
     console.log(AIRDROP_AMOUNT, PNG_SYMBOL, "was transferred to Airdrop address");
 
-    tx = await vester.setAdmin(timelock.address);
+    tx = await vester.transferOwnership(timelock.address);
     await tx.wait();
     await confirmTransactionCount();
     console.log("TreasuryVester ownership was transferred to Timelock");
