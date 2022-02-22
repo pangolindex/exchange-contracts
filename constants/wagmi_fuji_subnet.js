@@ -18,6 +18,11 @@ exports.PNG_STAKING_ALLOCATION = 500, // 5x weight in minichef
 exports.WETH_PNG_FARM_ALLOCATION = 3000, // 30x weight
 exports.INITIAL_FARMS = [
   {
+    tokenA: "0x21cf0eB2E3Ab483a67C900b27dA8F34185991982", // WAVAX
+    tokenB: WONE,
+    weight: 2000
+  },
+  {
     tokenA: "0xf1db872E6454D553686b088c1Ea3889cF2FE3ABe", // OG
     tokenB: WONE,
     weight: 2000
