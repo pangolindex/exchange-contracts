@@ -1,19 +1,19 @@
 pragma solidity 0.8.11;
 
 import "./interfaces/IWAVAX.sol";
-import "../amm/pangolin-core/interfaces/IERC20.sol";
-import "../amm/pangolin-core/interfaces/IPangolinPair.sol";
-import "../amm/pangolin-periphery/interfaces/IPangolinRouter.sol";
+import "../pangolin-core/interfaces/IERC20.sol";
+import "../pangolin-core/interfaces/IPangolinPair.sol";
+import "../pangolin-periphery/interfaces/IPangolinRouter.sol";
 
-import "../amm/pangolin-lib/libraries/Babylonian.sol";
-import "../amm/pangolin-lib/libraries/TransferHelper.sol";
+import "../pangolin-lib/libraries/Babylonian.sol";
+import "../pangolin-lib/libraries/TransferHelper.sol";
 
 
 // SPDX-License-Identifier: MIT
 
-// @author Wivern for Beefy.Finance
-// @author bmino for Pangolin
-// @notice This contract adds liquidity to Pangolin compatible liquidity pair pools and farms.
+/// @author Wivern for Beefy.Finance
+/// @author bmino for Pangolin
+/// @notice This contract adds liquidity to Pangolin compatible liquidity pair pools and farms.
 
 
 interface IMiniChefV2 {

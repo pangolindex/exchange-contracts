@@ -19,7 +19,7 @@ describe('PoolCreation', function () {
         this.NATERC20 = await ethers.getContractFactory("Png");
         this.JBXERC20 = await ethers.getContractFactory("Png");
     });
-  
+
     beforeEach(async function () {
         // deploy some Tokens for test
         this.png = await this.PNG.deploy(TOTAL_SUPPLY, AIRDROP_SUPPLY, "PNG", "Pangolin");
@@ -77,7 +77,7 @@ describe('PoolCreation', function () {
                 0,
                 this.admin.address,
                 this.deadline
-            )).to.emit(this.png, "transfer");
+            )).to.emit(this.png, "Transfer");
         });
         it("Create a pair with adding Liquidity", async function() {
             await expect(this.router.addLiquidity(
@@ -111,7 +111,7 @@ describe('PoolCreation', function () {
                 0,
                 this.admin.address,
                 this.deadline
-            )).to.emit(this.jbxerc20, "transfer");
+            )).to.emit(this.jbxerc20, "Transfer");
             await expect(this.router.addLiquidity(
                 this.naterc20.address,
                 this.png.address,
@@ -121,7 +121,7 @@ describe('PoolCreation', function () {
                 0,
                 this.admin.address,
                 this.deadline
-            )).to.emit(this.naterc20, "transfer");
+            )).to.emit(this.naterc20, "Transfer");
         });
     });
 });
