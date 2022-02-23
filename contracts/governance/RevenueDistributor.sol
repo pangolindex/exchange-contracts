@@ -2,8 +2,9 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract RevenueDistributor {
+contract RevenueDistributor is Ownable {
     using SafeERC20 for IERC20;
 
     struct Recipient {
@@ -13,16 +14,10 @@ contract RevenueDistributor {
 
     mapping(uint => Recipient) private _recipients;
 
-    address public admin;
     uint private _recipientsLength;
     uint private constant DENOMINATOR = 10000;
 
-    constructor(
-        address newAdmin,
-        Recipient[] memory newRecipients
-    ) {
-        require(newAdmin != address(0), "invalid new admin");
-        admin = newAdmin;
+    constructor(Recipient[] memory newRecipients) {
         setRecipients(newRecipients);
     }
 
@@ -53,17 +48,7 @@ contract RevenueDistributor {
         emit TokenDistributed(token, amount);
     }
 
-    function setAdmin(address newAdmin) external {
-        require(msg.sender == admin, "sender is not admin");
-        require(newAdmin != address(0), "invalid new admin");
-        admin = newAdmin;
-        emit AdminChanged(admin);
-    }
-
-    function setRecipients(Recipient[] memory newRecipients) public {
-        if (_recipientsLength != 0) {
-            require(msg.sender == admin, "sender is not admin");
-        }
+    function setRecipients(Recipient[] memory newRecipients) public onlyOwner {
         _recipientsLength = newRecipients.length;
         require(
             _recipientsLength != 0 && _recipientsLength < 21,
@@ -89,5 +74,4 @@ contract RevenueDistributor {
 
     event TokenDistributed(address token, uint amount);
     event RecipientsChanged(Recipient[] newRecipients);
-    event AdminChanged(address newAdmin);
 }

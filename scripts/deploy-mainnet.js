@@ -170,9 +170,7 @@ async function main() {
      *****************/
 
     // Deploy LP Factory
-    const PangolinFactory = await ethers.getContractFactory(
-        "contracts/pangolin-core/PangolinFactory.sol:PangolinFactory"
-    );
+    const PangolinFactory = await ethers.getContractFactory("PangolinFactory");
     const factory = await PangolinFactory.deploy(deployer.address);
     await factory.deployed();
     await confirmTransactionCount();
@@ -190,9 +188,7 @@ async function main() {
      **********************/
 
     // Deploy MiniChefV2
-    const MiniChef = await ethers.getContractFactory(
-        "contracts/dex/MiniChefV2.sol:MiniChefV2"
-    );
+    const MiniChef = await ethers.getContractFactory("MiniChefV2");
     const chef = await MiniChef.deploy(png.address, deployer.address);
     await chef.deployed();
     await confirmTransactionCount();
@@ -307,13 +303,13 @@ async function main() {
         ]);
     };
     const RevenueDistributor = await ethers.getContractFactory("RevenueDistributor");
-    const revenueDistributor = await RevenueDistributor.deploy(
-        jointMultisig.address,
-        revenueDistribution
-    );
+    const revenueDistributor = await RevenueDistributor.deploy(revenueDistribution);
     await revenueDistributor.deployed();
     await confirmTransactionCount();
     console.log("Revenue Distributor deployed at: " + revenueDistributor.address)
+    tx = await revenueDistributor.transferOwnership(jointMultisig.address);
+    await confirmTransactionCount();
+    console.log("Transferred RevenueDistributor ownership to Joint Multisig")
 
     // Deploy Fee Collector
     const FeeCollector = await ethers.getContractFactory("PangolinFeeCollector");
