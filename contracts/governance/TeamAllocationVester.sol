@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPLv3
 // solhint-disable not-rely-on-time
 pragma solidity ^0.8.0;
 
@@ -13,12 +13,9 @@ contract TeamAllocationVester is Ownable {
     using SafeERC20 for IERC20;
 
     struct Member {
-        /// @notice remaining tokens to be distributed
-        uint reserved;
-        /// @notice rewards per second
-        uint rate;
-        /// @notice timestamp of last harvest
-        uint lastUpdate;
+        uint reserved;   // remaining tokens to be distributed
+        uint rate;       // rewards per second
+        uint lastUpdate; // timestamp of last harvest
     }
 
     mapping(address => Member) public members;
@@ -38,6 +35,7 @@ contract TeamAllocationVester is Ownable {
 
     function harvest(address account) external {
         uint amount = pendingHarvest(account);
+        require(amount != 0, "no pending harvest");
         members[account].lastUpdate = block.timestamp;
         members[account].reserved -= amount;
         reserved -= amount;
@@ -45,7 +43,7 @@ contract TeamAllocationVester is Ownable {
     }
 
     function withdraw(uint amount) external onlyOwner {
-        require(unreserved() >= amount, "insufficient balance");
+        require(unreserved() >= amount, "low balance");
         png.safeTransfer(msg.sender, amount);
     }
 
@@ -62,7 +60,8 @@ contract TeamAllocationVester is Ownable {
         uint[] memory vestFor
     ) external onlyOwner {
         uint length = accounts.length;
-        require(length < 41, "array too long");
+        require(length < 41, "long array");
+        require(length > 0, "empty array");
         require(
             length == allocations.length && length == vestFor.length,
             "varying-length arrays"
@@ -74,16 +73,19 @@ contract TeamAllocationVester is Ownable {
             uint duration = vestFor[i];
             address account = accounts[i];
 
+            require(account != address(0), "bad recipient");
+
             uint unclaimed;
             if (members[account].reserved != 0) {
                 // record any unclaimed rewards of member
                 unclaimed = pendingHarvest(account);
+                balance -= unclaimed;
                 // free png that was locked for this member’s allocation
                 reserved -= members[account].reserved;
             }
 
             if (allocation != 0) {
-                require(duration >= 8 weeks, "vesting period is too short");
+                require(duration >= 8 weeks, "short vesting duration");
                 require(balance - reserved >= allocation, "low balance");
 
                 // lock png as reserved
