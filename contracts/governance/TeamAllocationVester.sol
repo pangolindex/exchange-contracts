@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPLv3
+// SPDX-License-Identifier: MIT
 // solhint-disable not-rely-on-time
 pragma solidity ^0.8.0;
 
@@ -13,13 +13,14 @@ contract TeamAllocationVester is Ownable {
     using SafeERC20 for IERC20;
 
     struct Member {
-        uint reserved;   // remaining tokens to be distributed
-        uint rate;       // rewards per second
+        uint reserved; // remaining tokens to be distributed
+        uint rate; // rewards per second
         uint lastUpdate; // timestamp of last harvest
     }
 
     mapping(address => Member) public members;
 
+    /// @notice The set of members who have non-zero allocation reserves
     EnumerableSet.AddressSet private _membersAddresses;
 
     IERC20 public immutable png;
@@ -39,6 +40,10 @@ contract TeamAllocationVester is Ownable {
         members[account].lastUpdate = block.timestamp;
         members[account].reserved -= amount;
         reserved -= amount;
+
+        // remove member from the set if its harvest has ended
+        if (members[account].reserved == 0) _membersAddresses.remove(account);
+
         png.safeTransfer(account, amount);
     }
 
@@ -82,6 +87,8 @@ contract TeamAllocationVester is Ownable {
                 balance -= unclaimed;
                 // free png that was locked for this member’s allocation
                 reserved -= members[account].reserved;
+                // remove the member from the set
+                _membersAddresses.remove(account);
             }
 
             if (allocation != 0) {
@@ -101,8 +108,6 @@ contract TeamAllocationVester is Ownable {
             } else {
                 // remove member’s allocation
                 members[account].reserved = 0;
-                // remove the member from the set
-                _membersAddresses.remove(account);
             }
 
             if (unclaimed != 0) png.safeTransfer(account, unclaimed);
