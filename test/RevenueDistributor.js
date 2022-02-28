@@ -58,27 +58,17 @@ describe("RevenueDistributor.sol", function () {
 
     // Deploy Distributor
     this.Distributor = await ethers.getContractFactory("RevenueDistributor");
-    this.distributor = await this.Distributor.deploy(
-      this.admin.address, // admin
-      this.recipients
-    );
+    this.distributor = await this.Distributor.deploy(this.recipients);
     await this.distributor.deployed();
 
   });
 
   describe("Access Control", function () {
-    it("unpriviledged cannot change admin", async function() {
-      let distributor = await this.distributor.connect(this.unprivileged);
-      await expect(distributor.setAdmin(this.unprivileged.address))
-        .to.be.revertedWith("sender is not admin");
-
-    });
-
     it("unpriviledged cannot change recipients", async function() {
       let distributor = await this.distributor.connect(this.unprivileged);
       await expect(distributor.setRecipients(
         [{ account: this.unprivileged.address, allocation: this.denominator }]
-      )).to.be.revertedWith("sender is not admin");
+      )).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
   });
@@ -132,12 +122,6 @@ describe("RevenueDistributor.sol", function () {
       }
       await expect(this.distributor.setRecipients(recipients))
         .to.be.revertedWith("total allocations do not equal to denominator");
-
-    });
-
-    it("cannot set admin to zero address", async function () {
-      await expect(this.distributor.setAdmin(ethers.constants.AddressZero))
-        .to.be.revertedWith("invalid new admin");
 
     });
 

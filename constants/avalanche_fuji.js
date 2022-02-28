@@ -6,9 +6,10 @@ exports.AIRDROP_AMOUNT = 11500000; // 11.5M or 5% of max supply
 exports.TIMELOCK_DELAY = 3 * 24 * 60 * 60; // 3 days
 exports.MULTISIG = {
   owners: [
-    "0xd8cab9d7D788ecD9Fa58928B95607037aC5E606D", // Trollip
+    "0x72C397908Cb93d1B569BBB0Ff8d3D26B7b21d730", // Trollip
+    "0xDA315a838E918026E51A864c43766f5AE86be8c6"  // Shung
   ],
-  threshold: 1
+  threshold: 2
 };
 exports.MULTISIG_ADDRESS;
 exports.FOUNDATION_ADDRESS;
