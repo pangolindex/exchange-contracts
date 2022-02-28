@@ -134,7 +134,7 @@ async function main() {
     }
 
     // Deploy foundation multisig
-    if (MULTISIG_ADDRESS === undefined) {
+    if (FOUNDATION_ADDRESS === undefined) {
         if (USE_GNOSIS_SAFE) {
             var foundation = await Multisig.deploySafe(FOUNDATION_MULTISIG);
             await confirmTransactionCount();
