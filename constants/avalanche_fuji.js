@@ -6,11 +6,12 @@ exports.AIRDROP_AMOUNT = 11500000; // 11.5M or 5% of max supply
 exports.TIMELOCK_DELAY = 3 * 24 * 60 * 60; // 3 days
 exports.MULTISIG = {
   owners: [
-    "0x72C397908Cb93d1B569BBB0Ff8d3D26B7b21d730", // Trollip
-    "0xDA315a838E918026E51A864c43766f5AE86be8c6"  // Shung
+    "0xd8cab9d7D788ecD9Fa58928B95607037aC5E606D", // Trollip
   ],
-  threshold: 2
+  threshold: 1
 };
+exports.MULTISIG_ADDRESS;
+exports.FOUNDATION_ADDRESS;
 exports.USE_GNOSIS_SAFE = false;
 exports.PROPOSAL_THRESHOLD = 100000; // 100K
 exports.PNG_STAKING_ALLOCATION = 500, // 5x weight in minichef
@@ -45,3 +46,5 @@ exports.REVENUE_DISTRIBUTION = [
     allocation: 8000,      // 80%
   }
 ]
+
+exports.TREASURY_FEE = 3000

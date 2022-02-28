@@ -1,10 +1,13 @@
 const { ethers } = require('hardhat');
 const { FOUNDATION_MULTISIG } = require("../constants/shared.js");
+const  abi  = require("../constants/abi.js");
 const {
     PNG_SYMBOL,
     PNG_NAME,
     TOTAL_SUPPLY,
     MULTISIG,
+    MULTISIG_ADDRESS,
+    FOUNDATION_ADDRESS,
     USE_GNOSIS_SAFE,
     PROPOSAL_THRESHOLD,
     WRAPPED_NATIVE_TOKEN,
@@ -14,7 +17,8 @@ const {
     REVENUE_DISTRIBUTION,
     TIMELOCK_DELAY,
     PNG_STAKING_ALLOCATION,
-    WETH_PNG_FARM_ALLOCATION
+    WETH_PNG_FARM_ALLOCATION,
+    TREASURY_FEE
 } = require( `../constants/${network.name}.js`);
 if (USE_GNOSIS_SAFE) {
     var { EthersAdapter, SafeFactory } = require('@gnosis.pm/safe-core-sdk');
@@ -107,38 +111,48 @@ async function main() {
     console.log("PNG token deployed at: " + png.address);
 
     // Deploy this chain’s multisig
-    if (USE_GNOSIS_SAFE) {
-        const ethAdapter = new EthersAdapter({
-          ethers,
-          signer: deployer
-        });
-        var Multisig = await SafeFactory.create({ ethAdapter });
-        var multisig = await Multisig.deploySafe(MULTISIG);
-        await confirmTransactionCount();
-        multisig.address = multisig.getAddress();
+    if (MULTISIG_ADDRESS === undefined) {
+        if (USE_GNOSIS_SAFE) {
+            const ethAdapter = new EthersAdapter({
+              ethers,
+              signer: deployer
+            });
+            var Multisig = await SafeFactory.create({ ethAdapter });
+            var multisig = await Multisig.deploySafe(MULTISIG);
+            await confirmTransactionCount();
+            multisig.address = multisig.getAddress();
+        } else {
+            var Multisig = await ethers.getContractFactory("MultiSigWalletWithDailyLimit");
+            var multisig = await Multisig.deploy(MULTISIG.owners, MULTISIG.threshold, 0);
+            await multisig.deployed();
+            await confirmTransactionCount();
+        }
+        console.log("Multisig deployed at: " + multisig.address);
     } else {
-        var Multisig = await ethers.getContractFactory("MultiSigWalletWithDailyLimit");
-        var multisig = await Multisig.deploy(MULTISIG.owners, MULTISIG.threshold, 0);
-        await multisig.deployed();
-        await confirmTransactionCount();
+        const multisig = new ethers.Contract(MULTISIG_ADDRESS, abi.MultiSigWallet, deployer);
+        console.log("Using existing Multisig contract at", multisig.address);
     }
-    console.log("Multisig deployed at: " + multisig.address);
 
     // Deploy foundation multisig
-    if (USE_GNOSIS_SAFE) {
-        var foundation = await Multisig.deploySafe(FOUNDATION_MULTISIG);
-        await confirmTransactionCount();
-        foundation.address = foundation.getAddress();
+    if (MULTISIG_ADDRESS === undefined) {
+        if (USE_GNOSIS_SAFE) {
+            var foundation = await Multisig.deploySafe(FOUNDATION_MULTISIG);
+            await confirmTransactionCount();
+            foundation.address = foundation.getAddress();
+        } else {
+            var foundation = await Multisig.deploy(
+                FOUNDATION_MULTISIG.owners,
+                FOUNDATION_MULTISIG.threshold,
+                0
+            );
+            await foundation.deployed();
+            await confirmTransactionCount();
+        }
+        console.log("Foundation multisig deployed at: " + foundation.address);
     } else {
-        var foundation = await Multisig.deploy(
-            FOUNDATION_MULTISIG.owners,
-            FOUNDATION_MULTISIG.threshold,
-            0
-        );
-        await foundation.deployed();
-        await confirmTransactionCount();
+        const foundation = new ethers.Contract(FOUNDATION_ADDRESS, abi.MultiSigWallet, deployer);
+        console.log("Using existing Foundation Multisig at", foundation.address);
     }
-    console.log("Foundation multisig deployed at: " + foundation.address);
 
     // Deploy Timelock
     const Timelock = await ethers.getContractFactory("Timelock");
@@ -170,9 +184,7 @@ async function main() {
      *****************/
 
     // Deploy LP Factory
-    const PangolinFactory = await ethers.getContractFactory(
-        "contracts/pangolin-core/PangolinFactory.sol:PangolinFactory"
-    );
+    const PangolinFactory = await ethers.getContractFactory("PangolinFactory");
     const factory = await PangolinFactory.deploy(deployer.address);
     await factory.deployed();
     await confirmTransactionCount();
@@ -190,9 +202,7 @@ async function main() {
      **********************/
 
     // Deploy MiniChefV2
-    const MiniChef = await ethers.getContractFactory(
-        "contracts/dex/MiniChefV2.sol:MiniChefV2"
-    );
+    const MiniChef = await ethers.getContractFactory("MiniChefV2");
     const chef = await MiniChef.deploy(png.address, deployer.address);
     await chef.deployed();
     await confirmTransactionCount();
@@ -307,13 +317,13 @@ async function main() {
         ]);
     };
     const RevenueDistributor = await ethers.getContractFactory("RevenueDistributor");
-    const revenueDistributor = await RevenueDistributor.deploy(
-        jointMultisig.address,
-        revenueDistribution
-    );
+    const revenueDistributor = await RevenueDistributor.deploy(revenueDistribution);
     await revenueDistributor.deployed();
     await confirmTransactionCount();
     console.log("Revenue Distributor deployed at: " + revenueDistributor.address)
+    tx = await revenueDistributor.transferOwnership(jointMultisig.address);
+    await confirmTransactionCount();
+    console.log("Transferred RevenueDistributor ownership to Joint Multisig")
 
     // Deploy Fee Collector
     const FeeCollector = await ethers.getContractFactory("PangolinFeeCollector");
@@ -422,44 +432,44 @@ async function main() {
     await tx.wait();
     await confirmTransactionCount();
     console.log("Deployed farms and transferred MiniChefV2 to multisig.");
+    
+     /***** THE HAPPY END *****/
 
-    /***** THE HAPPY END *****/
-
-    console.log("\n===============\n ALL ADDRESSES \n===============");
-    console.log("PNG address:                ", png.address);
-    console.log("WAVAX address:              ", nativeToken);
-    console.log("PangolinFactory address:    ", factory.address);
-    console.log("PangolinRouter address:     ", router.address);
-    console.log("Foundation Multisig address:", foundation.address);
-    console.log("Multisig address:           ", multisig.address);
-    console.log("JointMultisig address:      ", jointMultisig.address);
-    console.log("CommunityTreasury address:  ", treasury.address);
-    console.log("Airdrop address:            ", airdrop.address);
-    console.log("PNG Staking address:        ", staking.address);
-    console.log("Fee Collector address:      ", feeCollector.address);
-    console.log("Dummy PGL address:          ", dummyERC20.address);
-    console.log("RevenueDistributor address: ", revenueDistributor.address);
-    for (let i = 0; i < REVENUE_DISTRIBUTION.length; i++) {
-        console.log("                             " +
-            REVENUE_DISTRIBUTION[i].recipient + ": " +
-            (REVENUE_DISTRIBUTION[i].allocation / 100 ) + "%");
-    };
-    console.log("Timelock address:           ", timelock.address);
-    //console.log("GovernorAlpha address:      ", governor.address);
-    console.log("MiniChefV2 address:         ", chef.address);
-    for (let i = 0; i < pools.length; i++) {
-        console.log("                             " +
-            "pool " + i + ": " +  pools[i].allocPoint / 100  + "x weight");
-    };
-    console.log("TreasuryVester address:     ", vester.address);
-    for (let i = 0; i < VESTER_ALLOCATIONS.length; i++) {
-        console.log("                             " +
-            VESTER_ALLOCATIONS[i].recipient +
-            ": " + ( VESTER_ALLOCATIONS[i].allocation / 100 ) + "%");
-    };
-
-    const endBalance = await deployer.getBalance();
-    console.log("\nDeploy cost: ", initBalance.sub(endBalance).toString())
+     console.log("\n===============\n ALL ADDRESSES \n===============");
+     console.log("PNG address:                ", png.address);
+     console.log("WAVAX address:              ", nativeToken);
+     console.log("PangolinFactory address:    ", factory.address);
+     console.log("PangolinRouter address:     ", router.address);
+     console.log("Foundation Multisig address:", foundation.address);
+     console.log("Multisig address:           ", multisig.address);
+     console.log("JointMultisig address:      ", jointMultisig.address);
+     console.log("CommunityTreasury address:  ", treasury.address);
+     console.log("Airdrop address:            ", airdrop.address);
+     console.log("PNG Staking address:        ", staking.address);
+     console.log("Fee Collector address:      ", feeCollector.address);
+     console.log("Dummy PGL address:          ", dummyERC20.address);
+     console.log("RevenueDistributor address: ", revenueDistributor.address);
+     for (let i = 0; i < REVENUE_DISTRIBUTION.length; i++) {
+         console.log("                             " +
+             REVENUE_DISTRIBUTION[i].recipient + ": " +
+             (REVENUE_DISTRIBUTION[i].allocation / 100 ) + "%");
+     };
+     console.log("Timelock address:           ", timelock.address);
+     //console.log("GovernorAlpha address:      ", governor.address);
+     console.log("MiniChefV2 address:         ", chef.address);
+     for (let i = 0; i < pools.length; i++) {
+         console.log("                             " +
+             "pool " + i + ": " +  pools[i].allocPoint / 100  + "x weight");
+     };
+     console.log("TreasuryVester address:     ", vester.address);
+     for (let i = 0; i < VESTER_ALLOCATIONS.length; i++) {
+         console.log("                             " +
+             VESTER_ALLOCATIONS[i].recipient +
+             ": " + ( VESTER_ALLOCATIONS[i].allocation / 100 ) + "%");
+     };
+ 
+     const endBalance = await deployer.getBalance();
+     console.log("\nDeploy cost: ", initBalance.sub(endBalance).toString())
 }
 
 main()
