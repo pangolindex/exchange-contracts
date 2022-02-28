@@ -65,4 +65,4 @@ exports.REVENUE_DISTRIBUTION = [
   }
 ]
 
-exports.TREASURY_FEE = 3000
+
