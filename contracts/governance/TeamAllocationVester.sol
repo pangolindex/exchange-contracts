@@ -83,12 +83,15 @@ contract TeamAllocationVester is Ownable {
 
             require(account != address(0), "bad recipient");
 
+            uint unclaimed;
             if (members[account].reserved != 0) {
-                uint unclaimed = pendingHarvest(account);
+                unclaimed = pendingHarvest(account);
                 // record any unclaimed rewards of member
                 members[account].stashed = unclaimed;
                 // free png that was locked for this member’s allocation
                 reserved -= (members[account].reserved - unclaimed);
+            } else {
+                unclaimed = members[account].stashed;
             }
 
             if (allocation != 0) {
@@ -99,7 +102,7 @@ contract TeamAllocationVester is Ownable {
                 require(balance >= reserved, "low balance");
 
                 // add vesting info for the member
-                members[account].reserved = allocation;
+                members[account].reserved = allocation + unclaimed;
                 members[account].rate = allocation / duration;
                 members[account].lastUpdate = block.timestamp;
 
@@ -107,7 +110,7 @@ contract TeamAllocationVester is Ownable {
                 _membersAddresses.add(account);
             } else {
                 // remove member’s allocation
-                members[account].reserved = 0;
+                members[account].reserved = unclaimed;
             }
         }
 
