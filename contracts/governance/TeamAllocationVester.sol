@@ -14,6 +14,7 @@ contract TeamAllocationVester is Ownable {
 
     struct Member {
         uint reserved; // remaining tokens to be distributed
+        uint stashed; // tokens stashed when allocation is changed
         uint rate; // rewards per second
         uint lastUpdate; // timestamp of last harvest
     }
@@ -34,9 +35,11 @@ contract TeamAllocationVester is Ownable {
         png = IERC20(allocationToken);
     }
 
-    function harvest(address account) external {
+    function harvest() external {
+        address account = msg.sender;
         uint amount = pendingHarvest(account);
         require(amount != 0, "no pending harvest");
+        members[account].stashed = 0;
         members[account].lastUpdate = block.timestamp;
         members[account].reserved -= amount;
         reserved -= amount;
@@ -80,23 +83,20 @@ contract TeamAllocationVester is Ownable {
 
             require(account != address(0), "bad recipient");
 
-            uint unclaimed;
             if (members[account].reserved != 0) {
+                uint unclaimed = pendingHarvest(account);
                 // record any unclaimed rewards of member
-                unclaimed = pendingHarvest(account);
-                balance -= unclaimed;
+                members[account].stashed = unclaimed;
                 // free png that was locked for this member’s allocation
-                reserved -= members[account].reserved;
-                // remove the member from the set
-                _membersAddresses.remove(account);
+                reserved -= (members[account].reserved - unclaimed);
             }
 
             if (allocation != 0) {
                 require(duration >= 8 weeks, "short vesting duration");
-                require(balance - reserved >= allocation, "low balance");
 
                 // lock png as reserved
                 reserved += allocation;
+                require(balance >= reserved, "low balance");
 
                 // add vesting info for the member
                 members[account].reserved = allocation;
@@ -109,8 +109,6 @@ contract TeamAllocationVester is Ownable {
                 // remove member’s allocation
                 members[account].reserved = 0;
             }
-
-            if (unclaimed != 0) png.safeTransfer(account, unclaimed);
         }
 
         emit MembersChanged(accounts, allocations);
@@ -123,7 +121,9 @@ contract TeamAllocationVester is Ownable {
     function pendingHarvest(address account) public view returns (uint) {
         Member memory member = members[account];
 
-        uint amount = (block.timestamp - member.lastUpdate) * member.rate;
+        uint amount = member.stashed +
+            (block.timestamp - member.lastUpdate) *
+            member.rate;
         return amount > member.reserved ? member.reserved : amount;
     }
 
