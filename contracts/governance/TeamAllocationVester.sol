@@ -6,27 +6,25 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-/// @notice Simple contract to allocate & vest a token to EOAs
+/// @title A contract that allocates & vests a token to EOAs
+
 /// @author shung for Pangolin
 contract TeamAllocationVester is Ownable {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
 
     struct Member {
-        /// @notice remaining tokens to be distributed
-        uint reserved;
-        /// @notice rewards per second
-        uint rate;
-        /// @notice timestamp of last harvest
-        uint lastUpdate;
+        uint reserved; // remaining tokens to be distributed
+        uint rate; // rewards per second
+        uint lastUpdate; // timestamp of last harvest
     }
 
-    /// @notice Set of member addresses with allocations
-    EnumerableSet.AddressSet private membersAddresses;
+    mapping(address => Member) public members;
+
+    /// @notice The set of members who have non-zero allocation reserves
+    EnumerableSet.AddressSet private _membersAddresses;
 
     IERC20 public immutable png;
-
-    mapping(address => Member) public members;
 
     /// @notice The total amount of tokens set to be streamed to all members
     uint public reserved;
@@ -34,37 +32,28 @@ contract TeamAllocationVester is Ownable {
     /// @notice Min duration for the reserved tokens of a member to be vested
     uint public minVestingPeriod = 52 weeks;
 
+    event MembersChanged(address[] members, uint[] allocation);
+
     constructor(address allocationToken) {
         png = IERC20(allocationToken);
     }
 
-    function getMembers() external view returns (address[] memory) {
-        return membersAddresses.values();
-    }
-
-    function membersLength() external view returns (uint) {
-        return membersAddresses.length();
-    }
-
-    function memberAt(uint index) external view returns (address) {
-        return membersAddresses.at(index);
-    }
-
-    function pendingHarvest(address account) public view returns (uint) {
-        Member memory member = members[account];
-
-        uint amount = (block.timestamp - member.lastUpdate) * member.rate;
-        return amount > member.reserved ? member.reserved : amount;
-    }
-
-    function harvest(address account) public {
+    function harvest(address account) external {
         uint amount = pendingHarvest(account);
-        if (amount != 0) {
-            members[account].lastUpdate = block.timestamp;
-            members[account].reserved -= amount;
-            reserved -= amount;
-            png.transfer(account, amount);
-        }
+        require(amount != 0, "no pending harvest");
+        members[account].lastUpdate = block.timestamp;
+        members[account].reserved -= amount;
+        reserved -= amount;
+
+        // remove member from the set if its harvest has ended
+        if (members[account].reserved == 0) _membersAddresses.remove(account);
+
+        png.safeTransfer(account, amount);
+    }
+
+    function withdraw(uint amount) external onlyOwner {
+        require(unreserved() >= amount, "low balance");
+        png.safeTransfer(msg.sender, amount);
     }
 
     /**
@@ -80,67 +69,71 @@ contract TeamAllocationVester is Ownable {
         uint[] memory vestFor
     ) external onlyOwner {
         uint length = accounts.length;
-        require(length < 41, "array too long");
+
+        require(length < 41, "long array");
+        require(length > 0, "empty array");
         require(
             length == allocations.length && length == vestFor.length,
-            "array arguments must be of equal length"
+            "varying-length arrays"
         );
 
+        uint balance = png.balanceOf(address(this));
         for (uint i; i < length; ++i) {
             uint allocation = allocations[i];
             uint duration = vestFor[i];
             address account = accounts[i];
 
+            require(account != address(0), "bad recipient");
+
+            uint unclaimed;
             if (members[account].reserved != 0) {
-                // send pending rewards if any
-                harvest(account);
-                // remove remaining account reserve from `reserved`
-                // we will add it as allocation in the next statements
+                // record any unclaimed rewards of member
+                unclaimed = pendingHarvest(account);
+                balance -= unclaimed;
+                // free png that was locked for this member’s allocation
                 reserved -= members[account].reserved;
+                // remove the member from the set
+                _membersAddresses.remove(account);
             }
 
             if (allocation != 0) {
-                require(
-                    duration > minVestingPeriod,
-                    "vesting period is too short"
-                );
-                require(
-                    png.balanceOf(address(this)) - reserved >= allocation,
-                    "insufficient balance"
-                );
+                require(duration >= 8 weeks, "short vesting duration");
+                require(balance - reserved >= allocation, "low balance");
 
+                // lock png as reserved
                 reserved += allocation;
+
+                // add vesting info for the member
+
                 members[account].reserved = allocation;
                 members[account].rate = allocation / duration;
                 members[account].lastUpdate = block.timestamp;
 
-                // add the member to the set
-                membersAddresses.add(account);
+                // add the member to the set for easy access
+                _membersAddresses.add(account);
             } else {
+                // remove member’s allocation
                 members[account].reserved = 0;
-                // remove the member from the set
-                membersAddresses.remove(account);
             }
+
+            if (unclaimed != 0) png.safeTransfer(account, unclaimed);
         }
 
         emit MembersChanged(accounts, allocations);
     }
 
-    function withdraw(uint amount) external onlyOwner {
-        require(
-            png.balanceOf(address(this)) - reserved >= amount,
-            "insufficient balance"
-        );
-        png.transfer(msg.sender, amount);
+    function getMembers() external view returns (address[] memory) {
+        return _membersAddresses.values();
     }
 
-    function setMinVestingPeriod(uint newMinVestingPeriod) external onlyOwner {
-        require(
-            newMinVestingPeriod > 8 weeks,
-            "min vesting must be longer than 8 weeks"
-        );
-        minVestingPeriod = newMinVestingPeriod;
+    function pendingHarvest(address account) public view returns (uint) {
+        Member memory member = members[account];
+
+        uint amount = (block.timestamp - member.lastUpdate) * member.rate;
+        return amount > member.reserved ? member.reserved : amount;
     }
 
-    event MembersChanged(address[] members, uint[] allocation);
+    function unreserved() public view returns (uint) {
+        return png.balanceOf(address(this)) - reserved;
+    }
 }
