@@ -118,18 +118,6 @@ describe("TeamAllocationVester.sol", function () {
       ).to.be.revertedWith("short vesting duration");
     });
 
-    it("revert: more than forty recipients", async function () {
-      var [members, allocations, durations] = generateRecipients(41);
-
-      expect(await this.png.transfer(this.team.address, TOTAL_SUPPLY)).to.emit(
-        this.png,
-        "Transfer"
-      );
-      await expect(
-        this.team.setAllocations(members, allocations, durations)
-      ).to.be.revertedWith("long array");
-    });
-
     it("revert: zero recipients", async function () {
       await expect(this.team.setAllocations([], [], [])).to.be.revertedWith(
         "empty array"
