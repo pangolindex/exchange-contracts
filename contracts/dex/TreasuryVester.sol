@@ -147,7 +147,7 @@ contract TreasuryVester is Ownable {
         step++;
 
         // distributes _vestingAmount of tokens to recipients based on their allocation
-        for (uint i; i < _recipientsLength; i++) {
+        for (uint i; i < _recipientsLength; ++i) {
             Recipient memory recipient = _recipients[i];
             uint amount = recipient.allocation * _vestingAmount / DENOMINATOR;
             if (!recipient.isMiniChef) {
