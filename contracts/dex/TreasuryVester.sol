@@ -170,7 +170,7 @@ contract TreasuryVester is Ownable {
     function setRecipients(Recipient[] memory newRecipients) public onlyOwner {
         _recipientsLength = newRecipients.length;
         require(
-            _recipientsLength != 0,
+            _recipientsLength != 0 && _recipientsLength < 81,
             "TreasuryVester::setRecipients: invalid recipient number"
         );
         uint allocations;
