@@ -29,7 +29,7 @@ contract TeamAllocationVester is Ownable {
     /// @notice The total amount of tokens set to be streamed to all members
     uint public reserved;
 
-    event MembersChanged(address[] members, uint[] allocation);
+    event MembersChanged(address[] members, uint[] allocations);
 
     constructor(address allocationToken) {
         png = IERC20(allocationToken);
