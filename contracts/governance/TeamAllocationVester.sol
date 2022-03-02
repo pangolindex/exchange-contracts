@@ -68,8 +68,7 @@ contract TeamAllocationVester is Ownable {
         uint[] memory vestFor
     ) external onlyOwner {
         uint length = accounts.length;
-        require(length < 41, "long array");
-        require(length > 0, "empty array");
+        require(length != 0, "empty array");
         require(
             length == allocations.length && length == vestFor.length,
             "varying-length arrays"
