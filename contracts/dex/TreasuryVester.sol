@@ -120,7 +120,7 @@ contract TreasuryVester is Ownable {
      * @notice Distributes the tokens to recipients based on their allocation
      * @dev If the vesting is enabled, anyone can call this function with 1 day intervals
      */
-    function distribute() public {
+    function distribute() external {
         require(vestingEnabled, "TreasuryVester::distribute: vesting is not enabled");
         require(
             block.timestamp >= lastUpdate + VESTING_CLIFF,
