@@ -83,6 +83,7 @@ contract TreasuryVester is Ownable {
     ) {
         require(newStartingBalance > 0, "TreasuryVester::Constructor: invalid starting balance");
         require(newGuardian != address(0), "TreasuryVester::Constructor: invalid guardian address");
+        require(newVestedToken != address(0), "TreasuryVester::Constructor: invalid token address");
         guardian = newGuardian;
         vestedToken = IPng(newVestedToken);
         startingBalance = newStartingBalance;

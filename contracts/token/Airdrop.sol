@@ -41,6 +41,9 @@ contract Airdrop {
         address owner_,
         address remainderDestination_
     ) {
+        require(owner_ != address(0), 'Airdrop::Construct: invalid new owner');
+        require(png_ != address(0), 'Airdrop::Construct: invalid png address');
+
         airdropSupply = supply_;
         png = png_;
         owner = owner_;
