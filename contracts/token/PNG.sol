@@ -426,6 +426,8 @@ contract Png {
         emit Transfer(address(0), dst, amount);
 
         require(totalSupply <= maxSupply, "Png::_mintTokens: mint result exceeds max supply");
+
+        _moveDelegates(address(0), delegates[dst], amount);
     }
 
     function _moveDelegates(address srcRep, address dstRep, uint96 amount) internal {
