@@ -10,6 +10,7 @@ for(let i = 0; i < CHAINS.length; i++) {
   networksFromSdk[CHAINS[i].id] = {
     url: CHAINS[i].rpc_uri,
     chainId: CHAINS[i].chain_id,
+    timeout: 120000,
     accounts: [process.env.PRIVATE_KEY]
   };
 };
