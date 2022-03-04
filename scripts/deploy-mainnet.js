@@ -136,7 +136,7 @@ async function main() {
         ]);
     }
 
-    const timelock = await deploy("Timelock", [TIMELOCK_DELAY]);
+    const timelock = await deploy("Timelock", [multisig.address, TIMELOCK_DELAY]);
     const factory = await deploy("PangolinFactory", [deployer.address]);
     const router = await deploy("PangolinRouter", [
         factory.address,
@@ -223,10 +223,6 @@ async function main() {
     ]);
 
     console.log("\n===============\n CONFIGURATION \n===============");
-
-    await timelock.initiate(multisig.address);
-    await confirmTransactionCount();
-    console.log("Transferred Timelock ownership to Multisig.");
 
     await treasury.transferOwnership(timelock.address);
     await confirmTransactionCount();
