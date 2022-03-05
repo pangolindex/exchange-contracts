@@ -136,7 +136,10 @@ async function main() {
         ]);
     }
 
-    const timelock = await deploy("Timelock", [multisig.address, TIMELOCK_DELAY]);
+    const timelock = await deploy("Timelock", [
+        multisig.address,
+        TIMELOCK_DELAY,
+    ]);
     const factory = await deploy("PangolinFactory", [deployer.address]);
     const router = await deploy("PangolinRouter", [
         factory.address,
@@ -343,9 +346,17 @@ async function main() {
     console.log(
         "Recorded contract addresses to `addresses/" + network.name + ".js`."
     );
-    console.log(
-        "Refer to `addresses/README.md` for Etherscan verifications.\n"
-    );
+    console.log("Refer to `addresses/README.md` for Etherscan verification.\n");
+
+    try {
+        fs.writeFileSync(
+            "addresses/" + network.name + ".js",
+            "exports.ADDRESSES=" + JSON.stringify(contracts)
+        );
+        //file written successfully
+    } catch (err) {
+        console.error(err);
+    }
 }
 
 main()

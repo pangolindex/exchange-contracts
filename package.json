@@ -22,13 +22,11 @@
   "author": "Connor Daly <connor.daly@avalabs.org>",
   "license": "MIT",
   "scripts": {
-    "precompile": "rimraf ./build/",
     "compile": "export LANG=C && npx hardhat compile",
     "deploy": "export LANG=C && npx hardhat run scripts/deploy-mainnet.js",
-    "pretest": "yarn compile",
     "test": "export LANG=C && npx hardhat test",
-    "lint": "prettier ./test/**/*.ts --check",
-    "prepublishOnly": "yarn test"
+    "verify": "export LANG=C && npx hardhat run scripts/verify.js",
+    "lint": "prettier ./test/**/*.ts --check"
   },
   "bugs": {
     "url": "https://github.com/pangolindex/exchange-contracts/issues"
