@@ -83,6 +83,7 @@ contract TreasuryVester is Ownable {
     ) {
         require(newStartingBalance > 0, "TreasuryVester::Constructor: invalid starting balance");
         require(newGuardian != address(0), "TreasuryVester::Constructor: invalid guardian address");
+        require(newVestedToken != address(0), "TreasuryVester::Constructor: invalid token address");
         guardian = newGuardian;
         vestedToken = IPng(newVestedToken);
         startingBalance = newStartingBalance;
@@ -119,7 +120,7 @@ contract TreasuryVester is Ownable {
      * @notice Distributes the tokens to recipients based on their allocation
      * @dev If the vesting is enabled, anyone can call this function with 1 day intervals
      */
-    function distribute() public {
+    function distribute() external {
         require(vestingEnabled, "TreasuryVester::distribute: vesting is not enabled");
         require(
             block.timestamp >= lastUpdate + VESTING_CLIFF,
@@ -146,7 +147,7 @@ contract TreasuryVester is Ownable {
         step++;
 
         // distributes _vestingAmount of tokens to recipients based on their allocation
-        for (uint i; i < _recipientsLength; i++) {
+        for (uint i; i < _recipientsLength; ++i) {
             Recipient memory recipient = _recipients[i];
             uint amount = recipient.allocation * _vestingAmount / DENOMINATOR;
             if (!recipient.isMiniChef) {
@@ -170,7 +171,7 @@ contract TreasuryVester is Ownable {
     function setRecipients(Recipient[] memory newRecipients) public onlyOwner {
         _recipientsLength = newRecipients.length;
         require(
-            _recipientsLength != 0,
+            _recipientsLength != 0 && _recipientsLength < 81,
             "TreasuryVester::setRecipients: invalid recipient number"
         );
         uint allocations;

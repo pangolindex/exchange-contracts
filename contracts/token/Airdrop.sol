@@ -41,6 +41,9 @@ contract Airdrop {
         address owner_,
         address remainderDestination_
     ) {
+        require(owner_ != address(0), 'Airdrop::Construct: invalid new owner');
+        require(png_ != address(0), 'Airdrop::Construct: invalid png address');
+
         airdropSupply = supply_;
         png = png_;
         owner = owner_;
@@ -175,7 +178,7 @@ contract Airdrop {
             addrs.length == pngOuts.length,
             'Airdrop::whitelistAddresses: incorrect array length'
         );
-        for (uint i = 0; i < addrs.length; i++) {
+        for (uint i; i < addrs.length; ++i) {
             address addr = addrs[i];
             uint pngOut = pngOuts[i];
             totalAllocated = totalAllocated + pngOut - withdrawAmount[addr];

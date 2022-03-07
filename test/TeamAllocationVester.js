@@ -118,18 +118,6 @@ describe("TeamAllocationVester.sol", function () {
       ).to.be.revertedWith("short vesting duration");
     });
 
-    it("revert: more than forty recipients", async function () {
-      var [members, allocations, durations] = generateRecipients(41);
-
-      expect(await this.png.transfer(this.team.address, TOTAL_SUPPLY)).to.emit(
-        this.png,
-        "Transfer"
-      );
-      await expect(
-        this.team.setAllocations(members, allocations, durations)
-      ).to.be.revertedWith("long array");
-    });
-
     it("revert: zero recipients", async function () {
       await expect(this.team.setAllocations([], [], [])).to.be.revertedWith(
         "empty array"
@@ -323,7 +311,7 @@ describe("TeamAllocationVester.sol", function () {
   //////////////////////////////
   describe("harvest", function () {
     it("revert: nothing to harvest", async function () {
-      await expect(this.team.harvest(this.admin.address)).to.be.revertedWith(
+      await expect(this.team.harvest()).to.be.revertedWith(
         "no pending harvest"
       );
     });
@@ -341,7 +329,7 @@ describe("TeamAllocationVester.sol", function () {
           durations
         )
       ).to.emit(this.team, "MembersChanged");
-      expect(await this.team.harvest(this.admin.address)).to.emit(
+      expect(await this.team.harvest()).to.emit(
         this.png,
         "Transfer"
       );
@@ -470,30 +458,6 @@ describe("TeamAllocationVester.sol", function () {
       actualMembers = await this.team.getMembers();
       expect(actualMembers.length).to.equal(members.length);
       for (let i; i < 10; i++) expect(actualMembers[i]).to.equal(members[i]);
-    });
-
-    it("expect: no members after removal", async function () {
-      expect(await this.png.transfer(this.team.address, TOTAL_SUPPLY)).to.emit(
-        this.png,
-        "Transfer"
-      );
-
-      var [members, allocations, durations] = generateRecipients(10);
-      expect(
-        await this.team.setAllocations(members, allocations, durations)
-      ).to.emit(this.team, "MembersChanged");
-
-      var actualMembers = await this.team.getMembers();
-      expect(actualMembers.length).to.equal(members.length);
-      for (let i; i < 10; i++) expect(actualMembers[i]).to.equal(members[i]);
-
-      for (let i = 0; i < 10; i++) allocations[i] = BigNumber.from("0");
-      expect(
-        await this.team.setAllocations(members, allocations, durations)
-      ).to.emit(this.team, "MembersChanged");
-
-      actualMembers = await this.team.getMembers();
-      expect(actualMembers.length).to.equal(0);
     });
 
     it("expect: increase members after addition", async function () {

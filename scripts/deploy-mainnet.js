@@ -1,4 +1,5 @@
-const { ethers } = require('hardhat');
+const { ethers } = require("hardhat");
+const fs = require("fs");
 const { FOUNDATION_MULTISIG } = require("../constants/shared.js");
 const  abi  = require("../constants/abi.js");
 const {
@@ -18,39 +19,35 @@ const {
     TIMELOCK_DELAY,
     PNG_STAKING_ALLOCATION,
     WETH_PNG_FARM_ALLOCATION,
-    TREASURY_FEE
-} = require( `../constants/${network.name}.js`);
+} = require(`../constants/${network.name}.js`);
 if (USE_GNOSIS_SAFE) {
-    var { EthersAdapter, SafeFactory } = require('@gnosis.pm/safe-core-sdk');
+    var { EthersAdapter, SafeFactory } = require("@gnosis.pm/safe-core-sdk");
 }
 
+var contracts = [];
+
 function delay(timeout) {
-	return new Promise(resolve => {
-		setTimeout(resolve, timeout);
-	});
-};
+    return new Promise((resolve) => {
+        setTimeout(resolve, timeout);
+    });
+}
 
 async function main() {
-
-    let tx;
-
     const [deployer] = await ethers.getSigners();
-    console.log("Deploying contracts with the account:",deployer.address);
+    console.log("\nDeployer:", deployer.address);
 
     const initBalance = await deployer.getBalance();
-    console.log("Account balance:", initBalance.toString());
+    console.log("Balance:", ethers.utils.formatEther(initBalance) + "\n");
 
-    console.log("\n===================\n DEPLOYMENT CONFIG \n===================");
     if (USE_GNOSIS_SAFE) {
-        console.log("✅ Using Gnosis Safe for multisig accounts.");
+        console.log("✅ Using Gnosis Safe.");
     } else {
-        console.log("Using legacy multisig instead of Gnosis Safe.");
+        console.log("⚠️  Using legacy multisig.");
     }
-    console.log("Using Timelock + Multisig instead of full governance.");
     if (WRAPPED_NATIVE_TOKEN === undefined || WRAPPED_NATIVE_TOKEN == "") {
-        console.log("⚠️  No wrapped token contract is defined.");
+        console.log("⚠️  No wrapped gas token is defined.");
     } else {
-        console.log("✅ An existing wrapped token contract is defined.");
+        console.log("✅ An existing wrapped gas token is defined.");
     }
     if (INITIAL_FARMS.length === 0 || INITIAL_FARMS === undefined) {
         console.log("⚠️  No initial farm is defined.");
@@ -59,39 +56,42 @@ async function main() {
     // dirty hack to circumvent duplicate nonce submission error
     var txCount = await ethers.provider.getTransactionCount(deployer.address);
     async function confirmTransactionCount() {
-        let remainingTries = 50
         let newTxCount;
-        while (remainingTries--) {
+        while (true) {
             try {
-                newTxCount = await ethers.provider.getTransactionCount(deployer.address);
-                if (newTxCount != ( txCount + 1)) {
-                    console.log(`⚠️  Wrong tx count. Rechecking in 10 secs`);
-                    await delay(30000);
+                newTxCount = await ethers.provider.getTransactionCount(
+                    deployer.address
+                );
+                if (newTxCount != txCount + 1) {
                     continue;
-                };
+                }
                 txCount++;
             } catch (err) {
                 console.log(err);
                 process.exit(0);
-            };
+            }
             break;
-        };
-    };
+        }
+    }
 
+    async function deploy(factory, args) {
+        var ContractFactory = await ethers.getContractFactory(factory);
+        var contract = await ContractFactory.deploy(...args);
+        await contract.deployed();
+        contracts.push({ address: contract.address, args: args });
+        await confirmTransactionCount();
+        console.log(contract.address, ":", factory);
+        return contract;
+    }
 
     console.log("\n============\n DEPLOYMENT \n============");
 
     // Deploy WAVAX if not defined
     if (WRAPPED_NATIVE_TOKEN === undefined) {
-        const WAVAX = await ethers.getContractFactory("WAVAX");
-        const wavax = await WAVAX.deploy();
-        await wavax.deployed();
-        await confirmTransactionCount();
-        var nativeToken = wavax.address;
-        console.log("Deployed new wrapped token contract to", nativeToken);
+        var nativeToken = (await deploy("WAVAX", [])).address;
     } else {
         var nativeToken = WRAPPED_NATIVE_TOKEN;
-        console.log("Using existing wrapped token contract at", nativeToken);
+        console.log(nativeToken, ": WAVAX");
     }
 
     /**************
@@ -99,16 +99,12 @@ async function main() {
      **************/
 
     // Deploy PNG
-    const PNG = await ethers.getContractFactory("Png");
-    const png = await PNG.deploy(
+    const png = await deploy("Png", [
         ethers.utils.parseUnits(TOTAL_SUPPLY.toString(), 18),
         ethers.utils.parseUnits(AIRDROP_AMOUNT.toString(), 18),
         PNG_SYMBOL,
-        PNG_NAME
-    );
-    await png.deployed()
-    await confirmTransactionCount();
-    console.log("PNG token deployed at: " + png.address);
+        PNG_NAME,
+    ]);
 
     // Deploy this chain’s multisig
     if (MULTISIG_ADDRESS === undefined) {

@@ -6,6 +6,9 @@ These contracts are compiled and deployed using [Hardhat](https://hardhat.org/).
 
 To prepare the dev environment, run `yarn install`. To compile the contracts, run `yarn compile`. Yarn is available to install [here](https://classic.yarnpkg.com/en/docs/install/#debian-stable) if you need it.
 
+**Please note** Currently Hedera does not support Hardhat. There are instructions for Hedera under `contracts/hedera/readme.md`
+
+
 ## Accessing the ABI
 If you need to use any of the contract ABIs, you can install this repo as an npm package with `npm install --dev @pangolindex/exchange-contracts`. Then import the ABI like so: `import { abi as IPangolinPairABI } from '@pangolindex/exchange-contracts/artifacts/contracts/pangolin-core/interfaces/IPangolinPair.sol/IPangolinPair.json'`.
 
