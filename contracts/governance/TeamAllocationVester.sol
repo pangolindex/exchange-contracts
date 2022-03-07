@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title A contract that allocates & vests a token to EOAs
-
 /// @author shung for Pangolin
 contract TeamAllocationVester is Ownable {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -15,6 +14,7 @@ contract TeamAllocationVester is Ownable {
 
     struct Member {
         uint reserved; // remaining tokens to be distributed
+        uint stashed; // tokens stashed when allocation is changed
         uint rate; // rewards per second
         uint lastUpdate; // timestamp of last harvest
     }
@@ -29,18 +29,17 @@ contract TeamAllocationVester is Ownable {
     /// @notice The total amount of tokens set to be streamed to all members
     uint public reserved;
 
-    /// @notice Min duration for the reserved tokens of a member to be vested
-    uint public minVestingPeriod = 52 weeks;
-
-    event MembersChanged(address[] members, uint[] allocation);
+    event MembersChanged(address[] members, uint[] allocations);
 
     constructor(address allocationToken) {
         png = IERC20(allocationToken);
     }
 
-    function harvest(address account) external {
+    function harvest() external {
+        address account = msg.sender;
         uint amount = pendingHarvest(account);
         require(amount != 0, "no pending harvest");
+        members[account].stashed = 0;
         members[account].lastUpdate = block.timestamp;
         members[account].reserved -= amount;
         reserved -= amount;
@@ -69,9 +68,7 @@ contract TeamAllocationVester is Ownable {
         uint[] memory vestFor
     ) external onlyOwner {
         uint length = accounts.length;
-
-        require(length < 41, "long array");
-        require(length > 0, "empty array");
+        require(length != 0, "empty array");
         require(
             length == allocations.length && length == vestFor.length,
             "varying-length arrays"
@@ -87,25 +84,24 @@ contract TeamAllocationVester is Ownable {
 
             uint unclaimed;
             if (members[account].reserved != 0) {
-                // record any unclaimed rewards of member
                 unclaimed = pendingHarvest(account);
-                balance -= unclaimed;
+                // record any unclaimed rewards of member
+                members[account].stashed = unclaimed;
                 // free png that was locked for this member’s allocation
-                reserved -= members[account].reserved;
-                // remove the member from the set
-                _membersAddresses.remove(account);
+                reserved -= (members[account].reserved - unclaimed);
+            } else {
+                unclaimed = members[account].stashed;
             }
 
             if (allocation != 0) {
                 require(duration >= 8 weeks, "short vesting duration");
-                require(balance - reserved >= allocation, "low balance");
 
                 // lock png as reserved
                 reserved += allocation;
+                require(balance >= reserved, "low balance");
 
                 // add vesting info for the member
-
-                members[account].reserved = allocation;
+                members[account].reserved = allocation + unclaimed;
                 members[account].rate = allocation / duration;
                 members[account].lastUpdate = block.timestamp;
 
@@ -113,10 +109,8 @@ contract TeamAllocationVester is Ownable {
                 _membersAddresses.add(account);
             } else {
                 // remove member’s allocation
-                members[account].reserved = 0;
+                members[account].reserved = unclaimed;
             }
-
-            if (unclaimed != 0) png.safeTransfer(account, unclaimed);
         }
 
         emit MembersChanged(accounts, allocations);
@@ -129,7 +123,9 @@ contract TeamAllocationVester is Ownable {
     function pendingHarvest(address account) public view returns (uint) {
         Member memory member = members[account];
 
-        uint amount = (block.timestamp - member.lastUpdate) * member.rate;
+        uint amount = member.stashed +
+            (block.timestamp - member.lastUpdate) *
+            member.rate;
         return amount > member.reserved ? member.reserved : amount;
     }
 
