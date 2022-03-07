@@ -125,10 +125,9 @@ async function main() {
                 0,
             ]);
         }
-        console.log("Multisig deployed at: " + multisig.address);
     } else {
         const multisig = new ethers.Contract(MULTISIG_ADDRESS, abi.MultiSigWallet, deployer);
-        console.log("Using existing Multisig contract at", multisig.address);
+        console.log(multisig.address, ": MultiSigWalletWithDailyLimit");
     }
 
     // Deploy foundation multisig
@@ -145,10 +144,9 @@ async function main() {
                 0,
             ]);
         }
-        console.log("Foundation multisig deployed at: " + foundation.address);
     } else {
         const foundation = new ethers.Contract(FOUNDATION_ADDRESS, abi.MultiSigWallet, deployer);
-        console.log("Using existing Foundation Multisig at", foundation.address);
+        console.log(foundation.address, ": MultiSigWalletWithDailyLimit");
     }
 
     const timelock = await deploy("Timelock", [
