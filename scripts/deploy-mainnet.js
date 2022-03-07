@@ -44,6 +44,16 @@ async function main() {
     } else {
         console.log("⚠️  Using legacy multisig.");
     }
+    if (MULTISIG_ADDRESS) {
+        console.log("✅ Using Multisig already deploy.");
+    } else {
+        console.log("⚠️  No Multisig is defined.");
+    }
+    if (FOUNDATION_ADDRESS) {
+        console.log("✅ Using FoundationMultisig already deploy.");
+    } else {
+        console.log("⚠️  No Foundation Multisig is defined.");
+    }
     if (WRAPPED_NATIVE_TOKEN === undefined || WRAPPED_NATIVE_TOKEN == "") {
         console.log("⚠️  No wrapped gas token is defined.");
     } else {
