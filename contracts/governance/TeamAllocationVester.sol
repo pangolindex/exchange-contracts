@@ -4,11 +4,11 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "../access/Claimable.sol";
 
 /// @title A contract that allocates & vests a token to EOAs
 /// @author shung for Pangolin
-contract TeamAllocationVester is Ownable {
+contract TeamAllocationVester is Claimable {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
 
