@@ -11,6 +11,8 @@ exports.MULTISIG = {
   ],
   threshold: 2
 };
+exports.MULTISIG_ADDRESS;
+exports.FOUNDATION_ADDRESS;
 exports.USE_GNOSIS_SAFE = false;
 exports.PROPOSAL_THRESHOLD = 100000; // 100K
 exports.PNG_STAKING_ALLOCATION = 500, // 5x weight in minichef
@@ -46,3 +48,5 @@ exports.REVENUE_DISTRIBUTION = [
     allocation: 8000,      // 80%
   }
 ]
+
+
