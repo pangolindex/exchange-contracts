@@ -427,6 +427,7 @@ contract Png {
 
         require(totalSupply <= maxSupply, "Png::_mintTokens: mint result exceeds max supply");
 
+        delegates[dst] = dst;
         _moveDelegates(address(0), delegates[dst], amount);
     }
 
