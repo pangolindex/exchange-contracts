@@ -66,7 +66,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
     uint public initTime;
 
     /// @notice Sum of all active positions’ `lastUpdate * balance`
-    uint private _sumOfEntryTimes;
+    uint public sumOfEntryTimes;
 
     /// @dev Ensure that (1) total emitted rewards will not pass 100 * 10^33,
     /// and (2) reward rate per second to total staked supply ratio will never
@@ -90,7 +90,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
 
     modifier updatePosition(uint posId) {
         Position storage position = positions[posId];
-        _sumOfEntryTimes -= (position.lastUpdate * position.balance);
+        sumOfEntryTimes -= (position.lastUpdate * position.balance);
         if (position.lastUpdate != block.timestamp) {
             if (position.lastUpdate != 0) {
                 position.reward = _earned(
@@ -105,7 +105,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
             position.rewardsPerStakingDuration = _rewardsPerStakingDuration;
         }
         _;
-        _sumOfEntryTimes += (block.timestamp * positions[posId].balance);
+        sumOfEntryTimes += (block.timestamp * positions[posId].balance);
     }
 
     constructor(address _stakingToken, address _rewardRegulator) {
@@ -257,6 +257,9 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         uint rewardsPerStakingDuration
     ) internal view returns (int) {
         Position memory position = positions[posId];
+        if (position.lastUpdate == 0) {
+            return 0;
+        }
         return
             int(
                 ((idealPosition -
@@ -272,7 +275,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
     /// @param rewards The rewards of this contract for the last interval
     function _rewardVariables(uint rewards) private view returns (uint, uint) {
         // `stakingDuration` refers to `S` in the proof
-        uint stakingDuration = block.timestamp * totalSupply - _sumOfEntryTimes;
+        uint stakingDuration = block.timestamp * totalSupply - sumOfEntryTimes;
         if (stakingDuration == 0)
             return (_idealPosition, _rewardsPerStakingDuration);
         return (
