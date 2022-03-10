@@ -1,7 +1,6 @@
 const { ethers } = require("hardhat");
 const fs = require("fs");
 const { FOUNDATION_MULTISIG } = require("../constants/shared.js");
-const  abi  = require("../constants/abi.js");
 const {
     PNG_SYMBOL,
     PNG_NAME,
@@ -94,6 +93,14 @@ async function main() {
         return contract;
     }
 
+    async function attach(factory, address) {
+        var ContractFactory = await ethers.getContractFactory(factory);
+        var contract = await ContractFactory.attach(address);
+        contracts.push({ address: contract.address});
+        console.log(contract.address, ":", factory);
+        return contract;
+    }
+
     console.log("\n============\n DEPLOYMENT \n============");
 
     // Deploy WAVAX if not defined
@@ -136,8 +143,7 @@ async function main() {
             ]);
         }
     } else {
-        const multisig = new ethers.Contract(MULTISIG_ADDRESS, abi.MultiSigWallet, deployer);
-        console.log(multisig.address, ": MultiSigWalletWithDailyLimit");
+        var multisig = await attach("MultiSigWalletWithDailyLimit", MULTISIG_ADDRESS);
     }
 
     // Deploy foundation multisig
@@ -155,8 +161,7 @@ async function main() {
             ]);
         }
     } else {
-        const foundation = new ethers.Contract(FOUNDATION_ADDRESS, abi.MultiSigWallet, deployer);
-        console.log(foundation.address, ": MultiSigWalletWithDailyLimit");
+        var foundation = await attach("MultiSigWalletWithDailyLimit", FOUNDATION_ADDRESS);
     }
 
     const timelock = await deploy("Timelock", [
