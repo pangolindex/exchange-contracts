@@ -1,15 +1,18 @@
 {
   "name": "@pangolindex/exchange-contracts",
   "devDependencies": {
+    "@boringcrypto/boring-solidity": "boringcrypto/BoringSolidity#e06e943",
     "@nomiclabs/hardhat-ethers": "^2.0.1",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@openzeppelin/contracts": "^4.3.2",
     "chai": "^4.2.0",
     "ethereum-waffle": "^3.2.1",
     "ethereumjs-tx": "^2.1.2",
     "ethers": "^5.0.24",
-    "hardhat": "^2.0.6"
+    "hardhat": "^2.0.6",
+    "openzeppelin-contracts-legacy": "yarn:@openzeppelin/contracts@3.3.0"
   },
-  "version": "1.0.1",
+  "version": "2.0.0",
   "description": "Contracts for the Pangolin Dex.",
   "main": "index.js",
   "repository": {
@@ -19,15 +22,21 @@
   "author": "Connor Daly <connor.daly@avalabs.org>",
   "license": "MIT",
   "scripts": {
-    "precompile": "rimraf ./build/",
-    "compile": "npx hardhat compile",
-    "pretest": "yarn compile",
-    "test": "npx hardhat test",
-    "lint": "prettier ./test/**/*.ts --check",
-    "prepublishOnly": "yarn test"
+    "compile": "export LANG=C && npx hardhat compile",
+    "deploy": "export LANG=C && npx hardhat run scripts/deploy-mainnet.js",
+    "test": "export LANG=C && npx hardhat test",
+    "verify": "export LANG=C && npx hardhat run scripts/verify.js",
+    "lint": "prettier ./test/**/*.ts --check"
   },
   "bugs": {
     "url": "https://github.com/pangolindex/exchange-contracts/issues"
   },
-  "homepage": "https://pangolin.exchange"
+  "homepage": "https://pangolin.exchange",
+  "dependencies": {
+    "@gnosis.pm/safe-core-sdk": "^1.3.0",
+    "@nomiclabs/hardhat-etherscan": "^3.0.0",
+    "@pangolindex/sdk": "^1.4.0",
+    "chance": "^1.1.8",
+    "dotenv": "^14.2.0"
+  }
 }
