@@ -1,9 +1,7 @@
 contracts/TestERC20.sol
 contracts/WAVAX.sol
 scripts/
+test/
 cache/
 node_modules/
 artifacts/
-temp/
-.vscode
-.idea
