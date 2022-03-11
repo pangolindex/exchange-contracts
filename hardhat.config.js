@@ -68,15 +68,14 @@ module.exports = {
         }
       },
       {
-        version: "0.8.0"
-      },
-      {
         version: "0.8.9"
-      },
-      {
+      }
+    ],
+    overrides: {
+      "contracts/mini-chef-zapper/MiniChefV2Zapper.sol": {
         version: "0.8.11"
       }
-    ]
+    }
   },
   networks: networksFromSdk,
   etherscan: {
