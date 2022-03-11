@@ -6,7 +6,7 @@ import "openzeppelin-contracts-legacy/math/SafeMath.sol";
 import "openzeppelin-contracts-legacy/token/ERC20/SafeERC20.sol";
 import "openzeppelin-contracts-legacy/utils/ReentrancyGuard.sol";
 
-import "./interfaces/IPangolinERC20.sol";
+import "../pangolin-token/IPangolinERC20.sol";
 
 
 // https://docs.synthetix.io/contracts/source/contracts/stakingrewards

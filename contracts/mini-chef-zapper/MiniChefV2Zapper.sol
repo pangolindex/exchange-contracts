@@ -1,9 +1,9 @@
 pragma solidity 0.8.11;
 
-import "./interfaces/IWAVAX.sol";
 import "../pangolin-core/interfaces/IERC20.sol";
 import "../pangolin-core/interfaces/IPangolinPair.sol";
 import "../pangolin-periphery/interfaces/IPangolinRouter.sol";
+import "../pangolin-periphery/interfaces/IWAVAX.sol";
 
 import "../pangolin-lib/libraries/Babylonian.sol";
 import "../pangolin-lib/libraries/TransferHelper.sol";
@@ -123,7 +123,7 @@ contract MiniChefV2Zapper {
     ) public {
         zapOutAndSwap(pairAddress, withdrawAmount, WAVAX, desiredAVAXOutMin, address(this));
 
-        uint256 balance = IWAVAX(WAVAX).balanceOf(address(this));
+        uint256 balance = IERC20(WAVAX).balanceOf(address(this));
         IWAVAX(WAVAX).withdraw(balance);
 
         TransferHelper.safeTransferAVAX(to, balance);

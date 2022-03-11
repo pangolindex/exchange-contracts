@@ -5,8 +5,10 @@ pragma experimental ABIEncoderV2;
 
 import "@boringcrypto/boring-solidity/contracts/libraries/BoringMath.sol";
 import "openzeppelin-contracts-legacy/access/Ownable.sol";
-import "./libraries/SignedSafeMath.sol";
-import "./interfaces/IRewarder.sol";
+import "openzeppelin-contracts-legacy/math/SignedSafeMath.sol";
+import "openzeppelin-contracts-legacy/utils/SafeCast.sol";
+
+import "./IRewarder.sol";
 
 interface IMigratorChef {
     // Take the current LP token address and return the new LP token address.
@@ -22,6 +24,7 @@ contract MiniChefV2 is Ownable {
     using BoringMath128 for uint128;
     using BoringERC20 for IERC20;
     using SignedSafeMath for int256;
+    using SafeCast for int256;
 
     /// @notice Info of each MCV2 user.
     /// `amount` LP token amount the user has provided.
@@ -244,7 +247,7 @@ contract MiniChefV2 is Ownable {
             uint256 reward = time.mul(rewardPerSecond).mul(pool.allocPoint) / totalAllocPoint;
             accRewardPerShare = accRewardPerShare.add(reward.mul(ACC_REWARD_PRECISION) / lpSupply);
         }
-        pending = int256(user.amount.mul(accRewardPerShare) / ACC_REWARD_PRECISION).sub(user.rewardDebt).toUInt256();
+        pending = int256(user.amount.mul(accRewardPerShare) / ACC_REWARD_PRECISION).sub(user.rewardDebt).toUint256();
     }
 
     /// @notice Update reward variables for all pools. Be careful of gas spending!
@@ -347,7 +350,7 @@ contract MiniChefV2 is Ownable {
         PoolInfo memory pool = updatePool(pid);
         UserInfo storage user = userInfo[pid][msg.sender];
         int256 accumulatedReward = int256(user.amount.mul(pool.accRewardPerShare) / ACC_REWARD_PRECISION);
-        uint256 _pendingReward = accumulatedReward.sub(user.rewardDebt).toUInt256();
+        uint256 _pendingReward = accumulatedReward.sub(user.rewardDebt).toUint256();
 
         // Effects
         user.rewardDebt = accumulatedReward;
@@ -373,7 +376,7 @@ contract MiniChefV2 is Ownable {
         PoolInfo memory pool = updatePool(pid);
         UserInfo storage user = userInfo[pid][msg.sender];
         int256 accumulatedReward = int256(user.amount.mul(pool.accRewardPerShare) / ACC_REWARD_PRECISION);
-        uint256 _pendingReward = accumulatedReward.sub(user.rewardDebt).toUInt256();
+        uint256 _pendingReward = accumulatedReward.sub(user.rewardDebt).toUint256();
 
         // Effects
         user.rewardDebt = accumulatedReward.sub(int256(amount.mul(pool.accRewardPerShare) / ACC_REWARD_PRECISION));
