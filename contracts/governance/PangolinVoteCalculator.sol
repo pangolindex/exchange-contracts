@@ -1,9 +1,15 @@
-pragma solidity ^0.8.0;
+pragma solidity 0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-interface ILiquidityPoolManagerV2 {
-    function stakes(address pair) external view returns (address);
+interface IMiniChefV2 {
+    struct UserInfo {
+        uint256 amount;
+        int256 rewardDebt;
+    }
+
+    function lpTokens() external view returns (address[] memory);
+    function userInfo(uint pid, address user) external view returns (IMiniChefV2.UserInfo memory);
 }
 
 interface IPangolinPair {
@@ -18,40 +24,38 @@ interface IPangolinERC20 {
 }
 
 interface IStakingRewards {
-    function rewardsToken() external view returns (address);
     function stakingToken() external view returns (address);
     function balanceOf(address owner) external view returns (uint);
-    function earned(address account) external view returns (uint);
 }
 
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MIT
 contract PangolinVoteCalculator is Ownable {
 
     IPangolinERC20 png;
-    ILiquidityPoolManagerV2 liquidityManager;
+    IMiniChefV2 miniChef;
 
-    constructor(address _png, address _liquidityManager) {
+    constructor(address _png, address _miniChef) {
         png = IPangolinERC20(_png);
-        liquidityManager = ILiquidityPoolManagerV2(_liquidityManager);
+        miniChef = IMiniChefV2(_miniChef);
     }
 
-    function getVotesFromFarming(address voter, address[] calldata farms) external view returns (uint votes) {
-        for (uint i; i<farms.length; i++) {
-            IPangolinPair pair = IPangolinPair(farms[i]);
-            IStakingRewards staking = IStakingRewards(liquidityManager.stakes(farms[i]));
+    function getVotesFromFarming(address voter, uint[] calldata pids) external view returns (uint votes) {
+        address[] memory lpTokens = miniChef.lpTokens();
 
-            // Handle pairs that are no longer whitelisted
-            if (address(staking) == address(0)) continue;
+        for (uint i; i<pids.length; i++) {
+            // Skip invalid pids
+            if (pids[i] >= lpTokens.length) continue;
 
-            uint pair_total_PNG = png.balanceOf(farms[i]);
-            uint pair_total_PGL = pair.totalSupply(); // Could initially be 0 in rare situations
+            address pglAddress = lpTokens[pids[i]];
+            IPangolinPair pair = IPangolinPair(pglAddress);
+
+            uint pair_total_PNG = png.balanceOf(pglAddress);
+            uint pair_total_PGL = pair.totalSupply(); // Could initially be 0 in rare pre-mint situations
 
             uint PGL_hodling = pair.balanceOf(voter);
-            uint PGL_staking = staking.balanceOf(voter);
+            uint PGL_staking = miniChef.userInfo(pids[i], voter).amount;
 
-            uint pending_PNG = staking.earned(voter);
-
-            votes += ((PGL_hodling + PGL_staking) * pair_total_PNG) / pair_total_PGL + pending_PNG;
+            votes += ((PGL_hodling + PGL_staking) * pair_total_PNG) / pair_total_PGL;
         }
     }
 
@@ -59,11 +63,10 @@ contract PangolinVoteCalculator is Ownable {
         for (uint i; i<stakes.length; i++) {
             IStakingRewards staking = IStakingRewards(stakes[i]);
 
-            uint staked_PNG = staking.stakingToken() == address(png) ? staking.balanceOf(voter) : uint(0);
-
-            uint pending_PNG = staking.rewardsToken() == address(png) ? staking.earned(voter) : uint(0);
-
-            votes += (staked_PNG + pending_PNG);
+            // Safety check to ensure staking token is PNG
+            if (staking.stakingToken() == address(png)) {
+                votes += staking.balanceOf(voter);
+            }
         }
     }
 
@@ -75,10 +78,6 @@ contract PangolinVoteCalculator is Ownable {
         if (png.delegates(voter) == address(0)) {
             votes += png.balanceOf(voter);
         }
-    }
-
-    function changeLiquidityPoolManager(address _liquidityManager) external onlyOwner {
-        liquidityManager = ILiquidityPoolManagerV2(_liquidityManager);
     }
 
 }
