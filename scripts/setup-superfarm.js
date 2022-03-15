@@ -2,7 +2,8 @@ const { ethers, network } = require('hardhat');
 
 const {
     PANGOLIN_GNOSIS_SAFE,
-    MINICHEF_V2, PNG_ADDRESS,
+    MINICHEF_V2_ADDRESS,
+    PNG_ADDRESS,
 } = require("./mainnet-constants");
 
 const USDTe_ADDRESS = "0xc7198437980c041c805a1edcba50c1ce5db95118";
@@ -36,7 +37,7 @@ async function main() {
     console.log();
 
     const MiniChef = await ethers.getContractFactory("MiniChefV2");
-    const miniChef = await MiniChef.attach(MINICHEF_V2);
+    const miniChef = await MiniChef.attach(MINICHEF_V2_ADDRESS);
 
     // Deploy Rewarder (PNG rewards @ 2x)
     console.log(`Deploying single rewarder ...`);

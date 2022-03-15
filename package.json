@@ -12,7 +12,7 @@
     "hardhat": "^2.0.6",
     "openzeppelin-contracts-legacy": "yarn:@openzeppelin/contracts@3.3.0"
   },
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Contracts for the Pangolin Dex.",
   "main": "index.js",
   "repository": {
