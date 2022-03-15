@@ -15,15 +15,17 @@ interface IRewardRegulator {
 
     function mint(address to, uint amount) external;
 
-    function happy() external returns (address); // Used in LP extension
+    function rewardToken() external returns (address); // For compound ext.
 }
 
-/// @title Sunshine and Rainbows Staking Algorithm
-/// @notice Sunshine and Rainbows is a novel staking algorithm that gives
-/// relatively more rewards to users with longer staking durations.
-/// @dev For a general overview refer to `README.md`. For the proof of the
-/// algorithm refer to `documents/SunshineAndRainbows.pdf`.
-/// @author shung for Pangolin & cryptofrens.xyz
+/**
+ * @title Sunshine and Rainbows
+ * @notice Sunshine and Rainbows is a novel staking algorithm that gives
+ * more rewards to users with longer staking durations
+ * @dev For a general overview refer to `README.md`. For the proof of the
+ * algorithm refer to the proof linked in `README.md`.
+ * @author shung for Pangolin & cryptofrens.xyz
+ */
 contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
     using EnumerableSet for EnumerableSet.UintSet;
     using SafeERC20 for IERC20;
@@ -111,7 +113,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
     constructor(address _stakingToken, address _rewardRegulator) {
         require(
             _stakingToken != address(0) && _rewardRegulator != address(0),
-            "SARS::Constructor: zero address"
+            "SAR::Constructor: zero address"
         );
         stakingToken = _stakingToken;
         rewardRegulator = IRewardRegulator(_rewardRegulator);
@@ -126,7 +128,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
     /// @param posId ID of the position to be harvested from
     function harvest(uint posId) external nonReentrant {
         _updateRewardVariables();
-        require(_harvest(posId, msg.sender) != 0, "SARS::harvest: no reward");
+        require(_harvest(posId, msg.sender) != 0, "SAR::harvest: no reward");
     }
 
     /// @notice Creates a new position and stakes `amount` tokens to it
@@ -181,13 +183,13 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
     {
         Position storage position = positions[posId];
         address sender = msg.sender;
-        require(amount != 0, "SARS::_withdraw: zero amount");
-        require(position.owner == sender, "SARS::_withdraw: unauthorized");
+        require(amount != 0, "SAR::_withdraw: zero amount");
+        require(position.owner == sender, "SAR::_withdraw: unauthorized");
         if (position.balance == amount) {
             position.balance = 0;
             _userPositions[sender].remove(posId);
         } else if (position.balance < amount) {
-            revert("SARS::_withdraw: insufficient balance");
+            revert("SAR::_withdraw: insufficient balance");
         } else {
             position.balance -= (position.balance - amount);
         }
@@ -201,7 +203,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         uint amount,
         address from
     ) internal virtual updatePosition(posId) {
-        require(amount != 0, "SARS::_stake: zero amount");
+        require(amount != 0, "SAR::_stake: zero amount");
         if (initTime == 0) {
             initTime = block.timestamp;
         }
@@ -223,7 +225,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         returns (uint)
     {
         Position storage position = positions[posId];
-        require(position.owner == msg.sender, "SARS::_harvest: unauthorized");
+        require(position.owner == msg.sender, "SAR::_harvest: unauthorized");
         uint reward = uint(position.reward);
         if (reward != 0) {
             position.reward = 0;
@@ -242,7 +244,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
     }
 
     function _createPosition(address to) internal returns (uint) {
-        require(to != address(0), "SARS::_createPosition: bad recipient");
+        require(to != address(0), "SAR::_createPosition: bad recipient");
         positionsLength++; // posIds start from 1
         _userPositions[to].add(positionsLength);
         positions[positionsLength].owner = to;
