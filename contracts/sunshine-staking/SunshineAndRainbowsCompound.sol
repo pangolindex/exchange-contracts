@@ -6,8 +6,6 @@ import "./SunshineAndRainbows.sol";
 
 /// @notice Can be used when staking token is same as reward token
 contract SunshineAndRainbowsCompound is SunshineAndRainbows {
-    using SafeERC20 for IERC20;
-
     struct Child {
         uint parent;
         uint initTime;
