@@ -23,22 +23,42 @@ contract TeamAllocationVester is Claimable {
         uint lastUpdate; // timestamp of last harvest
     }
 
+    /**
+     * @notice The mapping of member addresses to their properties
+     */
     mapping(address => Member) public members;
 
-    /// @notice The set of members who have non-zero allocation reserves
+    /**
+     * @notice The set of members who have remaining allocation
+     */
     EnumerableSet.AddressSet private _membersAddresses;
 
-    IERC20 public immutable png;
+    /**
+     * @notice The token to be distributed
+     */
+    IERC20 public immutable token;
 
-    /// @notice The total amount of tokens set to be streamed to all members
+    /**
+     * @notice The total amount of tokens set to be streamed to all members
+     */
     uint public reserved;
 
+    /**
+     * @notice The event emitted when a new allocation is defined for a member
+     */
     event NewAllocation(address indexed member, uint allocation, uint duration);
 
-    constructor(address allocationToken) {
-        png = IERC20(allocationToken);
+    /**
+     * @notice Constructs a new TeamAllocationVester contract
+     * @param distributionToken The address of the token to be distributed
+     */
+    constructor(IERC20 distributionToken) {
+        token = distributionToken;
     }
 
+    /**
+     * @notice Claims all the pending rewards of the member
+     */
     function harvest() external {
         address account = msg.sender;
         uint amount = pendingHarvest(account);
@@ -53,12 +73,16 @@ contract TeamAllocationVester is Claimable {
         // remove member from the set if its harvest has ended
         if (member.reserved == 0) _membersAddresses.remove(account);
 
-        png.safeTransfer(account, amount);
+        token.safeTransfer(account, amount);
     }
 
+    /**
+     * @notice Withdraws unallocated tokens from the contract
+     * @param amount The amount of tokens to withdraw
+     */
     function withdraw(uint amount) external onlyOwner {
         require(unreserved() >= amount, "low balance");
-        png.safeTransfer(msg.sender, amount);
+        token.safeTransfer(msg.sender, amount);
     }
 
     /**
@@ -80,7 +104,7 @@ contract TeamAllocationVester is Claimable {
             "varying-length arrays"
         );
 
-        uint balance = png.balanceOf(address(this));
+        uint balance = token.balanceOf(address(this));
         for (uint i; i < length; ++i) {
             address account = accounts[i];
             uint allocation = allocations[i];
@@ -94,7 +118,7 @@ contract TeamAllocationVester is Claimable {
                 unclaimed = pendingHarvest(account);
                 // record any unclaimed rewards of member
                 member.stashed = unclaimed;
-                // free png that was locked for this member’s allocation
+                // free tokens that was locked for this member’s allocation
                 reserved -= (member.reserved - unclaimed);
             } else {
                 unclaimed = member.stashed;
@@ -103,7 +127,7 @@ contract TeamAllocationVester is Claimable {
             if (allocation != 0) {
                 require(duration >= 8 weeks, "short vesting duration");
 
-                // lock png as reserved
+                // lock tokens as reserved
                 reserved += allocation;
                 require(balance >= reserved, "low balance");
 
@@ -137,6 +161,6 @@ contract TeamAllocationVester is Claimable {
     }
 
     function unreserved() public view returns (uint) {
-        return png.balanceOf(address(this)) - reserved;
+        return token.balanceOf(address(this)) - reserved;
     }
 }

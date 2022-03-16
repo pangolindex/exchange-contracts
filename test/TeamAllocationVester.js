@@ -69,8 +69,8 @@ describe("TeamAllocationVester.sol", function () {
   //     Constructor
   //////////////////////////////
   describe("Constructor", function () {
-    it("arg 1: allocationToken", async function () {
-      expect(await this.team.png()).to.equal(this.png.address);
+    it("arg 1: distributionToken", async function () {
+      expect(await this.team.token()).to.equal(this.png.address);
     });
   });
 
