@@ -134,11 +134,6 @@ contract AllocationVester is Claimable {
                 reserve -= (member.reserve - unclaimed);
                 // free non-stashed tokens from member's reserves
                 member.reserve = unclaimed;
-            } else {
-                // when member.reserve is 0, pendingHarvest will equal
-                // member.stashed. therefore the following operation alone is
-                // equivalent to the four statements above
-                unclaimed = member.stash;
             }
 
             // check the member's new allocation
@@ -158,7 +153,7 @@ contract AllocationVester is Claimable {
                 _membersAddresses.add(account);
             }
 
-            emit NewAllocation(account, allocation, duration);
+            emit AllocationSet(account, allocation, duration);
         }
     }
 
