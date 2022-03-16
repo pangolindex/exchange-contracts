@@ -17,8 +17,8 @@ contract AllocationVester is Claimable {
     using SafeERC20 for IERC20;
 
     struct Member {
-        uint reserved; // remaining tokens to be distributed
-        uint stashed; // tokens stashed when allocation is changed
+        uint reserve; // remaining tokens to be distributed
+        uint stash; // tokens stashed when allocation is changed
         uint rate; // rewards per second
         uint lastUpdate; // timestamp of last harvest
     }
@@ -46,7 +46,7 @@ contract AllocationVester is Claimable {
     /**
      * @notice The total amount of tokens set to be streamed to all members
      */
-    uint public reserved;
+    uint public reserve;
 
     /**
      * @notice The event emitted when a new allocation is defined for a member
@@ -74,14 +74,14 @@ contract AllocationVester is Claimable {
 
         // update the member's properties
         member.lastUpdate = block.timestamp;
-        member.stashed = 0;
-        member.reserved -= amount;
+        member.stash = 0;
+        member.reserve -= amount;
 
         // free up to-be-transferred tokens from the reserves
-        reserved -= amount;
+        reserve -= amount;
 
         // remove the member from the set if its harvest has ended
-        if (member.reserved == 0) _membersAddresses.remove(account);
+        if (member.reserve == 0) _membersAddresses.remove(account);
 
         token.safeTransfer(account, amount);
     }
@@ -126,31 +126,31 @@ contract AllocationVester is Claimable {
             uint unclaimed;
 
             // check the member's remaining harvest
-            if (member.reserved != 0) {
+            if (member.reserve != 0) {
                 unclaimed = pendingHarvest(account);
                 // stash pending rewards of the member so it remains claimable
-                member.stashed = unclaimed;
+                member.stash = unclaimed;
                 // free non-stashed reserves of the member from the reserves
-                reserved -= (member.reserved - unclaimed);
+                reserve -= (member.reserve - unclaimed);
                 // free non-stashed tokens from member's reserves
-                member.reserved = unclaimed;
+                member.reserve = unclaimed;
             } else {
-                // when member.reserved is 0, pendingHarvest will equal
+                // when member.reserve is 0, pendingHarvest will equal
                 // member.stashed. therefore the following operation alone is
                 // equivalent to the four statements above
-                unclaimed = member.stashed;
+                unclaimed = member.stash;
             }
 
             // check the member's new allocation
             if (allocation != 0) {
                 require(duration >= MIN_DURATION, "short vesting duration");
 
-                // lock tokens as reserved and ensure sufficient balance
-                reserved += allocation;
-                require(balance >= reserved, "low balance");
+                // lock tokens as reserve and ensure sufficient balance
+                reserve += allocation;
+                require(balance >= reserve, "low balance");
 
                 // add vesting info for the member
-                member.reserved += allocation;
+                member.reserve += allocation;
                 member.rate = allocation / duration;
                 member.lastUpdate = block.timestamp;
 
@@ -181,10 +181,10 @@ contract AllocationVester is Claimable {
     function pendingHarvest(address account) public view returns (uint) {
         Member memory member = members[account];
 
-        uint amount = member.stashed +
+        uint amount = member.stash +
             (block.timestamp - member.lastUpdate) *
             member.rate;
-        return amount > member.reserved ? member.reserved : amount;
+        return amount > member.reserve ? member.reserve : amount;
     }
 
     /**
@@ -192,6 +192,6 @@ contract AllocationVester is Claimable {
      * @return The amount of unallocated tokens in the contract
      */
     function unreserved() public view returns (uint) {
-        return token.balanceOf(address(this)) - reserved;
+        return token.balanceOf(address(this)) - reserve;
     }
 }

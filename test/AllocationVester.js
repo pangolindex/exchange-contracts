@@ -337,11 +337,11 @@ describe("AllocationVester.sol", function () {
   });
 
   //////////////////////////////
-  //     reserved
+  //     reserve
   //////////////////////////////
-  describe("reserved", function () {
+  describe("reserve", function () {
     it("expect: nothing is reserved at first", async function () {
-      expect(await this.vester.reserved()).to.equal("0");
+      expect(await this.vester.reserve()).to.equal("0");
     });
   });
 
@@ -366,7 +366,7 @@ describe("AllocationVester.sol", function () {
       member = await this.vester.members(members[0]);
 
       expect(member.lastUpdate).to.equal(blockTime);
-      expect(member.reserved).to.equal(allocations[0]);
+      expect(member.reserve).to.equal(allocations[0]);
       expect(member.rate).to.equal(allocations[0].div(durations[0]));
 
     });
@@ -388,7 +388,7 @@ describe("AllocationVester.sol", function () {
       member = await this.vester.members(members[0]);
 
       expect(member.lastUpdate).to.equal(blockTime);
-      expect(member.reserved).to.equal(allocations[0]);
+      expect(member.reserve).to.equal(allocations[0]);
       expect(member.rate).to.equal(allocations[0].div(durations[0]));
 
     });
