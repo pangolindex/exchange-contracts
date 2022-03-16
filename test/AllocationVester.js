@@ -167,7 +167,7 @@ describe("AllocationVester.sol", function () {
       );
       expect(
         await this.vester.setAllocations(members, allocations, durations)
-      ).to.emit(this.vester, "NewAllocation");
+      ).to.emit(this.vester, "AllocationSet");
 
       [members, allocations, durations] = generateRecipients(10);
       totalAlloc = arraySum(allocations);
@@ -190,7 +190,7 @@ describe("AllocationVester.sol", function () {
       );
       expect(
         await this.vester.setAllocations(members, allocations, durations)
-      ).to.emit(this.vester, "NewAllocation");
+      ).to.emit(this.vester, "AllocationSet");
     });
 
     it("success: forty recipients", async function () {
@@ -203,7 +203,7 @@ describe("AllocationVester.sol", function () {
       );
       expect(
         await this.vester.setAllocations(members, allocations, durations)
-      ).to.emit(this.vester, "NewAllocation");
+      ).to.emit(this.vester, "AllocationSet");
     });
 
     it("success: change previous allocations", async function () {
@@ -215,12 +215,12 @@ describe("AllocationVester.sol", function () {
       var [members, allocations, durations] = generateRecipients(10);
       expect(
         await this.vester.setAllocations(members, allocations, durations)
-      ).to.emit(this.vester, "NewAllocation");
+      ).to.emit(this.vester, "AllocationSet");
 
       [, allocations, durations] = generateRecipients(10);
       expect(
         await this.vester.setAllocations(members, allocations, durations)
-      ).to.emit(this.vester, "NewAllocation");
+      ).to.emit(this.vester, "AllocationSet");
     });
 
     it("success: add new members after initial members", async function () {
@@ -233,7 +233,7 @@ describe("AllocationVester.sol", function () {
       );
       expect(
         await this.vester.setAllocations(members, allocations, durations)
-      ).to.emit(this.vester, "NewAllocation");
+      ).to.emit(this.vester, "AllocationSet");
 
       [members, allocations, durations] = generateRecipients(10);
       totalAlloc = arraySum(allocations);
@@ -244,7 +244,7 @@ describe("AllocationVester.sol", function () {
       );
       expect(
         await this.vester.setAllocations(members, allocations, durations)
-      ).to.emit(this.vester, "NewAllocation");
+      ).to.emit(this.vester, "AllocationSet");
     });
 
     it("success: remove previous allocations", async function () {
@@ -256,12 +256,12 @@ describe("AllocationVester.sol", function () {
       var [members, allocations, durations] = generateRecipients(10);
       expect(
         await this.vester.setAllocations(members, allocations, durations)
-      ).to.emit(this.vester, "NewAllocation");
+      ).to.emit(this.vester, "AllocationSet");
 
       for (let i = 0; i < 10; i++) allocations[i] = BigNumber.from("0");
       expect(
         await this.vester.setAllocations(members, allocations, durations)
-      ).to.emit(this.vester, "NewAllocation");
+      ).to.emit(this.vester, "AllocationSet");
     });
   });
 
@@ -279,7 +279,7 @@ describe("AllocationVester.sol", function () {
       );
       expect(
         await this.vester.setAllocations(members, allocations, durations)
-      ).to.emit(this.vester, "NewAllocation");
+      ).to.emit(this.vester, "AllocationSet");
       await expect(this.vester.withdraw("1")).to.be.revertedWith("low balance");
     });
     it("revert: unauthorized", async function () {
@@ -301,7 +301,7 @@ describe("AllocationVester.sol", function () {
       ).to.emit(this.png, "Transfer");
       expect(
         await this.vester.setAllocations(members, allocations, durations)
-      ).to.emit(this.vester, "NewAllocation");
+      ).to.emit(this.vester, "AllocationSet");
       expect(await this.vester.withdraw("1")).to.emit(this.png, "Transfer");
     });
   });
@@ -328,7 +328,7 @@ describe("AllocationVester.sol", function () {
           allocations,
           durations
         )
-      ).to.emit(this.vester, "NewAllocation");
+      ).to.emit(this.vester, "AllocationSet");
       expect(await this.vester.harvest()).to.emit(
         this.png,
         "Transfer"
@@ -358,7 +358,7 @@ describe("AllocationVester.sol", function () {
       );
       expect(
         await this.vester.setAllocations(members, allocations, durations)
-      ).to.emit(this.vester, "NewAllocation");
+      ).to.emit(this.vester, "AllocationSet");
 
       var blockNumber = await ethers.provider.getBlockNumber();
       var blockTime = (await ethers.provider.getBlock(blockNumber)).timestamp;
@@ -380,7 +380,7 @@ describe("AllocationVester.sol", function () {
       );
       expect(
         await this.vester.setAllocations(members, allocations, durations)
-      ).to.emit(this.vester, "NewAllocation");
+      ).to.emit(this.vester, "AllocationSet");
 
       var blockNumber = await ethers.provider.getBlockNumber();
       var blockTime = (await ethers.provider.getBlock(blockNumber)).timestamp;
@@ -412,7 +412,7 @@ describe("AllocationVester.sol", function () {
       );
       expect(
         await this.vester.setAllocations(members, allocations, durations)
-      ).to.emit(this.vester, "NewAllocation");
+      ).to.emit(this.vester, "AllocationSet");
 
       var actualMembers = await this.vester.getMembers();
       expect(actualMembers.length).to.equal(members.length);
@@ -428,7 +428,7 @@ describe("AllocationVester.sol", function () {
       );
       expect(
         await this.vester.setAllocations(members, allocations, durations)
-      ).to.emit(this.vester, "NewAllocation");
+      ).to.emit(this.vester, "AllocationSet");
 
       var actualMembers = await this.vester.getMembers();
       expect(actualMembers.length).to.equal(members.length);
@@ -444,7 +444,7 @@ describe("AllocationVester.sol", function () {
       var [members, allocations, durations] = generateRecipients(10);
       expect(
         await this.vester.setAllocations(members, allocations, durations)
-      ).to.emit(this.vester, "NewAllocation");
+      ).to.emit(this.vester, "AllocationSet");
 
       var actualMembers = await this.vester.getMembers();
       expect(actualMembers.length).to.equal(members.length);
@@ -453,7 +453,7 @@ describe("AllocationVester.sol", function () {
       [, allocations, durations] = generateRecipients(10);
       expect(
         await this.vester.setAllocations(members, allocations, durations)
-      ).to.emit(this.vester, "NewAllocation");
+      ).to.emit(this.vester, "AllocationSet");
 
       actualMembers = await this.vester.getMembers();
       expect(actualMembers.length).to.equal(members.length);
@@ -471,7 +471,7 @@ describe("AllocationVester.sol", function () {
           [TOTAL_SUPPLY],
           [TWO_YEARS]
         )
-      ).to.emit(this.vester, "NewAllocation");
+      ).to.emit(this.vester, "AllocationSet");
       await network.provider.send("evm_increaseTime", [TWO_YEARS+1]);
       expect(await this.vester.harvest()).to.emit(
         this.png,
@@ -491,7 +491,7 @@ describe("AllocationVester.sol", function () {
       );
       expect(
         await this.vester.setAllocations(members, allocations, durations)
-      ).to.emit(this.vester, "NewAllocation");
+      ).to.emit(this.vester, "AllocationSet");
 
       var actualMembers = await this.vester.getMembers();
       expect(actualMembers.length).to.equal(members.length);
@@ -507,7 +507,7 @@ describe("AllocationVester.sol", function () {
       );
       expect(
         await this.vester.setAllocations(newMembers, allocations, durations)
-      ).to.emit(this.vester, "NewAllocation");
+      ).to.emit(this.vester, "AllocationSet");
 
       var actualMembers = await this.vester.getMembers();
       expect(actualMembers.length).to.equal(members.length);

@@ -51,7 +51,7 @@ contract AllocationVester is Claimable {
     /**
      * @notice The event emitted when a new allocation is defined for a member
      */
-    event NewAllocation(address indexed member, uint allocation, uint duration);
+    event AllocationSet(address indexed member, uint allocation, uint duration);
 
     /**
      * @notice Constructs a new AllocationVester contract
