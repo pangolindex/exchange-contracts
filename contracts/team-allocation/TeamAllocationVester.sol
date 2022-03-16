@@ -39,6 +39,11 @@ contract TeamAllocationVester is Claimable {
     IERC20 public immutable token;
 
     /**
+     * @notice The minimum duration a vesting can last after it is updated
+     */
+    uint private constant MIN_DURATION = 8 weeks;
+
+    /**
      * @notice The total amount of tokens set to be streamed to all members
      */
     uint public reserved;
@@ -61,16 +66,21 @@ contract TeamAllocationVester is Claimable {
      */
     function harvest() external {
         address account = msg.sender;
+        Member storage member = members[account];
+
+        // get the claimable rewards of the member
         uint amount = pendingHarvest(account);
         require(amount != 0, "no pending harvest");
 
-        Member storage member = members[account];
-        member.stashed = 0;
+        // update the member's properties
         member.lastUpdate = block.timestamp;
+        member.stashed = 0;
         member.reserved -= amount;
+
+        // free up to-be-transferred tokens from the reserves
         reserved -= amount;
 
-        // remove member from the set if its harvest has ended
+        // remove the member from the set if its harvest has ended
         if (member.reserved == 0) _membersAddresses.remove(account);
 
         token.safeTransfer(account, amount);
@@ -114,43 +124,60 @@ contract TeamAllocationVester is Claimable {
             require(account != address(0), "bad recipient");
 
             uint unclaimed;
+
+            // check the member's remaining harvest
             if (member.reserved != 0) {
                 unclaimed = pendingHarvest(account);
-                // record any unclaimed rewards of member
+                // stash pending rewards of the member so it remains claimable
                 member.stashed = unclaimed;
-                // free tokens that was locked for this member’s allocation
+                // free non-stashed reserves of the member from the reserves
                 reserved -= (member.reserved - unclaimed);
+                // free non-stashed tokens from member's reserves
+                member.reserved = unclaimed;
             } else {
+                // when member.reserved is 0, pendingHarvest will equal
+                // member.stashed. therefore the following operation alone is
+                // equivalent to the four statements above
                 unclaimed = member.stashed;
             }
 
+            // check the member's new allocation
             if (allocation != 0) {
-                require(duration >= 8 weeks, "short vesting duration");
+                require(duration >= MIN_DURATION, "short vesting duration");
 
-                // lock tokens as reserved
+                // lock tokens as reserved and ensure sufficient balance
                 reserved += allocation;
                 require(balance >= reserved, "low balance");
 
                 // add vesting info for the member
-                member.reserved = allocation + unclaimed;
+                member.reserved += allocation;
                 member.rate = allocation / duration;
                 member.lastUpdate = block.timestamp;
 
-                // add the member to the set for easy access
+                // add the member to the set
                 _membersAddresses.add(account);
-            } else {
-                // remove member’s allocation
-                member.reserved = unclaimed;
             }
 
             emit NewAllocation(account, allocation, duration);
         }
     }
 
+    /**
+     * @notice Returns a list of members for easy access
+     * @dev Although this function can fail on very high number of members,
+     * in general usage we do not expect that to happen. In the case that
+     * happens, direct storage access or event filtering can be used instead.
+     * @return The list of addresses of members who have an allocation
+     */
     function getMembers() external view returns (address[] memory) {
         return _membersAddresses.values();
     }
 
+    /**
+     * @notice Returns the claimable rewards of a member
+     * @param account The address of the member
+     * @return The amount of tokens that can be harvested by the member
+     */
     function pendingHarvest(address account) public view returns (uint) {
         Member memory member = members[account];
 
@@ -160,6 +187,10 @@ contract TeamAllocationVester is Claimable {
         return amount > member.reserved ? member.reserved : amount;
     }
 
+    /**
+     * @notice Returns the amount of unallocated tokens
+     * @return The amount of unallocated tokens in the contract
+     */
     function unreserved() public view returns (uint) {
         return token.balanceOf(address(this)) - reserved;
     }
