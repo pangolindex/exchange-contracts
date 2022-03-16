@@ -33,7 +33,7 @@ contract TeamAllocationVester is Claimable {
     /// @notice The total amount of tokens set to be streamed to all members
     uint public reserved;
 
-    event MembersChanged(address[] members, uint[] allocations);
+    event NewAllocation(address indexed member, uint allocation, uint duration);
 
     constructor(address allocationToken) {
         png = IERC20(allocationToken);
@@ -66,29 +66,28 @@ contract TeamAllocationVester is Claimable {
      * @param accounts An array of member addresses
      * @param allocations The amount of tokens to allocate to the corresponding
      * member, overriding the previous allocation
-     * @param vestFor The duration the corresponding allocation will last for
+     * @param durations The duration the corresponding allocation will last for
      */
     function setAllocations(
         address[] memory accounts,
         uint[] memory allocations,
-        uint[] memory vestFor
+        uint[] memory durations
     ) external onlyOwner {
         uint length = accounts.length;
         require(length != 0, "empty array");
         require(
-            length == allocations.length && length == vestFor.length,
+            length == allocations.length && length == durations.length,
             "varying-length arrays"
         );
 
         uint balance = png.balanceOf(address(this));
         for (uint i; i < length; ++i) {
-            uint allocation = allocations[i];
-            uint duration = vestFor[i];
             address account = accounts[i];
+            uint allocation = allocations[i];
+            uint duration = durations[i];
+            Member storage member = members[account];
 
             require(account != address(0), "bad recipient");
-
-            Member storage member = members[account];
 
             uint unclaimed;
             if (member.reserved != 0) {
@@ -119,9 +118,9 @@ contract TeamAllocationVester is Claimable {
                 // remove member’s allocation
                 member.reserved = unclaimed;
             }
-        }
 
-        emit MembersChanged(accounts, allocations);
+            emit NewAllocation(account, allocation, duration);
+        }
     }
 
     function getMembers() external view returns (address[] memory) {
