@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 /**
  * @notice A StakingRewards replacement that distributes to multiple contracts
  * @dev Downstream staking contract must ask for declaration of its rewards
- * through a `setRewards()` function. Then the declared rewards can be
+ * through the `setRewards()` function. Then the declared rewards can be
  * claimed through the `mint()` function.
  * @author shung for Pangolin
  */
@@ -18,12 +18,14 @@ contract RewardRegulatorFundable is AccessControl {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
 
-    /// @notice The information stored for an account (i.e. recipient contract)
+    /**
+     * @notice The properties of a recipient contract
+     */
     struct Recipient {
         uint allocation; // The emission allocation of the account
         uint unclaimed; // The reward amount the account can request to mint
         uint undeclared; // The reward amount stashed when allocation changes
-        uint rewardStored; // The rewardStored when recipient was last updated
+        uint rewardStored; // The _rewardStored when recipient was last updated
     }
 
     /// @notice The mapping of accounts (i.e. recipients) to their information
@@ -34,9 +36,6 @@ contract RewardRegulatorFundable is AccessControl {
 
     /// @notice The reward token the contract will distribute
     IERC20 public immutable rewardToken;
-
-    /// @notice The divisor for allocations
-    uint private constant DENOMINATOR = 10000;
 
     /// @notice The timestamp of the last update
     uint public lastUpdate;
@@ -50,14 +49,17 @@ contract RewardRegulatorFundable is AccessControl {
     /// @notice Rewards emitted per second
     uint public rewardRate;
 
-    /// @notice Total rewards emitted until last update (≈rewardPerTokenStored)
-    uint public rewardStored;
-
     /// @notice The amount of reward tokens allocated to be distributed
     uint public lockedSupply;
 
     /// @notice Sum of allocations (either 0 or DENOMINATOR)
     uint public totalAllocations;
+
+    /// @notice Total rewards emitted until last update (≈rewardPerTokenStored)
+    uint private _rewardStored;
+
+    /// @notice The divisor for allocations
+    uint private constant DENOMINATOR = 10000;
 
     /// @notice The role for calling `notifyRewardAmount` function
     bytes32 private constant FUNDER = keccak256("FUNDER");
@@ -95,7 +97,7 @@ contract RewardRegulatorFundable is AccessControl {
         uint rewards = getRewards(sender);
         require(rewards != 0, "setRewards: no rewards");
 
-        recipient.rewardStored = rewardStored;
+        recipient.rewardStored = _rewardStored;
         recipient.unclaimed += rewards;
         recipient.undeclared = 0;
 
@@ -170,9 +172,9 @@ contract RewardRegulatorFundable is AccessControl {
             "notifyRewardAmount: no allocation is defined"
         );
 
-        // update rewardStored based on previous rewardRate
+        // update _rewardStored based on previous rewardRate
         // don't call _globalUpdate() as we will have to reset lastUpdate
-        rewardStored = rewardTotal();
+        _rewardStored = rewardTotal();
 
         // Set new reward rate
         if (blockTime >= periodFinish) {
@@ -262,10 +264,10 @@ contract RewardRegulatorFundable is AccessControl {
 
     function rewardTotal() public view returns (uint) {
         if (totalAllocations == 0) {
-            return rewardStored;
+            return _rewardStored;
         }
         return
-            rewardStored +
+            _rewardStored +
             (lastTimeRewardApplicable() - lastUpdate) *
             rewardRate;
     }
@@ -289,7 +291,7 @@ contract RewardRegulatorFundable is AccessControl {
         _recipientAddresses.add(account);
         // stash the undeclared rewards
         recipient.undeclared = getRewards(account);
-        recipient.rewardStored = rewardStored;
+        recipient.rewardStored = _rewardStored;
         recipient.allocation = allocation;
 
         emit NewAllocation(account, allocation);
@@ -297,7 +299,7 @@ contract RewardRegulatorFundable is AccessControl {
     }
 
     function _globalUpdate() private {
-        rewardStored = rewardTotal();
+        _rewardStored = rewardTotal();
         lastUpdate = lastTimeRewardApplicable();
     }
 }
