@@ -6,8 +6,12 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "../Claimable.sol";
 
-/// @title A contract that allocates & vests a token to EOAs
-/// @author shung for Pangolin
+/**
+ * @title Team Allocation Vester
+ * @notice Allows allocating and distributing tokens to recipients by vesting
+ * it for arbitrary durations for each recipient
+ * @author shung for Pangolin
+ */
 contract TeamAllocationVester is Claimable {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
@@ -39,13 +43,15 @@ contract TeamAllocationVester is Claimable {
         address account = msg.sender;
         uint amount = pendingHarvest(account);
         require(amount != 0, "no pending harvest");
-        members[account].stashed = 0;
-        members[account].lastUpdate = block.timestamp;
-        members[account].reserved -= amount;
+
+        Member storage member = members[account];
+        member.stashed = 0;
+        member.lastUpdate = block.timestamp;
+        member.reserved -= amount;
         reserved -= amount;
 
         // remove member from the set if its harvest has ended
-        if (members[account].reserved == 0) _membersAddresses.remove(account);
+        if (member.reserved == 0) _membersAddresses.remove(account);
 
         png.safeTransfer(account, amount);
     }
@@ -82,15 +88,17 @@ contract TeamAllocationVester is Claimable {
 
             require(account != address(0), "bad recipient");
 
+            Member storage member = members[account];
+
             uint unclaimed;
-            if (members[account].reserved != 0) {
+            if (member.reserved != 0) {
                 unclaimed = pendingHarvest(account);
                 // record any unclaimed rewards of member
-                members[account].stashed = unclaimed;
+                member.stashed = unclaimed;
                 // free png that was locked for this member’s allocation
-                reserved -= (members[account].reserved - unclaimed);
+                reserved -= (member.reserved - unclaimed);
             } else {
-                unclaimed = members[account].stashed;
+                unclaimed = member.stashed;
             }
 
             if (allocation != 0) {
@@ -101,15 +109,15 @@ contract TeamAllocationVester is Claimable {
                 require(balance >= reserved, "low balance");
 
                 // add vesting info for the member
-                members[account].reserved = allocation + unclaimed;
-                members[account].rate = allocation / duration;
-                members[account].lastUpdate = block.timestamp;
+                member.reserved = allocation + unclaimed;
+                member.rate = allocation / duration;
+                member.lastUpdate = block.timestamp;
 
                 // add the member to the set for easy access
                 _membersAddresses.add(account);
             } else {
                 // remove member’s allocation
-                members[account].reserved = unclaimed;
+                member.reserved = unclaimed;
             }
         }
 
