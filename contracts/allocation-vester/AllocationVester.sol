@@ -7,12 +7,12 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "../Claimable.sol";
 
 /**
- * @title Team Allocation Vester
+ * @title Allocation Vester
  * @notice Allows allocating and distributing tokens to recipients by vesting
  * it for arbitrary durations for each recipient
  * @author shung for Pangolin
  */
-contract TeamAllocationVester is Claimable {
+contract AllocationVester is Claimable {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
 
@@ -54,7 +54,7 @@ contract TeamAllocationVester is Claimable {
     event NewAllocation(address indexed member, uint allocation, uint duration);
 
     /**
-     * @notice Constructs a new TeamAllocationVester contract
+     * @notice Constructs a new AllocationVester contract
      * @param distributionToken The address of the token to be distributed
      */
     constructor(IERC20 distributionToken) {
