@@ -123,17 +123,14 @@ contract AllocationVester is Claimable {
 
             require(account != address(0), "bad recipient");
 
-            uint unclaimed;
-
             // check the member's remaining harvest
             if (member.reserve != 0) {
-                unclaimed = pendingHarvest(account);
                 // stash pending rewards of the member so it remains claimable
-                member.stash = unclaimed;
+                member.stash = pendingHarvest(account);
                 // free non-stashed reserves of the member from the reserves
-                reserve -= (member.reserve - unclaimed);
+                reserve -= (member.reserve - member.stash);
                 // free non-stashed tokens from member's reserves
-                member.reserve = unclaimed;
+                member.reserve = member.stash;
             }
 
             // check the member's new allocation
