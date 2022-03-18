@@ -5,28 +5,20 @@ const { CHAINS } = require("@pangolindex/sdk");
 require('dotenv').config();
 
 // Create hardhat networks from @pangolindex/sdk
-let networksFromSdk = {};
-for(let i = 0; i < CHAINS.length; i++) {
-  networksFromSdk[CHAINS[i].id] = {
-    url: CHAINS[i].rpc_uri,
-    chainId: CHAINS[i].chain_id,
-    accounts: [process.env.PRIVATE_KEY]
+const networksFromSdk = {};
+for (const { id, chain_id, rpc_uri } of CHAINS) {
+  networksFromSdk[id] = {
+    url: rpc_uri,
+    chainId: chain_id,
   };
-};
+  if (process.env.PRIVATE_KEY) {
+    networksFromSdk[id].accounts = [process.env.PRIVATE_KEY];
+  }
+}
 networksFromSdk["hardhat"] = {
   chainId: 43112,
   initialDate: "2021-10-10",
-}
-
-// This is a sample Hardhat task. To learn how to create your own go to
-// https://hardhat.org/guides/create-task.html
-task("accounts", "Prints the list of accounts", async () => {
-  const accounts = await ethers.getSigners();
-
-  for (const account of accounts) {
-    console.log(account.address);
-  }
-});
+};
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
