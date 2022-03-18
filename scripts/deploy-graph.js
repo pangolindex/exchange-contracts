@@ -32,7 +32,7 @@ function replaceByArray(data, array) {
 
 async function main() {
     let dir = __dirname + "/../subgraph/" + network.name;
-    let chain = await fetchChain();
+    let chain = fetchChain();
     let dataSubgraph = fs.readFileSync("subgraph/sample/subgraph.yaml", 'utf8');
     dataSubgraph = dataSubgraph.replace(/DEPLOY_NETWORK/g, chain.name);
     dataSubgraph = dataSubgraph.replace(/FACTORY_ADDRESS/g, chain.contracts.factory);
@@ -48,6 +48,13 @@ async function main() {
     let dataPricing = fs.readFileSync("subgraph/sample/src/mappings/pricing.ts", 'utf8');
     dataPricing = dataPricing.replace(/0x000000000000000000000000000000000000wavax/g, chain.contracts.wrapped_native_token);
     dataPricing = dataPricing.replace(/PRICE/g, chain.theGraph.native_price_pre_stable);
+    dataPricing = dataPricing.replace(/0x000000000000000000000000000000000AEBUSDT/g, chain.theGraph.stables_pair_AEB[0]);
+    dataPricing = dataPricing.replace(/0x0000000000000000000000000000000000AEBDAI/g, chain.theGraph.stables_pair_AEB[1]);
+    dataPricing = dataPricing.replace(/0x0000000000000000000000000000000000ABUSDT/g, chain.theGraph.stables_pair_AB[0]);
+    dataPricing = dataPricing.replace(/0x00000000000000000000000000000000000ABDAI/g, chain.theGraph.stables_pair_AB[1]);
+    dataPricing = dataPricing.replace(/2147483647/g, chain.theGraph.stables_pair_AEB_block[0]);
+    dataPricing = dataPricing.replace(/2147483646/g, chain.theGraph.stables_pair_AEB_block[1]);
+    dataPricing = dataPricing.replace(/2147483645/g, chain.theGraph.stables_pair_AB_block);
     dataPricing = replaceByArray(dataPricing, chain.theGraph.mining_pools);
     let dataPackage = fs.readFileSync("subgraph/sample/package.json", 'utf8');
 
