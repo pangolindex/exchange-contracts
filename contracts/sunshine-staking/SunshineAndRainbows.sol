@@ -38,9 +38,9 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         uint balance;
         // Last time the position was updated
         uint lastUpdate;
-        // `_rewardsPerStakingDuration` on position’s last update
+        // `_rewardsPerStakingDuration` on position's last update
         uint rewardsPerStakingDuration;
-        // `_idealPosition` on position’s last update
+        // `_idealPosition` on position's last update
         uint idealPosition;
         // Owner of the position
         address owner;
@@ -67,7 +67,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
     /// @notice Time stamp of first stake event
     uint public initTime;
 
-    /// @notice Sum of all active positions’ `lastUpdate * balance`
+    /// @notice Sum of all active positions' `lastUpdate * balance`
     uint public sumOfEntryTimes;
 
     /// @dev Ensure that (1) total emitted rewards will not pass 100 * 10^33,
@@ -77,7 +77,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
     /// zero-reward emissions.
     uint private constant PRECISION = 10**30;
 
-    /// @notice Sum of all intervals’ (`rewards`/`stakingDuration`)
+    /// @notice Sum of all intervals' (`rewards`/`stakingDuration`)
     /// @dev Refer to `sum of r/S` in the proof for more details.
     uint internal _rewardsPerStakingDuration;
 

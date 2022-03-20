@@ -11,17 +11,12 @@ import "./SunshineAndRainbows.sol";
  * @author shung for Pangolin
  */
 contract SunshineAndRainbowsCompound is SunshineAndRainbows {
-    /**
-     * @notice A custom type that defines the properties of child positions
-     */
     struct Child {
         uint parent; // ID of the parent position
         uint initTime; // timestamp of the creation of the child position
     }
 
-    /**
-     *  @notice A mapping of child positions’ IDs to their properties
-     */
+    /// @notice A mapping of child positions' IDs to their properties
     mapping(uint => Child) public children;
 
     /**
@@ -42,7 +37,7 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
     }
 
     /**
-     * @notice Creates a new position with the rewards of another position
+     * @notice Creates a new position with the rewards of the given position
      * @dev New position is considered locked, and it cannot be withdrawn until
      * the parent position is updated after the creation of the new position
      * @param posId ID of the parent position whose rewards are harvested
@@ -50,7 +45,6 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
      */
     function compound(uint posId, address to)
         external
-        virtual
         nonReentrant
         whenNotPaused
     {
@@ -60,23 +54,23 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
         // create a new position
         uint childPosId = _createPosition(to);
 
-        // harvest parent position and stake its rewards to child position
-        _stake(childPosId, _lockedHarvest(posId), address(this));
-
         // record parent-child relation to lock the child position
         Child storage child = children[childPosId];
         child.parent = posId;
         child.initTime = block.timestamp;
+
+        // harvest parent position and stake its rewards to child position
+        _stake(childPosId, _harvestWithoutUpdate(posId), address(this));
     }
 
     /**
-     * @dev Prepend to the over-ridden `_withdraw` function a special rule that
-     * disables withdrawal if the parent position was not updated at least once
-     * after the creation of the child position
+     * @dev Prepends to the over-ridden `_withdraw` function a special rule
+     * that disables withdrawal if the parent position was not updated at least
+     * once after the creation of the child position
      */
     function _withdraw(uint amount, uint posId) internal override {
         Child memory child = children[posId];
-        if (child.parent != 0) {
+        if (child.initTime != 0) {
             require(
                 child.initTime < positions[child.parent].lastUpdate,
                 "SAR::_withdraw: parent position not updated"
@@ -86,21 +80,22 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
     }
 
     /**
-     * @dev An analogue to `_harvest` function of the inherited contract, that is
-     * used to harvest from a position without resetting its reward rate
+     * @dev An analogue of `_harvest` function of the inherited contract,
+     * without the `updatePosition` modifier. Since the position is not
+     * updated, to prevent double rewards, harvested amount must be subtracted
+     * from `position.reward`.
      */
-    function _lockedHarvest(uint posId) private returns (uint) {
+    function _harvestWithoutUpdate(uint posId) private returns (uint) {
         Position storage position = positions[posId];
-        require(position.owner == msg.sender, "SAR::_harvest: unauthorized");
+        require(
+            position.owner == msg.sender,
+            "SAR::_harvestWithoutUpdate: unauthorized"
+        );
         int reward = _earned(posId, _idealPosition, _rewardsPerStakingDuration);
         assert(reward >= 0);
-        if (reward != 0) {
-            // since the position is not updated, `_earned()` will not reset,
-            // so we must decrease its rewards
-            position.reward -= reward;
-            rewardRegulator.mint(address(this), uint(reward));
-            emit Harvest(posId, uint(reward));
-        }
+        position.reward -= reward;
+        rewardRegulator.mint(address(this), uint(reward));
+        emit Harvest(posId, uint(reward));
         return uint(reward);
     }
 }
