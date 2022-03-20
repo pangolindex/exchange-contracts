@@ -11,8 +11,8 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 /**
  * @title Fundable Reward Regulator
  * @notice A StakingRewards replacement that distributes to multiple contracts
- * @dev This contract is a partial implementation of StakingRewards. The
- * contract does not hold any staking tokens, and lacks withdrawing,
+ * @dev This contract is a partial implementation of Synthetix' StakingRewards.
+ * The contract does not hold any staking tokens, and lacks withdrawing,
  * harvesting, and staking functions. It only holds the reward token, and
  * distributes the reward token to downstream recipient contracts. In essence,
  * this is StakingRewards broken into two components. First component is this
@@ -49,7 +49,7 @@ contract RewardRegulatorFundable is AccessControl {
     /// @notice The reward token the contract will distribute
     IERC20 public immutable rewardToken;
 
-    /// @notice How long the staking last after `notifyRewardAmount` is called
+    /// @notice The duration of staking after `notifyRewardAmount` is called
     uint public rewardsDuration = 1 days;
 
     /// @notice The end time of the reward period
@@ -275,7 +275,7 @@ contract RewardRegulatorFundable is AccessControl {
         return rewardRate * rewardsDuration;
     }
 
-    /// @notice Gets all the recipients for easy access
+    /// @notice Gets all the recipient addresses for easy access
     function getAllRecipients() external view returns (address[] memory) {
         return _recipients.values();
     }

@@ -102,7 +102,7 @@ describe("SunshineAndRainbows.sol", function () {
 
       expect(await this.sunshine.stake("1", this.admin.address)).to.emit(
         this.sunshine,
-        "Stake"
+        "Staked"
       );
 
       var blockNumber = await ethers.provider.getBlockNumber();
@@ -129,7 +129,7 @@ describe("SunshineAndRainbows.sol", function () {
 
       expect(await this.sunshine.stake("1", this.unauthorized.address)).to.emit(
         this.sunshine,
-        "Stake"
+        "Staked"
       );
 
       var blockNumber = await ethers.provider.getBlockNumber();
@@ -178,7 +178,7 @@ describe("SunshineAndRainbows.sol", function () {
 
       expect(await this.sunshine.stake("1", this.admin.address)).to.emit(
         this.sunshine,
-        "Stake"
+        "Staked"
       );
 
       var blockNumber = await ethers.provider.getBlockNumber();
@@ -191,7 +191,7 @@ describe("SunshineAndRainbows.sol", function () {
 
       expect(await this.sunshine.stake("1", this.admin.address)).to.emit(
         this.sunshine,
-        "Stake"
+        "Staked"
       );
 
       blockNumber = await ethers.provider.getBlockNumber();
@@ -234,7 +234,7 @@ describe("SunshineAndRainbows.sol", function () {
 
       expect(await this.sunshine.stake("1", this.admin.address)).to.emit(
         this.sunshine,
-        "Stake"
+        "Staked"
       );
 
       var blockNumber = await ethers.provider.getBlockNumber();
@@ -247,7 +247,7 @@ describe("SunshineAndRainbows.sol", function () {
 
       expect(await this.sunshine.withdraw("1", "1")).to.emit(
         this.sunshine,
-        "Withdraw"
+        "Withdrawn"
       );
 
       blockNumber = await ethers.provider.getBlockNumber();
@@ -285,7 +285,7 @@ describe("SunshineAndRainbows.sol", function () {
 
       expect(await this.sunshine.stake("1", this.admin.address)).to.emit(
         this.sunshine,
-        "Stake"
+        "Staked"
       );
 
       var blockNumber = await ethers.provider.getBlockNumber();
@@ -312,7 +312,7 @@ describe("SunshineAndRainbows.sol", function () {
 
       expect(await this.sunshine.stake("1", this.admin.address)).to.emit(
         this.sunshine,
-        "Stake"
+        "Staked"
       );
 
       var blockNumber = await ethers.provider.getBlockNumber();
@@ -339,7 +339,7 @@ describe("SunshineAndRainbows.sol", function () {
 
       expect(await this.sunshine.stake("1", this.admin.address)).to.emit(
         this.sunshine,
-        "Stake"
+        "Staked"
       );
 
       var blockNumber = await ethers.provider.getBlockNumber();
@@ -375,7 +375,7 @@ describe("SunshineAndRainbows.sol", function () {
 
       expect(await this.sunshine.stake("1", this.admin.address)).to.emit(
         this.sunshine,
-        "Stake"
+        "Staked"
       );
 
       var blockNumber = await ethers.provider.getBlockNumber();
@@ -386,7 +386,7 @@ describe("SunshineAndRainbows.sol", function () {
 
       expect(await this.sunshine.harvest("1")).to.emit(
         this.sunshine,
-        "Harvest"
+        "Harvested"
       );
 
       blockNumber = await ethers.provider.getBlockNumber();
@@ -425,7 +425,7 @@ describe("SunshineAndRainbows.sol", function () {
 
       expect(await this.sunshine.stake("1", this.admin.address)).to.emit(
         this.sunshine,
-        "Stake"
+        "Staked"
       );
 
       var blockNumber = await ethers.provider.getBlockNumber();
@@ -460,7 +460,7 @@ describe("SunshineAndRainbows.sol", function () {
 
       expect(await this.sunshine.stake("1", this.admin.address)).to.emit(
         this.sunshine,
-        "Stake"
+        "Staked"
       );
 
       var blockNumber = await ethers.provider.getBlockNumber();
@@ -471,7 +471,7 @@ describe("SunshineAndRainbows.sol", function () {
 
       expect(await this.sunshine.withdraw("1", "1")).to.emit(
         this.sunshine,
-        "Withdraw"
+        "Withdrawn"
       );
 
       blockNumber = await ethers.provider.getBlockNumber();
@@ -505,7 +505,7 @@ describe("SunshineAndRainbows.sol", function () {
 
       expect(await this.sunshine.harvest("1")).to.emit(
         this.sunshine,
-        "Harvest"
+        "Harvested"
       );
 
       await expect(this.sunshine.harvest("1"))
@@ -523,12 +523,12 @@ describe("SunshineAndRainbows.sol", function () {
 
       expect(await this.sunshine.stake("1", this.admin.address)).to.emit(
         this.sunshine,
-        "Stake"
+        "Staked"
       );
 
       expect(await this.sunshine.massExit([1])).to.emit(
         this.sunshine,
-        "Withdraw"
+        "Withdrawn"
       );
     });
     it("exits two positions", async function () {
@@ -536,17 +536,17 @@ describe("SunshineAndRainbows.sol", function () {
 
       expect(await this.sunshine.stake("1", this.admin.address)).to.emit(
         this.sunshine,
-        "Stake"
+        "Staked"
       );
 
       expect(await this.sunshine.stake("1", this.admin.address)).to.emit(
         this.sunshine,
-        "Stake"
+        "Staked"
       );
 
       expect(await this.sunshine.massExit([1,2])).to.emit(
         this.sunshine,
-        "Withdraw"
+        "Withdrawn"
       );
     });
     it("exits 10 positions", async function () {
@@ -556,14 +556,14 @@ describe("SunshineAndRainbows.sol", function () {
       for (var i = 1; i < 11; i++) {
         expect(await this.sunshine.stake("1", this.admin.address)).to.emit(
           this.sunshine,
-          "Stake"
+          "Staked"
         );
         arr[i - 1] = i;
       }
 
       expect(await this.sunshine.massExit(arr)).to.emit(
         this.sunshine,
-        "Withdraw"
+        "Withdrawn"
       );
     });
   });

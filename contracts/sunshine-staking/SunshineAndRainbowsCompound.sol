@@ -94,7 +94,7 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
         assert(reward >= 0);
         position.reward -= reward;
         rewardRegulator.mint(address(this), uint(reward));
-        emit Harvest(posId, uint(reward));
+        emit Harvested(posId, uint(reward));
         return uint(reward);
     }
 }

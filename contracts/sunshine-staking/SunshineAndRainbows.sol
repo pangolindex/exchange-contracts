@@ -86,9 +86,9 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
     /// @dev Refer to `sum of I` in the proof for more details.
     uint internal _idealPosition;
 
-    event Harvest(uint position, uint reward);
-    event Stake(uint position, uint amount);
-    event Withdraw(uint position, uint amount);
+    event Harvested(uint position, uint reward);
+    event Staked(uint position, uint amount);
+    event Withdrawn(uint position, uint amount);
 
     modifier updatePosition(uint posId) {
         Position storage position = positions[posId];
@@ -195,7 +195,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         }
         totalSupply -= amount;
         IERC20(stakingToken).safeTransfer(sender, amount);
-        emit Withdraw(posId, amount);
+        emit Withdrawn(posId, amount);
     }
 
     function _stake(
@@ -216,7 +216,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
                 amount
             );
         }
-        emit Stake(posId, amount);
+        emit Staked(posId, amount);
     }
 
     function _harvest(uint posId, address to)
@@ -230,7 +230,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         if (reward != 0) {
             position.reward = 0;
             rewardRegulator.mint(to, reward);
-            emit Harvest(posId, reward);
+            emit Harvested(posId, reward);
         }
         return reward;
     }
