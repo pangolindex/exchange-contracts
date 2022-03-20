@@ -46,10 +46,10 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         address owner;
     }
 
-    /// @notice The list of all positions
+    /// @notice The mapping of positions' ids to their properties
     mapping(uint => Position) public positions;
 
-    /// @notice A set of all positions of an account used for interfacing
+    /// @notice A set of all positions of a user used for interfacing
     mapping(address => EnumerableSet.UintSet) internal _userPositions;
 
     /// @notice The contract that determines the rewards of this contract
@@ -70,30 +70,49 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
     /// @notice Sum of all active positions' `lastUpdate * balance`
     uint public sumOfEntryTimes;
 
-    /// @dev Ensure that (1) total emitted rewards will not pass 100 * 10^33,
-    /// and (2) reward rate per second to total staked supply ratio will never
-    /// fall below 1:3*10^18. The failure of condition (1) could lock the
-    /// contract due to overflow, and the failure of condition (2) could be
-    /// zero-reward emissions.
+    /**
+     * @dev We have the precision to prevent zero rewards on rewardVariable
+     * calculations, which can happen when staked tokens are more than reward
+     * tokens. This precision is sufficient when the reward rate per second
+     * to total staked supply ratio is above 1/(3*10^18). This high precision
+     * introduces the risk of DOS due to overflow. To prevent overflow, one
+     * must ensure that the amount of rewards emitted in total must never pass
+     * 10^35. This guarantees +100 years of operations.
+     */
     uint private constant PRECISION = 10**30;
 
-    /// @notice Sum of all intervals' (`rewards`/`stakingDuration`)
-    /// @dev Refer to `sum of r/S` in the proof for more details.
+    /**
+     * @notice Sum of all intervals' (`rewards`/`stakingDuration`)
+     * @dev Refer to `sum of r/S` in the proof for more details.
+     */
     uint internal _rewardsPerStakingDuration;
 
-    /// @notice Hypothetical rewards accumulated by an ideal position whose
-    /// `lastUpdate` equals `initTime`, and `balance` equals one.
-    /// @dev Refer to `sum of I` in the proof for more details.
+    /**
+     * @notice Hypothetical rewards accumulated by an ideal position whose
+     * `lastUpdate` equals `initTime`, and `balance` equals one.
+     * @dev Refer to `sum of I` in the proof for more details.
+     */
     uint internal _idealPosition;
 
     event Harvested(uint position, uint reward);
     event Staked(uint position, uint amount);
     event Withdrawn(uint position, uint amount);
 
+    /**
+     * @notice Makes state changes to the properties' of a position whenever it
+     * is staked, withdrawn, or harvested. Those events resets to reward rate
+     * of a position to zero, which then gradually increase.
+     * @dev Note that the modifier mostly concerns with the position being
+     * updated. The only exception is sumOfEntryTimes, which is concerned with
+     * the global reward rate.
+     */
     modifier updatePosition(uint posId) {
         Position storage position = positions[posId];
-        sumOfEntryTimes -= (position.lastUpdate * position.balance);
+        bool updated;
+        // only make changes if it wasn't already updated this instance
         if (position.lastUpdate != block.timestamp) {
+            updated = true;
+            // calculated earned rewards when this isn't the first staking
             if (position.lastUpdate != 0) {
                 position.reward = _earned(
                     posId,
@@ -101,39 +120,55 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
                     _rewardsPerStakingDuration
                 );
                 assert(position.reward >= 0);
+                // update sum of entry times by removing old balance
+                sumOfEntryTimes -= (position.lastUpdate * position.balance);
             }
             position.lastUpdate = block.timestamp;
             position.idealPosition = _idealPosition;
             position.rewardsPerStakingDuration = _rewardsPerStakingDuration;
         }
         _;
-        sumOfEntryTimes += (block.timestamp * positions[posId].balance);
+        // update sum of entry times by adding new balance
+        if (updated) sumOfEntryTimes += (block.timestamp * position.balance);
     }
 
-    constructor(address _stakingToken, address _rewardRegulator) {
+    /**
+     * @notice Constructs the Sunshine And Rainbows contract and pauses it
+     * @param newStakingToken The token that will be staked for rewards
+     * @param newRewardRegulator The contract that will determine the global
+     * reward rate
+     */
+    constructor(address newStakingToken, address newRewardRegulator) {
         require(
-            _stakingToken != address(0) && _rewardRegulator != address(0),
+            newStakingToken != address(0) && newRewardRegulator != address(0),
             "SAR::Constructor: zero address"
         );
-        stakingToken = _stakingToken;
-        rewardRegulator = IRewardRegulator(_rewardRegulator);
+        stakingToken = newStakingToken;
+        rewardRegulator = IRewardRegulator(newRewardRegulator);
         _pause();
     }
 
+    /// @notice Irreversibly unpauses the contract
     function resume() external onlyOwner {
         _unpause();
     }
 
-    /// @notice Harvests accumulated rewards of the user
-    /// @param posId ID of the position to be harvested from
+    /**
+     * @notice Harvests the accumulated rewards of the user
+     * @dev This call also resets the position's reward rate to zero
+     * @param posId ID of the position to be harvested from
+     */
     function harvest(uint posId) external nonReentrant {
         _updateRewardVariables();
         require(_harvest(posId, msg.sender) != 0, "SAR::harvest: no reward");
     }
 
-    /// @notice Creates a new position and stakes `amount` tokens to it
-    /// @param amount Amount of tokens to stake
-    /// @param to Owner of the new position
+    /**
+     * @notice Creates a new position and stakes tokens to it
+     * @dev The reward rate of the new position starts from zero
+     * @param amount Amount of tokens to stake
+     * @param to Owner of the new position
+     */
     function stake(uint amount, address to)
         external
         virtual
@@ -144,23 +179,36 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         _stake(_createPosition(to), amount, msg.sender);
     }
 
-    /// @notice Withdraws `amount` tokens from `posId`
-    /// @param amount Amount of tokens to withdraw
-    /// @param posId ID of the position to withdraw from
-    function withdraw(uint amount, uint posId) external virtual nonReentrant {
+    /**
+     * @notice Withdraws tokens from a position
+     * @dev This call also resets the position's reward rate to zero
+     * @param amount Amount of tokens to withdraw
+     * @param posId ID of the position to withdraw from
+     */
+    function withdraw(uint posId, uint amount) external virtual nonReentrant {
         _updateRewardVariables();
-        _withdraw(amount, posId);
+        _withdraw(posId, amount);
     }
 
+    /**
+     * @notice Exits from multiple positions by withdrawing all their tokens
+     * and harvesting all the rewards
+     * @param posIds The list of IDs of the positions to exit from
+     */
     function massExit(uint[] calldata posIds) external virtual nonReentrant {
-        _updateRewardVariables();
+        _updateRewardVariables(); // saves gas by updating only once
         for (uint i; i < posIds.length; ++i) {
             uint posId = posIds[i];
-            _withdraw(positions[posId].balance, posId);
+            _withdraw(posId, positions[posId].balance);
             _harvest(posId, msg.sender);
         }
     }
 
+    /**
+     * @notice Returns the pending rewards of a position
+     * @param posId The ID of the position to check the rewards
+     * @return The amount of tokens that can be claimed
+     */
     function pendingRewards(uint posId) external view returns (int) {
         (uint x, uint y) = _rewardVariables(
             rewardRegulator.getRewards(address(this))
@@ -168,6 +216,10 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         return _earned(posId, x, y);
     }
 
+    /**
+     * @notice Simple interfacing function to list all positions of a user
+     * @return The list of user's positions
+     */
     function positionsOf(address account)
         external
         view
@@ -176,7 +228,13 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         return _userPositions[account].values();
     }
 
-    function _withdraw(uint amount, uint posId)
+    /**
+     * @notice Updates position then withdraws tokens it
+     * @dev It must always be called after `_updateRewardVariables()`
+     * @param amount Amount of tokens to withdraw
+     * @param posId ID of the position to withdraw from
+     */
+    function _withdraw(uint posId, uint amount)
         internal
         virtual
         updatePosition(posId)
@@ -198,6 +256,12 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         emit Withdrawn(posId, amount);
     }
 
+    /**
+     * @notice Updates positions then stakes tokens to it
+     * @param posId ID of the position to stake to
+     * @param amount Amount of tokens to stake
+     * @param from The address that will supply the tokens for the position
+     */
     function _stake(
         uint posId,
         uint amount,
@@ -219,6 +283,11 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         emit Staked(posId, amount);
     }
 
+    /**
+     * @notice Updates position then harvests its rewards
+     * @param posId ID of the position to harvest from
+     * @param to The address that will receive the rewards of the position
+     */
     function _harvest(uint posId, address to)
         internal
         updatePosition(posId)
@@ -235,6 +304,20 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         return reward;
     }
 
+    /**
+     * @notice Creates a new position
+     * @param to The address that will own the position
+     * @return The ID of the position that was created
+     */
+    function _createPosition(address to) internal returns (uint) {
+        require(to != address(0), "SAR::_createPosition: bad recipient");
+        positionsLength++; // posIds start from 1
+        _userPositions[to].add(positionsLength); // for interfacing
+        positions[positionsLength].owner = to;
+        return positionsLength;
+    }
+
+    /// @notice Updates the two variables that govern the reward distribution
     function _updateRewardVariables() internal {
         if (totalSupply != 0) {
             (_idealPosition, _rewardsPerStakingDuration) = _rewardVariables(
@@ -243,25 +326,29 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         }
     }
 
-    function _createPosition(address to) internal returns (uint) {
-        require(to != address(0), "SAR::_createPosition: bad recipient");
-        positionsLength++; // posIds start from 1
-        _userPositions[to].add(positionsLength);
-        positions[positionsLength].owner = to;
-        return positionsLength;
-    }
-
-    /// @param posId position id
-    /// @return amount of reward tokens the account can harvest
+    /**
+     * @notice Gets the pending rewards of a position based on given reward
+     * variables
+     * @dev Refer to the derived formula at the end of section 2.3 of proof
+     * @param posId The ID of the position to check the rewards
+     * @param idealPosition The sum of ideal position's rewards at a reference
+     * time
+     * @param rewardsPerStakingDuration The sum of rewards per staking duration
+     * at the same reference time
+     */
     function _earned(
         uint posId,
         uint idealPosition,
         uint rewardsPerStakingDuration
     ) internal view returns (int) {
         Position memory position = positions[posId];
-        if (position.lastUpdate == 0) {
-            return 0;
-        }
+        if (position.lastUpdate == 0) return 0;
+        /*
+         * core formula in eqn:
+         * ( ( sum I from 1 to m - sum I from 1 to n-1 ) -
+         * ( sum (R/s) from 1 to m - sum (R/s) from 1 to n-1 )
+         * times ( sum t from 1 to n-1 ) ) times y
+         */
         return
             int(
                 ((idealPosition -
@@ -273,17 +360,24 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
             ) + position.reward;
     }
 
-    /// @notice Two variables used in per-user APR calculation
-    /// @param rewards The rewards of this contract for the last interval
+    /**
+     * @notice Calculates the variables that govern the reward distribution
+     * @dev For `idealPosition`, refer to `I` in the proof, for
+     * `stakingDuration`, refer to `S`, and for `_rewardsPerStakingDuration`,
+     * refer to `r/S`
+     * @param rewards The rewards this contract is eligible to distribute
+     * during the last interval (i.e., since the last update)
+     */
     function _rewardVariables(uint rewards) private view returns (uint, uint) {
-        // `stakingDuration` refers to `S` in the proof
         uint stakingDuration = block.timestamp * totalSupply - sumOfEntryTimes;
         if (stakingDuration == 0)
             return (_idealPosition, _rewardsPerStakingDuration);
         return (
+            // in eqn: sum t times r over S
             _idealPosition +
                 ((block.timestamp - initTime) * rewards * PRECISION) /
                 stakingDuration,
+            // in eqn: r over S
             _rewardsPerStakingDuration + (rewards * PRECISION) / stakingDuration
         );
     }

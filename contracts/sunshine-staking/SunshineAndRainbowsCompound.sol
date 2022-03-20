@@ -67,7 +67,7 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
      * that disables withdrawal if the parent position was not updated at least
      * once after the creation of the child position
      */
-    function _withdraw(uint amount, uint posId) internal override {
+    function _withdraw(uint posId, uint amount) internal override {
         Child memory child = children[posId];
         if (child.initTime != 0) {
             require(
@@ -75,7 +75,7 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
                 "SAR::_withdraw: parent position not updated"
             );
         }
-        super._withdraw(amount, posId);
+        super._withdraw(posId, amount);
     }
 
     /**
