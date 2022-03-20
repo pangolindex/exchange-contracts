@@ -26,10 +26,9 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
      * @param _rewardRegulator Contract address of the reward regulator which
      * distributes reward tokens
      */
-    constructor(
-        address _stakingToken,
-        address _rewardRegulator
-    ) SunshineAndRainbows(_stakingToken, _rewardRegulator) {
+    constructor(address _stakingToken, address _rewardRegulator)
+        SunshineAndRainbows(_stakingToken, _rewardRegulator)
+    {
         require(
             _stakingToken == address(rewardRegulator.rewardToken()),
             "SAR::Constructor: staking token is different than reward token"

@@ -1,27 +1,40 @@
 // SPDX-License-Identifier: MIT
 // solhint-disable not-rely-on-time
-pragma solidity ^0.8;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 /**
  * @title Fundable Reward Regulator
  * @notice A StakingRewards replacement that distributes to multiple contracts
- * @dev Downstream staking contract must ask for declaration of its rewards
- * through the `setReward()` function. Then the declared rewards can be
- * claimed through the `mint()` function.
+ * @dev This contract is a partial implementation of StakingRewards. The
+ * contract does not hold any staking tokens, and lacks withdrawing,
+ * harvesting, and staking functions. It only holds the reward token, and
+ * distributes the reward token to downstream recipient contracts. In essence,
+ * this is StakingRewards broken into two components. First component is this
+ * contract, which holds the reward token and then determines the global
+ * reward rate. The second component is separate contracts which handle
+ * distribution of rewards to end users. We will call these separate contracts
+ * recipients. A recipient contract must call `setReward()` of RewardRegulator
+ * to "declare" its reward. When its reward is declared, RewardRegulator
+ * updates the properties of the recipient, and returns the amount of reward
+ * tokens the recipient is eligible since the last declaration. The recipient
+ * contract then must call `mint()` to claim the reward tokens it is eligible.
+ * RewardRegulator is agnostic to how the recipient distributes its rewards, as
+ * long as the recipient do not claim/mint more tokens than it is eligible.
  * @author shung for Pangolin
  */
 contract RewardRegulatorFundable is AccessControl {
+    using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
     using SafeCast for int;
 
-    /// @notice The properties of a recipient contract
     struct Recipient {
-        uint allocation; // The emission allocation of the account
+        uint allocation; // The emission allocation of the recipient
         uint unclaimed; // The reward amount the account can request to mint
         uint undeclared; // The reward amount stashed when allocation changes
         uint rewardStored; // The _rewardStored when recipient was last updated
@@ -31,13 +44,10 @@ contract RewardRegulatorFundable is AccessControl {
     mapping(address => Recipient) public recipients;
 
     /// @notice A set of recipient addresses (for interfacing/transparency)
-    address[] public recipientAddresses;
+    EnumerableSet.AddressSet private _recipients;
 
     /// @notice The reward token the contract will distribute
     IERC20 public immutable rewardToken;
-
-    /// @notice The timestamp of the last update
-    uint public lastUpdate;
 
     /// @notice How long the staking last after `notifyRewardAmount` is called
     uint public rewardsDuration = 1 days;
@@ -47,6 +57,9 @@ contract RewardRegulatorFundable is AccessControl {
 
     /// @notice Rewards emitted per second
     uint public rewardRate;
+
+    /// @notice The timestamp of the last update
+    uint private _lastUpdate;
 
     /// @notice The amount of reward tokens allocated to be distributed
     uint private _reserved;
@@ -63,19 +76,10 @@ contract RewardRegulatorFundable is AccessControl {
     /// @notice The role for calling `notifyRewardAmount` function
     bytes32 private constant FUNDER = keccak256("FUNDER");
 
-    /// @notice The event that is emitted when an account’s allocation changes
-    event AllocationChanged(address indexed account, uint newAllocation);
-
-    /// @notice The event that is emitted when an account’s rewards are declared
+    event RecipientSet(address indexed account, uint newAllocation);
     event RewardDeclared(address indexed account, uint reward);
-
-    /// @notice The event for total allocations changing from or to zero
     event Initiated(bool initiated);
-
-    /// @notice The event for adding rewards
     event RewardAdded(uint reward);
-
-    /// @notice The event for changing reward duration
     event RewardsDurationUpdated(uint newDuration);
 
     /**
@@ -98,7 +102,7 @@ contract RewardRegulatorFundable is AccessControl {
 
         _globalUpdate();
         uint reward = getRewards(sender);
-        require(reward != 0, "setRewards: no rewards");
+        require(reward != 0, "setReward: no rewards");
 
         recipient.rewardStored = _rewardStored;
         recipient.unclaimed += reward;
@@ -110,6 +114,10 @@ contract RewardRegulatorFundable is AccessControl {
 
     /**
      * @notice Claims the `amount` of tokens to `to`
+     * @dev The function is named `mint()`, because the original
+     * RewardRegulator (non-fundable) directly mints from the token contract
+     * instead of transferring tokens from its balance. Since SAR was written
+     * for original RewardRegulator, we opt to keep the function name as is.
      * @param to The recipient address of the claimed tokens
      * @param amount The amount of tokens to claim
      */
@@ -184,7 +192,7 @@ contract RewardRegulatorFundable is AccessControl {
         );
 
         // update _rewardStored based on previous rewardRate
-        // don't call _globalUpdate() as we will have to set lastUpdate
+        // don't call _globalUpdate() as we will have to set _lastUpdate
         _rewardStored = rewardTotal();
 
         // Set new reward rate
@@ -199,7 +207,7 @@ contract RewardRegulatorFundable is AccessControl {
         periodFinish = blockTime + rewardsDuration;
 
         // update the lastUpdate time
-        lastUpdate = blockTime;
+        _lastUpdate = blockTime;
 
         emit RewardAdded(reward);
     }
@@ -209,10 +217,10 @@ contract RewardRegulatorFundable is AccessControl {
      * @param accounts The list of addresses to have a new allocation
      * @param allocations The list of allocations corresponding to `accounts`
      */
-    function setRecipients(address[] memory accounts, uint[] memory allocations)
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    function setRecipients(
+        address[] calldata accounts,
+        uint[] calldata allocations
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         uint length = accounts.length;
         require(
             length == allocations.length,
@@ -233,13 +241,13 @@ contract RewardRegulatorFundable is AccessControl {
             );
 
             // add the new recipient to the set
-            recipientAddresses.push(account);
+            _recipients.add(account);
             // stash the undeclared rewards
             recipient.undeclared = getRewards(account);
             recipient.rewardStored = _rewardStored;
             recipient.allocation = allocation;
 
-            emit AllocationChanged(account, allocation);
+            emit RecipientSet(account, allocation);
             totalAllocChange += int(allocation) - int(oldAlloc);
         }
 
@@ -249,8 +257,8 @@ contract RewardRegulatorFundable is AccessControl {
                 block.timestamp > periodFinish,
                 "setRecipients: ongoing period"
             );
-            _totalAllocations =
-                (int(_totalAllocations) + totalAllocChange).toUint256();
+            _totalAllocations = (int(_totalAllocations) + totalAllocChange)
+                .toUint256();
             // confirm allocations
             if (_totalAllocations == 0) {
                 emit Initiated(false);
@@ -262,18 +270,17 @@ contract RewardRegulatorFundable is AccessControl {
         }
     }
 
-    /**
-     * @notice Gets the total rewards for the current period
-     * @return The amount of tokens being distributed during this period
-     */
+    /// @notice Gets the total rewards for the current period
     function getRewardForDuration() external view returns (uint) {
         return rewardRate * rewardsDuration;
     }
 
-    /**
-     * @notice Gets the tokens that can be withdrawn or added to rewards
-     * @return The amount of tokens in the contract not set to be distributed
-     */
+    /// @notice Gets all the recipients for easy access
+    function getAllRecipients() external view returns (address[] memory) {
+        return _recipients.values();
+    }
+
+    /// @notice Gets the tokens that can be withdrawn or added to rewards
     function unreserved() public view returns (uint) {
         return rewardToken.balanceOf(address(this)) - _reserved;
     }
@@ -291,16 +298,18 @@ contract RewardRegulatorFundable is AccessControl {
             DENOMINATOR;
     }
 
+    /// @notice The total amount of reward tokens emitted until the call
     function rewardTotal() public view returns (uint) {
         if (_totalAllocations == 0) {
             return _rewardStored;
         }
         return
             _rewardStored +
-            (lastTimeRewardApplicable() - lastUpdate) *
+            (lastTimeRewardApplicable() - _lastUpdate) *
             rewardRate;
     }
 
+    /// @notice The time of last emission (now or end of last emission period)
     function lastTimeRewardApplicable() public view returns (uint) {
         return Math.min(block.timestamp, periodFinish);
     }
@@ -308,6 +317,6 @@ contract RewardRegulatorFundable is AccessControl {
     /// @notice Updates reward stored whenever rewards are declared or changed
     function _globalUpdate() private {
         _rewardStored = rewardTotal();
-        lastUpdate = lastTimeRewardApplicable();
+        _lastUpdate = lastTimeRewardApplicable();
     }
 }
