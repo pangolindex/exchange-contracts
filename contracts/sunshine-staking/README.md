@@ -54,3 +54,10 @@ as the reward token, or when the staking token can be derived from the reward
 token (i.e.: liquidity pool tokens). `SunshineAndRainbowsCompound.sol` features
 the reference implementation of *loked-deposit harvesting* when the reward
 token is the same as staking token.
+
+## Reward Regulator
+
+For modularity, how the total reward rate is determined, and how
+the rewards are distributed are defined in separate contracts.
+`RewardRegulatorFundable.sol` handles the former. Refer to the in-code
+documentation for the specifications of how this is managed.
