@@ -123,6 +123,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
                 // update sum of entry times by removing old balance
                 sumOfEntryTimes -= (position.lastUpdate * position.balance);
             }
+            // update position's properties
             position.lastUpdate = block.timestamp;
             position.idealPosition = _idealPosition;
             position.rewardsPerStakingDuration = _rewardsPerStakingDuration;
@@ -287,6 +288,9 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
     {
         Position storage position = positions[posId];
         require(position.owner == msg.sender, "SAR::_harvest: unauthorized");
+        // Remove position from the set: Due to `!= 0` check in `harvest()`
+        // function, if position has no rewards the position will not be
+        // removed. This is not ideal but we can live with it.
         if (position.balance == 0) _userPositions[msg.sender].remove(posId);
         uint reward = uint(position.reward);
         if (reward != 0) {
