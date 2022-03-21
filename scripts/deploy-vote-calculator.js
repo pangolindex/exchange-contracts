@@ -1,6 +1,6 @@
 const { ethers } = require('hardhat');
 
-const { PNG_ADDRESS, LP_MANAGER_V2_ADDRESS } = require("./mainnet-constants");
+const { PNG_ADDRESS, MINICHEF_V2_ADDRESS } = require("./mainnet-constants");
 
 async function main() {
 
@@ -12,13 +12,13 @@ async function main() {
     console.log("Account balance:", initBalance.toString());
 
     const png = ethers.utils.getAddress(PNG_ADDRESS);
-    const liquidityPoolManagerV2 = ethers.utils.getAddress(LP_MANAGER_V2_ADDRESS);
+    const miniChefV2 = ethers.utils.getAddress(MINICHEF_V2_ADDRESS);
 
     // Deploy PangolinVoteCalculator
     const PangolinVoteCalculator = await ethers.getContractFactory("PangolinVoteCalculator");
     const pangolinVoteCalculator = await PangolinVoteCalculator.deploy(
       png,
-      liquidityPoolManagerV2,
+      miniChefV2,
     );
     await pangolinVoteCalculator.deployed();
 

@@ -1,8 +1,7 @@
-contracts/TestERC20.sol
-contracts/WAVAX.sol
 cache/
 node_modules/
 artifacts/
 .secret.env
 .env
 .idea
+.vscode
