@@ -119,13 +119,13 @@ contract RewardRegulatorFundable is AccessControl {
      * @param amount The amount of tokens to claim
      */
     function claim(address to, uint amount) external {
-        address sender = msg.sender;
+        Recipient storage recipient = recipients[msg.sender];
         require(
-            amount <= recipients[sender].unclaimed && amount != 0,
+            amount <= recipient.unclaimed && amount != 0,
             "claim: invalid claim amount"
         );
         unchecked {
-            recipients[sender].unclaimed -= amount;
+            recipient.unclaimed -= amount;
         }
         _reserved -= amount;
         rewardToken.safeTransfer(to, amount);
