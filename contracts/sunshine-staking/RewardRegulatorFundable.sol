@@ -23,9 +23,9 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
  * to "declare" its reward. When its reward is declared, RewardRegulator
  * updates the properties of the recipient, and returns the amount of reward
  * tokens the recipient is eligible since the last declaration. The recipient
- * contract then must call `mint()` to claim the reward tokens it is eligible.
+ * contract then must call `claim()` to claim the reward tokens it is eligible.
  * RewardRegulator is agnostic to how the recipient distributes its rewards, as
- * long as the recipient do not claim/mint more tokens than it is eligible.
+ * long as the recipient do not claim more tokens than it is eligible.
  * @author shung for Pangolin
  */
 contract RewardRegulatorFundable is AccessControl {
@@ -35,7 +35,7 @@ contract RewardRegulatorFundable is AccessControl {
 
     struct Recipient {
         uint allocation; // The emission allocation of the recipient
-        uint unclaimed; // The reward amount the account can request to mint
+        uint unclaimed; // The reward amount the account can request to claim
         uint undeclared; // The reward amount stashed when allocation changes
         uint rewardStored; // The _rewardStored when recipient was last updated
     }
@@ -114,18 +114,14 @@ contract RewardRegulatorFundable is AccessControl {
 
     /**
      * @notice Claims the `amount` of tokens to `to`
-     * @dev The function is named `mint()`, because the original
-     * RewardRegulator (non-fundable) directly mints from the token contract
-     * instead of transferring tokens from its balance. Since SAR was written
-     * for original RewardRegulator, we opt to keep the function name as is.
      * @param to The recipient address of the claimed tokens
      * @param amount The amount of tokens to claim
      */
-    function mint(address to, uint amount) external {
+    function claim(address to, uint amount) external {
         address sender = msg.sender;
         require(
             amount <= recipients[sender].unclaimed && amount != 0,
-            "mint: invalid mint amount"
+            "claim: invalid claim amount"
         );
         unchecked {
             recipients[sender].unclaimed -= amount;

@@ -13,7 +13,7 @@ interface IRewardRegulator {
 
     function setRewards() external returns (uint);
 
-    function mint(address to, uint amount) external;
+    function claim(address to, uint amount) external;
 
     function rewardToken() external returns (address); // For compound ext.
 }
@@ -291,7 +291,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         uint reward = uint(position.reward);
         if (reward != 0) {
             position.reward = 0;
-            rewardRegulator.mint(to, reward);
+            rewardRegulator.claim(to, reward);
             emit Harvested(posId, reward);
         }
         return reward;
