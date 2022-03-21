@@ -1,59 +1,56 @@
 # Sunshine And Rainbows
 
-Sunshine and Rainbows (SAR) is a novel staking algorithm.
+Sunshine and Rainbows (SAR) is a novel staking algorithm. SAR contracts utilize
+not only a novel algorithm, but also introduce multiple new concept both in
+tokenomics and staking architecture.
 
-## Concepts
+## Core Algorithm
 
-Most of the current staking algorithms are derived from [Synthetix’ implementation](https://github.com/Synthetixio/synthetix/blob/v2.54.0/contracts/StakingRewards.sol).
-This implementation simply distributes the rewards proportional to the stake amount of
-an account. To encourage sticky liquidity, many protocols have implemented *ad hoc*
-“solutions” such as “paper-hand fees”, which seizes portion of user’s tokens if it is
-withdrawn earlier than an arbitrary duration. We have seen that such solutions do not
-work, and often only benefit to the developers’ pockets. In contrast, SAR
-is built from ground up to provide a novel model to elegantly encourage long-term staking and
-discourage withdrawing or selling harvests.
+Most DeFi staking algorithms are derived from [Synthetix’ implementation](https://github.com/Synthetixio/synthetix/blob/v2.54.0/contracts/StakingRewards.sol).
+This implementation simply distributes rewards, *r*, proportional to user’s
+staked amount, *y*, to the total staked amount, *Σy*. So, for each interval, a
+user’s reward, *R*, is defined as follows.
 
-### Reward Rate Based on Staking Duration
+![Simple Staking](https://latex.codecogs.com/svg.latex?R%3D%5Cfrac%7By%7D%7B%5Csum%7By%7D%7Dr )
 
-SAR staking model considers both the stake amount and the *staking duration* when
-calculating the user’s share of rewards. At each withdraw, deposit, or harvest events,
-the staking duration of the user resets to zero. The deviation of the user’s staking
-duration from the average staking duration is factored into the calculation of the
-reward rate of the user. However, simple staking duration averaging calculations on
-top of Synthetix’ model cannot account for the changes in both the reward rate and
-the average staking duration while the user has been staking. Therefore, a novel
-staking model had to be invented. The SAR algorithm can handle arbitrary changes
-in the global reward rate, and it ensures that the sum of users’ rewards for a given
-duration will always equal to the total allocated rewards for that duration.
+To encourage long-term staking and prevent sell pressure on the reward token,
+SAR adds staking duration, *x*, to the equation above.
 
-Refer to [the proof](https://gateway.pinata.cloud/ipfs/Qmat8gcrWjbFqDK5Aw3X8c29q1DQpNJR3T6wpbRoY3AfHA) to see how it works.
+![SAR Staking](https://latex.codecogs.com/svg.latex?R%3D%5Cfrac%7Bxy%7D%7B%5Csum%7Bxy%7D%7Dr )
 
-### Multiple Deposits with Position-Based Account Tracking
+This basic equation is then used to invent a new formula to calculate
+rewards in *O(1)*. **Refer to [the proofs](https://gateway.pinata.cloud/ipfs/Qmat8gcrWjbFqDK5Aw3X8c29q1DQpNJR3T6wpbRoY3AfHA)** for the derivation and symbols
+used in the equation below.
 
-We had mentioned that the staking duration resets on withdraw, deposit, or harvest.
-However, depositing is a positive event for the farm’s health. Therefore, it should
-not be discouraged by resetting the staking duration of an existing user. To prevent
-this, staking duration, balance, and rewards are tracked as positions instead of
-users. This way, a user can have infinite positions which hold different balances at
-different staking durations. The default deposit event opens a new position for the
-user instead of resetting an existing position. This prevents the need to use multiple
-wallet addresses to increase one’s stake without resetting the staking duration.
+![SAR Staking Final](https://latex.codecogs.com/svg.latex?P_%7Bn%5Crightarrow%20m%7D%3D%5Cleft%28%5Csum_%7Bi%3Dn%7D%5E%7Bm%7D%7BI_i%7D-%5Cleft%28%5Csum_%7Bi%3Dn%7D%5E%7Bm%7D%7B%5Cfrac%7Br_i%7D%7BS_i%7D%7D%5Cright%29%5Csum_%7Bi%3D1%7D%5E%7Bn-1%7D%7Bt_i%7D%5Cright%29y )
 
-### Locked-Deposit Harvesting
+## Position-Based Account Tracking
 
-(This feature is not active in the core contract `SunshineAndRainbows.sol`.)
+Staking duration resets on withdraw, deposit, or harvest functions. However,
+depositing is a positive event for a farm’s health. Therefore, it should not be
+discouraged by resetting the staking duration of an existing user. To prevent
+this, staking duration, balance, and rewards are tracked as positions instead
+of users. This way, a user can have infinite positions which hold different
+balances at different staking durations. In the reference implementation,
+`SunshineAndRainbows.sol`, the stake function opens a new position for the user
+instead of resetting an existing position.
 
-Harvesting can be a desirable or an undesirable event for the farm’s health. If the
-user sells the rewards, that would be undesirable. If the user adds more liquidity
-with the rewards, that would be desirable. However, there is no way to know beforehand
-how the user will spend those rewards. Therefore, the staking duration for the
-position is reset to zero whenever the rewards are harvested. An alternative way
-to harvest the rewards in a way that is beneficial to the farm is *locked-deposit harvesting*.
-In this method, rewards never leave the contract. Instead, the user has
-to transfer equivalent pair tokens to the staking contract. The staking contract then
-pairs the two tokens and creates a new position with the pool tokens. The new position
-is considered the child of the position from which the rewards were harvested. When
-a position has a parent, its stake cannot be withdrawn until the parent position’s
-staking duration is reset at least once after the creation of the child position. This
-feature is only available in LP staking, where the reward token is one of the tokens
-in the LP pair.
+## Locked-Deposit Harvesting
+
+Harvesting can be a desirable or an undesirable event for a farm’s health.
+If a user sells the rewards, that would be undesirable. If a user adds more
+liquidity with the rewards, that would be desirable. However, there is no
+way to know beforehand how a user will spend those rewards. Therefore, the
+staking duration for the position is reset to zero whenever the rewards are
+harvested. As an alternative, we introduce *locked-deposit harvesting*. In this
+method, staking duration of a position does not reset, because the rewards
+never leave the contract. Instead of the rewards being transferred to the user,
+they are used to create a new position. The new position is considered the
+child of the position from which the rewards are harvested. When a position has
+a parent, its deposit cannot be withdrawn until the parent position’s staking
+duration is reset at least once after the creation of the child position.
+*Locked-deposit harvesting* is only possible when the staking token is the same
+as the reward token, or when the staking token can be derived from the reward
+token (i.e.: liquidity pool tokens). `SunshineAndRainbowsCompound.sol` features
+the reference implementation of *loked-deposit harvesting* when the reward
+token is the same as staking token.
