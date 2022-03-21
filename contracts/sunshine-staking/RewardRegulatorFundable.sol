@@ -88,6 +88,7 @@ contract RewardRegulatorFundable is AccessControl {
      */
     constructor(address newRewardToken) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        require(newRewardToken != address(0), "Construct: zero address");
         rewardToken = IERC20(newRewardToken);
     }
 
@@ -135,15 +136,15 @@ contract RewardRegulatorFundable is AccessControl {
      * @param token Address of the token to withdraw
      * @param amount Amount of token to withdraw
      */
-    function recover(address token, uint amount)
+    function recover(IERC20 token, uint amount)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         require(
-            token != address(rewardToken) || unreserved() >= amount,
+            token != rewardToken || unreserved() >= amount,
             "recover: insufficient unlocked supply"
         );
-        IERC20(token).safeTransfer(msg.sender, amount);
+        token.safeTransfer(msg.sender, amount);
     }
 
     /**
