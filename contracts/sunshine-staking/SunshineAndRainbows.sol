@@ -13,7 +13,7 @@ interface IRewardRegulator {
 
     function claim() external returns (uint);
 
-    function rewardToken() external returns (address);
+    function rewardToken() external returns (IERC20);
 }
 
 /**
@@ -57,7 +57,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
     IERC20 public immutable rewardToken;
 
     /// @notice The token that can be staked in the contract
-    address public immutable stakingToken;
+    IERC20 public immutable stakingToken;
 
     /// @notice Total amount of tokens staked in the contract
     uint public totalSupply;
@@ -145,9 +145,9 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
             newStakingToken != address(0) && newRewardRegulator != address(0),
             "SAR::Constructor: zero address"
         );
-        stakingToken = newStakingToken;
+        stakingToken = IERC20(newStakingToken);
         rewardRegulator = IRewardRegulator(newRewardRegulator);
-        rewardToken = IERC20(rewardRegulator.rewardToken());
+        rewardToken = rewardRegulator.rewardToken();
         _pause();
     }
 
@@ -247,7 +247,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         require(position.owner == msg.sender, "SAR::_withdraw: unauthorized");
         position.balance -= (position.balance - amount);
         totalSupply -= amount;
-        IERC20(stakingToken).safeTransfer(msg.sender, amount);
+        stakingToken.safeTransfer(msg.sender, amount);
         emit Withdrawn(posId, amount);
     }
 
@@ -269,7 +269,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         totalSupply += amount;
         positions[posId].balance += amount;
         if (from != address(this)) {
-            IERC20(stakingToken).safeTransferFrom(
+            stakingToken.safeTransferFrom(
                 msg.sender,
                 address(this),
                 amount
