@@ -17,16 +17,13 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
  * harvesting, and staking functions. It only holds the reward token, and
  * distributes the reward token to downstream recipient contracts. In essence,
  * this is StakingRewards broken into two components. First component is this
- * contract, which holds the reward token and then determines the global
- * reward rate. The second component is separate contracts which handle
- * distribution of rewards to end users. We will call these separate contracts
- * recipients. A recipient contract must call `setReward()` of RewardRegulator
- * to "declare" its reward. When its reward is declared, RewardRegulator
- * updates the properties of the recipient, and returns the amount of reward
- * tokens the recipient is eligible since the last declaration. The recipient
- * contract then can call `claim()` to claim the reward tokens it is eligible.
- * RewardRegulator is agnostic to how the recipient distributes its rewards, as
- * long as the recipient do not claim more tokens than it is eligible.
+ * contract, which holds the reward token and then determines the global reward
+ * rate. The second component is separate contracts which handle distribution
+ * of rewards to end users. We will call these separate contracts recipients.
+ * A recipient contract must call `claim()` of RewardRegulator to receive its
+ * reward since its last `claim()` call. Then the recipient should manage
+ * distributing the tokens in its balance to end users. RewardRegulator is
+ * agnostic to how the recipient distributes its rewards.
  * @author shung for Pangolin
  */
 contract RewardRegulatorFundable is AccessControl {
@@ -37,8 +34,7 @@ contract RewardRegulatorFundable is AccessControl {
 
     struct Recipient {
         uint weight; // The emission weight of the recipient
-        uint unclaimed; // The reward amount the account can request to claim
-        uint undeclared; // The reward amount stashed when weight changes
+        uint stash; // The reward amount stashed when weight changes
         uint rewardPerWeightPaid; // The _rewardPerWeightStored on update
     }
 
@@ -76,7 +72,7 @@ contract RewardRegulatorFundable is AccessControl {
     bytes32 private constant FUNDER = keccak256("FUNDER");
 
     event RecipientSet(address indexed account, uint newWeight);
-    event RewardDeclared(address indexed account, uint reward);
+    event Claimed(address indexed account, uint reward);
     event RewardAdded(uint reward);
     event RewardsDurationUpdated(uint newDuration);
 
@@ -91,42 +87,27 @@ contract RewardRegulatorFundable is AccessControl {
     }
 
     /**
-     * @notice Requests the declaration of reward for the message sender
+     * @notice Sends the rewards to message sender
      * @return The amount of reward tokens that became eligible for claiming
      */
-    function setReward() external returns (uint) {
+    function claim() external returns (uint) {
         address sender = msg.sender;
         Recipient storage recipient = recipients[sender];
 
         _globalUpdate();
 
-        uint reward = getRewards(sender);
+        uint reward = pendingRewards(sender);
         require(reward != 0, "setReward: no rewards");
 
         recipient.rewardPerWeightPaid = _rewardPerWeightStored;
-        recipient.unclaimed += reward;
-        recipient.undeclared = 0;
+        recipient.stash = 0;
 
-        emit RewardDeclared(sender, reward);
+        _reserved -= reward;
+
+        rewardToken.safeTransfer(sender, reward);
+        emit Claimed(sender, reward);
+
         return reward;
-    }
-
-    /**
-     * @notice Claims the `amount` of tokens to `to`
-     * @param to The recipient address of the claimed tokens
-     * @param amount The amount of tokens to claim
-     */
-    function claim(address to, uint amount) external {
-        Recipient storage recipient = recipients[msg.sender];
-        require(
-            amount <= recipient.unclaimed && amount != 0,
-            "claim: invalid claim amount"
-        );
-        unchecked {
-            recipient.unclaimed -= amount;
-        }
-        _reserved -= amount;
-        rewardToken.safeTransfer(to, amount);
     }
 
     /**
@@ -218,14 +199,16 @@ contract RewardRegulatorFundable is AccessControl {
             uint weight = weights[i];
             Recipient storage recipient = recipients[account];
 
-            require(weight != recipient.weight, "setRecipients: same weight");
-            totalWeight += weight - recipient.weight;
+            uint oldWeight = recipient.weight;
+            require(weight != oldWeight, "setRecipients: same weight");
+            totalWeight += weight - oldWeight;
 
-            // add the new recipient to the set
-            if (weight != 0) _recipients.add(account);
+            // add or remove the recipient to/from the set
+            if (oldWeight == 0) _recipients.add(account);
+            if (weight == 0) _recipients.remove(account);
 
-            // stash the undeclared rewards
-            recipient.undeclared = getRewards(account);
+            // stash the unclaimed rewards
+            recipient.stash = pendingRewards(account);
             recipient.rewardPerWeightPaid = _rewardPerWeightStored;
             recipient.weight = weight;
 
@@ -259,14 +242,14 @@ contract RewardRegulatorFundable is AccessControl {
     }
 
     /**
-     * @notice Gets the amount of reward tokens yet to be declared for account
+     * @notice Gets the amount of reward tokens yet to be claimed for account
      * @param account Address of the contract to check rewards
-     * @return The amount of reward accumulated since the last declaration
+     * @return The amount of reward accumulated since the last claimed
      */
-    function getRewards(address account) public view returns (uint) {
+    function pendingRewards(address account) public view returns (uint) {
         Recipient memory recipient = recipients[account];
         return
-            recipient.undeclared +
+            recipient.stash +
             (rewardPerWeight() - recipient.rewardPerWeightPaid) *
             recipient.weight;
     }
@@ -283,7 +266,7 @@ contract RewardRegulatorFundable is AccessControl {
         return Math.min(block.timestamp, periodFinish);
     }
 
-    /// @notice Updates reward stored whenever rewards are declared or changed
+    /// @notice Updates reward stored whenever rewards are claimed or changed
     function _globalUpdate() private {
         _rewardPerWeightStored = rewardPerWeight();
         _lastUpdate = block.timestamp;

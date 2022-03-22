@@ -22,15 +22,15 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
     /**
      * @notice Constructs a new SunshineAndRainbows staking contract with
      * locked-stake harvesting feature
-     * @param _stakingToken Contract address of the staking token
-     * @param _rewardRegulator Contract address of the reward regulator which
+     * @param newStakingToken Contract address of the staking token
+     * @param newRewardRegulator Contract address of the reward regulator which
      * distributes reward tokens
      */
-    constructor(address _stakingToken, address _rewardRegulator)
-        SunshineAndRainbows(_stakingToken, _rewardRegulator)
+    constructor(address newStakingToken, address newRewardRegulator)
+        SunshineAndRainbows(newStakingToken, newRewardRegulator)
     {
         require(
-            _stakingToken == address(rewardRegulator.rewardToken()),
+            newStakingToken == address(rewardToken),
             "SAR::Constructor: staking token is different than reward token"
         );
     }
@@ -93,7 +93,6 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
         int reward = _earned(posId, _idealPosition, _rewardsPerStakingDuration);
         assert(reward >= 0);
         position.reward -= reward;
-        rewardRegulator.claim(address(this), uint(reward));
         emit Harvested(posId, uint(reward));
         return uint(reward);
     }

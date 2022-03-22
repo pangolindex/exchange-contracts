@@ -9,13 +9,11 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 interface IRewardRegulator {
-    function getRewards(address account) external view returns (uint);
+    function pendingRewards(address account) external view returns (uint);
 
-    function setRewards() external returns (uint);
+    function claim() external returns (uint);
 
-    function claim(address to, uint amount) external;
-
-    function rewardToken() external returns (address); // For compound ext.
+    function rewardToken() external returns (address);
 }
 
 /**
@@ -55,8 +53,11 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
     /// @notice The contract that determines the rewards of this contract
     IRewardRegulator public immutable rewardRegulator;
 
+    /// @notice The token that is distributed as reward
+    IERC20 public immutable rewardToken;
+
     /// @notice The token that can be staked in the contract
-    address public stakingToken;
+    address public immutable stakingToken;
 
     /// @notice Total amount of tokens staked in the contract
     uint public totalSupply;
@@ -146,6 +147,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         );
         stakingToken = newStakingToken;
         rewardRegulator = IRewardRegulator(newRewardRegulator);
+        rewardToken = IERC20(rewardRegulator.rewardToken());
         _pause();
     }
 
@@ -212,7 +214,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
      */
     function pendingRewards(uint posId) external view returns (int) {
         (uint x, uint y) = _rewardVariables(
-            rewardRegulator.getRewards(address(this))
+            rewardRegulator.pendingRewards(address(this))
         );
         return _earned(posId, x, y);
     }
@@ -295,7 +297,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         uint reward = uint(position.reward);
         if (reward != 0) {
             position.reward = 0;
-            rewardRegulator.claim(to, reward);
+            rewardToken.safeTransfer(to, reward);
             emit Harvested(posId, reward);
         }
         return reward;
@@ -318,7 +320,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
     function _updateRewardVariables() internal {
         if (totalSupply != 0) {
             (_idealPosition, _rewardsPerStakingDuration) = _rewardVariables(
-                rewardRegulator.setRewards()
+                rewardRegulator.claim()
             );
         }
     }
