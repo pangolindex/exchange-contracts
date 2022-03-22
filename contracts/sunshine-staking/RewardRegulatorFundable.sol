@@ -97,7 +97,7 @@ contract RewardRegulatorFundable is AccessControl {
         _globalUpdate();
 
         uint reward = pendingRewards(sender);
-        require(reward != 0, "setReward: no rewards");
+        require(reward != 0, "claim: no rewards");
 
         recipient.rewardPerWeightPaid = _rewardPerWeightStored;
         recipient.stash = 0;
