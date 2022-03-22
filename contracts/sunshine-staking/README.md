@@ -16,13 +16,13 @@ user’s (position’s) reward, *P*, is defined as follows.
 To encourage long-term staking and prevent sell pressure on the reward token,
 SAR adds staking duration, *x*, to the equation above.
 
-![SAR Staking](https://latex.codecogs.com/png.latex?P%3D%5Cfrac%7Bxy%7D%7B%5Csum%7Bxy%7D%7Dr )
+![SAR Staking](https://latex.codecogs.com/svg.latex?P%3D%5Cfrac%7Bxy%7D%7B%5Csum%7Bxy%7D%7Dr )
 
 This basic equation is then used to invent a new formula to calculate
 rewards in *O(1)*. **Refer to [the proofs](https://gateway.pinata.cloud/ipfs/Qmat8gcrWjbFqDK5Aw3X8c29q1DQpNJR3T6wpbRoY3AfHA)** for the derivation and symbols
 used in the equation below.
 
-![SAR Staking Final](https://latex.codecogs.com/png.latex?P_%7Bn%5Crightarrow%20m%7D%3D%5Cleft%28%5Csum_%7Bi%3Dn%7D%5E%7Bm%7D%7BI_i%7D-%5Cleft%28%5Csum_%7Bi%3Dn%7D%5E%7Bm%7D%7B%5Cfrac%7Br_i%7D%7BS_i%7D%7D%5Cright%29%5Csum_%7Bi%3D1%7D%5E%7Bn-1%7D%7Bt_i%7D%5Cright%29y )
+![SAR Staking Final](https://latex.codecogs.com/svg.latex?P_%7Bn%5Crightarrow%20m%7D%3D%5Cleft%28%5Csum_%7Bi%3Dn%7D%5E%7Bm%7D%7BI_i%7D-%5Cleft%28%5Csum_%7Bi%3Dn%7D%5E%7Bm%7D%7B%5Cfrac%7Br_i%7D%7BS_i%7D%7D%5Cright%29%5Csum_%7Bi%3D1%7D%5E%7Bn-1%7D%7Bt_i%7D%5Cright%29y )
 
 ## Position-Based Account Tracking
 
