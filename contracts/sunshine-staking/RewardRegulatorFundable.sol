@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 /**
@@ -23,7 +24,7 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
  * to "declare" its reward. When its reward is declared, RewardRegulator
  * updates the properties of the recipient, and returns the amount of reward
  * tokens the recipient is eligible since the last declaration. The recipient
- * contract then must call `claim()` to claim the reward tokens it is eligible.
+ * contract then can call `claim()` to claim the reward tokens it is eligible.
  * RewardRegulator is agnostic to how the recipient distributes its rewards, as
  * long as the recipient do not claim more tokens than it is eligible.
  * @author shung for Pangolin
@@ -32,12 +33,13 @@ contract RewardRegulatorFundable is AccessControl {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
     using SafeCast for int;
+    using SafeMath for uint;
 
     struct Recipient {
-        uint allocation; // The emission allocation of the recipient
+        uint weight; // The emission weight of the recipient
         uint unclaimed; // The reward amount the account can request to claim
-        uint undeclared; // The reward amount stashed when allocation changes
-        uint rewardStored; // The _rewardStored when recipient was last updated
+        uint undeclared; // The reward amount stashed when weight changes
+        uint rewardPerWeightPaid; // The _rewardPerWeightStored on update
     }
 
     /// @notice The mapping of accounts (i.e. recipients) to their information
@@ -58,27 +60,23 @@ contract RewardRegulatorFundable is AccessControl {
     /// @notice Rewards emitted per second
     uint public rewardRate;
 
+    /// @notice Sum of all weight
+    uint public totalWeight;
+
     /// @notice The timestamp of the last update
     uint private _lastUpdate;
 
-    /// @notice The amount of reward tokens allocated to be distributed
+    /// @notice The amount of reward tokens reserved to be distributed
     uint private _reserved;
 
-    /// @notice Sum of allocations (either 0 or DENOMINATOR)
-    uint private _totalAllocations;
-
-    /// @notice Total rewards emitted until last update (≈rewardPerTokenStored)
-    uint private _rewardStored;
-
-    /// @notice The divisor for allocations
-    uint private constant DENOMINATOR = 10000;
+    /// @notice Total rewards emitted per weight until last update
+    uint private _rewardPerWeightStored;
 
     /// @notice The role for calling `notifyRewardAmount` function
     bytes32 private constant FUNDER = keccak256("FUNDER");
 
-    event RecipientSet(address indexed account, uint newAllocation);
+    event RecipientSet(address indexed account, uint newWeight);
     event RewardDeclared(address indexed account, uint reward);
-    event Initiated(bool initiated);
     event RewardAdded(uint reward);
     event RewardsDurationUpdated(uint newDuration);
 
@@ -98,14 +96,14 @@ contract RewardRegulatorFundable is AccessControl {
      */
     function setReward() external returns (uint) {
         address sender = msg.sender;
-
         Recipient storage recipient = recipients[sender];
 
         _globalUpdate();
+
         uint reward = getRewards(sender);
         require(reward != 0, "setReward: no rewards");
 
-        recipient.rewardStored = _rewardStored;
+        recipient.rewardPerWeightPaid = _rewardPerWeightStored;
         recipient.unclaimed += reward;
         recipient.undeclared = 0;
 
@@ -174,25 +172,16 @@ contract RewardRegulatorFundable is AccessControl {
      */
     function notifyRewardAmount(uint reward) external onlyRole(FUNDER) {
         uint blockTime = block.timestamp;
-
-        // Ensure sufficient balance for the reward amount
+        require(totalWeight != 0, "notifyRewardAmount: no recipients");
+        require(reward != 0, "notifyRewardAmount: zero reward");
         require(
             unreserved() >= reward,
-            "notifyRewardAmount: provided reward too high"
-        );
-        // increase locked supply to ensure above require check works next time
-        _reserved += reward;
-
-        require(
-            _totalAllocations == DENOMINATOR,
-            "notifyRewardAmount: no allocation is defined"
+            "notifyRewardAmount: insufficient balance for reward"
         );
 
-        // update _rewardStored based on previous rewardRate
-        // don't call _globalUpdate() as we will have to set _lastUpdate
-        _rewardStored = rewardTotal();
+        _globalUpdate();
 
-        // Set new reward rate
+        // Set new reward rate after setting _rewardPerWeightStored
         if (blockTime >= periodFinish) {
             rewardRate = reward / rewardsDuration;
         } else {
@@ -200,71 +189,53 @@ contract RewardRegulatorFundable is AccessControl {
             rewardRate = (reward + leftover) / rewardsDuration;
         }
 
-        // update the end of this period
+        // update the end of this period after setting reward rate
         periodFinish = blockTime + rewardsDuration;
 
-        // update the lastUpdate time
-        _lastUpdate = blockTime;
-
+        _reserved += reward;
         emit RewardAdded(reward);
     }
 
     /**
-     * @notice Changes recipient allocations
-     * @param accounts The list of addresses to have a new allocation
-     * @param allocations The list of allocations corresponding to `accounts`
+     * @notice Changes recipient weights
+     * @dev It is suggested to use two decimals for weights (e.g.: 100 for 1x)
+     * @param accounts The list of addresses to have new weights
+     * @param weights The list of weights corresponding to `accounts`
      */
-    function setRecipients(
-        address[] calldata accounts,
-        uint[] calldata allocations
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        uint length = accounts.length;
+    function setRecipients(address[] calldata accounts, uint[] calldata weights)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         require(
-            length == allocations.length,
+            accounts.length == weights.length,
             "setRecipients: arrays must be of equal lengths"
         );
 
         _globalUpdate();
 
-        int totalAllocChange;
-        for (uint i; i < length; ++i) {
+        for (uint i; i < weights.length; ++i) {
             address account = accounts[i];
-            uint allocation = allocations[i];
+            uint weight = weights[i];
             Recipient storage recipient = recipients[account];
-            uint oldAlloc = recipient.allocation;
-            require(
-                allocation != oldAlloc,
-                "setRecipients: new allocation must not be same"
-            );
+
+            require(weight != recipient.weight, "setRecipients: same weight");
+            totalWeight += weight - recipient.weight;
 
             // add the new recipient to the set
-            _recipients.add(account);
+            if (weight != 0) _recipients.add(account);
+
             // stash the undeclared rewards
             recipient.undeclared = getRewards(account);
-            recipient.rewardStored = _rewardStored;
-            recipient.allocation = allocation;
+            recipient.rewardPerWeightPaid = _rewardPerWeightStored;
+            recipient.weight = weight;
 
-            emit RecipientSet(account, allocation);
-            totalAllocChange += int(allocation) - int(oldAlloc);
+            emit RecipientSet(account, weight);
         }
 
-        // ensure change in allocation is acceptable
-        if (totalAllocChange != 0) {
-            require(
-                block.timestamp > periodFinish,
-                "setRecipients: ongoing period"
-            );
-            _totalAllocations = (int(_totalAllocations) + totalAllocChange)
-                .toUint256();
-            // confirm allocations
-            if (_totalAllocations == 0) {
-                emit Initiated(false);
-            } else if (_totalAllocations == DENOMINATOR) {
-                emit Initiated(true);
-            } else {
-                revert("setRecipients: invalid allocation change");
-            }
-        }
+        require(
+            totalWeight != 0 || block.timestamp > periodFinish,
+            "setRecipients: ongoing period"
+        );
     }
 
     /// @notice Gets the total rewards for the current period
@@ -275,6 +246,11 @@ contract RewardRegulatorFundable is AccessControl {
     /// @notice Gets all the recipient addresses for easy access
     function getAllRecipients() external view returns (address[] memory) {
         return _recipients.values();
+    }
+
+    /// @notice Gets the `address` of recipient contract at `index`
+    function getRecipientAt(uint index) external view returns (address) {
+        return _recipients.at(index);
     }
 
     /// @notice Gets the tokens that can be withdrawn or added to rewards
@@ -291,19 +267,15 @@ contract RewardRegulatorFundable is AccessControl {
         Recipient memory recipient = recipients[account];
         return
             recipient.undeclared +
-            ((rewardTotal() - recipient.rewardStored) * recipient.allocation) /
-            DENOMINATOR;
+            (rewardPerWeight() - recipient.rewardPerWeightPaid) *
+            recipient.weight;
     }
 
     /// @notice The total amount of reward tokens emitted until the call
-    function rewardTotal() public view returns (uint) {
-        if (_totalAllocations == 0) {
-            return _rewardStored;
-        }
-        return
-            _rewardStored +
-            (lastTimeRewardApplicable() - _lastUpdate) *
-            rewardRate;
+    function rewardPerWeight() public view returns (uint) {
+        if (totalWeight == 0) return _rewardPerWeightStored;
+        (, uint duration) = lastTimeRewardApplicable().trySub(_lastUpdate);
+        return _rewardPerWeightStored + (duration * rewardRate) / totalWeight;
     }
 
     /// @notice The time of last emission (now or end of last emission period)
@@ -313,7 +285,7 @@ contract RewardRegulatorFundable is AccessControl {
 
     /// @notice Updates reward stored whenever rewards are declared or changed
     function _globalUpdate() private {
-        _rewardStored = rewardTotal();
-        _lastUpdate = lastTimeRewardApplicable();
+        _rewardPerWeightStored = rewardPerWeight();
+        _lastUpdate = block.timestamp;
     }
 }
