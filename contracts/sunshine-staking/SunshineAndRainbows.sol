@@ -245,7 +245,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         Position storage position = positions[posId];
         require(amount != 0, "SAR::_withdraw: zero amount");
         require(position.owner == msg.sender, "SAR::_withdraw: unauthorized");
-        position.balance -= (position.balance - amount);
+        position.balance -= amount;
         totalSupply -= amount;
         stakingToken.safeTransfer(msg.sender, amount);
         emit Withdrawn(posId, amount);
