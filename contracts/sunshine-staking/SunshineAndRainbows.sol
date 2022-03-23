@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 
 interface IRewardRegulator {
     function pendingRewards(address account) external view returns (uint);
@@ -27,6 +28,7 @@ interface IRewardRegulator {
 contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
     using EnumerableSet for EnumerableSet.UintSet;
     using SafeERC20 for IERC20;
+    using Math for uint;
 
     struct Position {
         // Amount of claimable rewards of the position
@@ -369,10 +371,16 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         return (
             // in eqn: sum t times r over S
             _idealPosition +
-                ((block.timestamp - initTime) * rewards * PRECISION) /
-                stakingDuration,
+                ((block.timestamp - initTime) * rewards * PRECISION).ceilDiv(
+                    stakingDuration
+                ),
             // in eqn: r over S
-            _rewardsPerStakingDuration + (rewards * PRECISION) / stakingDuration
+            _rewardsPerStakingDuration +
+                (rewards * PRECISION).ceilDiv(stakingDuration)
         );
+        // use ceiling division for less rewards in `_earned()`. this causes
+        // dust accumulation but prevents insufficient balance when all
+        // positions get harvested at the same time. dust accumulation is
+        // preferable to the latter.
     }
 }
