@@ -159,13 +159,18 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Harvests the accumulated rewards of the user
-     * @dev This call also resets the position's reward rate to zero
-     * @param posId ID of the position to be harvested from
+     * @notice Harvests the accumulated rewards from multiple positions
+     * @dev This call also resets the positions' reward rates to zero
+     * @param posIds IDs of the positions to harvest from
      */
-    function harvest(uint posId) external nonReentrant {
+    function harvest(uint[] calldata posIds) external nonReentrant {
         _updateRewardVariables();
-        require(_harvest(posId, msg.sender) != 0, "SAR::harvest: no reward");
+        for (uint i; i < posIds.length; ++i) {
+            require(
+                _harvest(posIds[i], msg.sender) != 0,
+                "SAR::harvest: no reward"
+            );
+        }
     }
 
     /**
@@ -185,14 +190,20 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Withdraws tokens from a position
-     * @dev This call also resets the position's reward rate to zero
-     * @param amount Amount of tokens to withdraw
-     * @param posId ID of the position to withdraw from
+     * @notice Withdraws tokens from multiple positions
+     * @dev This call also resets the positions' reward rates to zero
+     * @param posIds IDs of the positions to withdraw from
+     * @param amounts Amount of tokens to withdraw from corresponding positions
      */
-    function withdraw(uint posId, uint amount) external virtual nonReentrant {
+    function withdraw(uint[] calldata posIds, uint[] calldata amounts)
+        external
+        virtual
+        nonReentrant
+    {
         _updateRewardVariables();
-        _withdraw(posId, amount);
+        for (uint i; i < posIds.length; ++i) {
+            _withdraw(posIds[i], amounts[i]);
+        }
     }
 
     /**
@@ -200,7 +211,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
      * and harvesting all the rewards
      * @param posIds The list of IDs of the positions to exit from
      */
-    function massExit(uint[] calldata posIds) external virtual nonReentrant {
+    function exit(uint[] calldata posIds) external virtual nonReentrant {
         _updateRewardVariables(); // saves gas by updating only once
         for (uint i; i < posIds.length; ++i) {
             uint posId = posIds[i];
@@ -368,7 +379,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         uint posId,
         uint idealPosition,
         uint rewardsPerStakingDuration
-    ) internal virtual view returns (uint) {
+    ) internal view virtual returns (uint) {
         Position memory position = positions[posId];
         if (position.lastUpdate == 0) return position.reward;
         /*

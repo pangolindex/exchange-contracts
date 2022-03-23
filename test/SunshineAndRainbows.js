@@ -255,7 +255,7 @@ describe.only("SunshineAndRainbows.sol", function () {
 
       await ethers.provider.send("evm_increaseTime", [ONE_DAY.toNumber()]);
 
-      expect(await this.sunshine.withdraw("1", SUPPLY)).to.emit(
+      expect(await this.sunshine.withdraw(["1"], [SUPPLY])).to.emit(
         this.sunshine,
         "Withdrawn"
       );
@@ -302,7 +302,7 @@ describe.only("SunshineAndRainbows.sol", function () {
 
       await ethers.provider.send("evm_increaseTime", [ONE_DAY.toNumber()]);
 
-      await expect(this.sunshine.withdraw("1", "0")).to.be.revertedWith(
+      await expect(this.sunshine.withdraw(["1"], ["0"])).to.be.revertedWith(
         "SAR::_withdraw: zero amount"
       );
     });
@@ -319,7 +319,7 @@ describe.only("SunshineAndRainbows.sol", function () {
       await ethers.provider.send("evm_increaseTime", [ONE_DAY.toNumber()]);
 
       await expect(
-        this.sunshine.withdraw("1", SUPPLY.add("1"))
+        this.sunshine.withdraw(["1"], [SUPPLY.add("1")])
       ).to.be.revertedWith("SAR::_withdraw: low balance");
     });
 
@@ -336,7 +336,7 @@ describe.only("SunshineAndRainbows.sol", function () {
 
       sunshine = await this.sunshine.connect(this.unauthorized);
 
-      await expect(sunshine.withdraw("1", SUPPLY)).to.be.revertedWith(
+      await expect(sunshine.withdraw(["1"], [SUPPLY])).to.be.revertedWith(
         "SAR::_withdraw: unauthorized"
       );
     });
@@ -357,7 +357,7 @@ describe.only("SunshineAndRainbows.sol", function () {
 
       await ethers.provider.send("evm_increaseTime", [ONE_DAY.toNumber()]);
 
-      expect(await this.sunshine.harvest("1")).to.emit(
+      expect(await this.sunshine.harvest(["1"])).to.emit(
         this.sunshine,
         "Harvested"
       );
@@ -409,7 +409,7 @@ describe.only("SunshineAndRainbows.sol", function () {
 
       sunshine = await this.sunshine.connect(this.unauthorized);
 
-      await expect(sunshine.harvest("1")).to.be.revertedWith(
+      await expect(sunshine.harvest(["1"])).to.be.revertedWith(
         "SAR::_harvest: unauthorized"
       );
     });
@@ -421,27 +421,27 @@ describe.only("SunshineAndRainbows.sol", function () {
       );
 
       await ethers.provider.send("evm_increaseTime", [ONE_DAY.toNumber()]);
-      expect(await this.sunshine.withdraw("1", SUPPLY)).to.emit(
+      expect(await this.sunshine.withdraw(["1"], [SUPPLY])).to.emit(
         this.sunshine,
         "Withdrawn"
       );
 
       await ethers.provider.send("evm_increaseTime", [ONE_DAY.toNumber()]);
-      expect(await this.sunshine.harvest("1")).to.emit(
+      expect(await this.sunshine.harvest(["1"])).to.emit(
         this.sunshine,
         "Harvested"
       );
 
-      await expect(this.sunshine.harvest("1")).to.be.revertedWith(
+      await expect(this.sunshine.harvest(["1"])).to.be.revertedWith(
         "SAR::harvest: no reward"
       );
     });
   });
 
   //////////////////////////////
-  //     massExit
+  //     exit
   //////////////////////////////
-  describe("massExit", function () {
+  describe("exit", function () {
     it("exits one position", async function () {
       expect(await this.sunshine.stake(SUPPLY, this.admin.address)).to.emit(
         this.sunshine,
@@ -452,7 +452,7 @@ describe.only("SunshineAndRainbows.sol", function () {
 
       await ethers.provider.send("evm_increaseTime", [ONE_DAY.toNumber()]);
 
-      expect(await this.sunshine.massExit([1])).to.emit(
+      expect(await this.sunshine.exit([1])).to.emit(
         this.sunshine,
         "Withdrawn"
       );
@@ -508,7 +508,7 @@ describe.only("SunshineAndRainbows.sol", function () {
         SUPPLY
       );
 
-      expect(await this.sunshine.massExit(arr)).to.emit(
+      expect(await this.sunshine.exit(arr)).to.emit(
         this.sunshine,
         "Withdrawn"
       );
