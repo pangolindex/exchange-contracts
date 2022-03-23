@@ -12,6 +12,8 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 interface IRewardRegulator {
     function pendingRewards(address account) external view returns (uint);
 
+    function rewardRate() external view returns (uint);
+
     function claim() external returns (uint);
 
     function rewardToken() external returns (IERC20);
@@ -210,15 +212,47 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Returns the pending rewards of a position
-     * @param posId The ID of the position to check the rewards
-     * @return The amount of tokens that can be claimed
+     * @notice Returns the pending rewards of multiple positions
+     * @param posIds The IDs of the positions to check the rewards
+     * @return The amount of tokens that can be claimed for each position
      */
-    function pendingRewards(uint posId) external view returns (int) {
+    function pendingRewards(uint[] calldata posIds)
+        external
+        view
+        returns (int[] memory)
+    {
         (uint x, uint y) = _rewardVariables(
             rewardRegulator.pendingRewards(address(this))
         );
-        return _earned(posId, x, y);
+        int[] memory rewards = new int[](posIds.length);
+        for (uint i; i < posIds.length; ++i) {
+            rewards[i] = _earned(posIds[i], x, y);
+        }
+        return rewards;
+    }
+
+    /**
+     * @notice Returns the reward rates of multiple position
+     * @param posIds The IDs of the positions to check the reward rates
+     * @return The reward rates per second of each position
+     */
+    function rewardRates(uint[] calldata posIds)
+        external
+        view
+        returns (uint[] memory)
+    {
+        uint[] memory rates = new uint[](posIds.length);
+        uint stakingDuration = block.timestamp * totalSupply - sumOfEntryTimes;
+        if (stakingDuration == 0) return rates;
+        for (uint i; i < posIds.length; ++i) {
+            Position memory position = positions[posIds[i]];
+            rates[i] =
+                (rewardRegulator.rewardRate() *
+                    (block.timestamp - position.lastUpdate) *
+                    position.balance) /
+                stakingDuration;
+        }
+        return rates;
     }
 
     /**
