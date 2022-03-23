@@ -69,12 +69,11 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
      */
     function _withdraw(uint posId, uint amount) internal override {
         Child memory child = children[posId];
-        if (child.initTime != 0) {
+        if (child.initTime != 0)
             require(
                 child.initTime < positions[child.parent].lastUpdate,
                 "SAR::_withdraw: parent position not updated"
             );
-        }
         super._withdraw(posId, amount);
     }
 

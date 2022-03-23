@@ -266,14 +266,11 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         address from
     ) internal virtual updatePosition(posId) {
         require(amount != 0, "SAR::_stake: zero amount");
-        if (initTime == 0) {
-            initTime = block.timestamp;
-        }
+        if (initTime == 0) initTime = block.timestamp;
         totalSupply += amount;
         positions[posId].balance += amount;
-        if (from != address(this)) {
+        if (from != address(this))
             stakingToken.safeTransferFrom(msg.sender, address(this), amount);
-        }
         emit Staked(posId, amount);
     }
 
@@ -317,11 +314,10 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
 
     /// @notice Updates the two variables that govern the reward distribution
     function _updateRewardVariables() internal {
-        if (totalSupply != 0) {
+        if (totalSupply != 0)
             (_idealPosition, _rewardsPerStakingDuration) = _rewardVariables(
                 rewardRegulator.claim()
             );
-        }
     }
 
     /**
