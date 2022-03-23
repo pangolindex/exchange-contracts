@@ -1,0 +1,4 @@
+{
+  "require": ["hardhat/register", "ts-node/register/transpile-only"],
+  "timeout": 1e6
+}
