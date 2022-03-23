@@ -34,8 +34,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
 
     struct Position {
         // Amount of claimable rewards of the position
-        // It uses `int` instead of `uint` to support LP extension
-        int reward;
+        uint reward;
         // Amount of tokens staked in the position
         uint balance;
         // Last time the position was updated
@@ -124,7 +123,6 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
                     _idealPosition,
                     _rewardsPerStakingDuration
                 );
-                assert(position.reward >= 0);
                 // update sum of entry times by removing old balance
                 sumOfEntryTimes -= (position.lastUpdate * position.balance);
             }
@@ -219,12 +217,12 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
     function pendingRewards(uint[] calldata posIds)
         external
         view
-        returns (int[] memory)
+        returns (uint[] memory)
     {
         (uint x, uint y) = _rewardVariables(
             rewardRegulator.pendingRewards(address(this))
         );
-        int[] memory rewards = new int[](posIds.length);
+        uint[] memory rewards = new uint[](posIds.length);
         for (uint i; i < posIds.length; ++i) {
             rewards[i] = _earned(posIds[i], x, y);
         }
@@ -326,7 +324,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         // function, if position has no rewards the position will not be
         // removed. This is not ideal but we can live with it.
         if (position.balance == 0) _userPositions[msg.sender].remove(posId);
-        uint reward = uint(position.reward);
+        uint reward = position.reward;
         if (reward != 0) {
             position.reward = 0;
             rewardToken.safeTransfer(to, reward);
@@ -370,7 +368,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         uint posId,
         uint idealPosition,
         uint rewardsPerStakingDuration
-    ) internal view returns (int) {
+    ) internal virtual view returns (uint) {
         Position memory position = positions[posId];
         if (position.lastUpdate == 0) return position.reward;
         /*
@@ -380,14 +378,13 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
          * times ( sum t from 1 to n-1 ) ) times y
          */
         return
-            int(
-                ((idealPosition -
-                    position.idealPosition -
-                    (rewardsPerStakingDuration -
-                        position.rewardsPerStakingDuration) *
-                    (position.lastUpdate - initTime)) * position.balance) /
-                    PRECISION
-            ) + position.reward;
+            ((idealPosition -
+                position.idealPosition -
+                (rewardsPerStakingDuration -
+                    position.rewardsPerStakingDuration) *
+                (position.lastUpdate - initTime)) * position.balance) /
+            PRECISION +
+            position.reward;
     }
 
     /**

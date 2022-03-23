@@ -19,6 +19,9 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
     /// @notice A mapping of child positions' IDs to their properties
     mapping(uint => Child) public children;
 
+    /// @notice A mapping of position to its reward debt
+    mapping(uint => uint) private _debts;
+
     /**
      * @notice Constructs a new SunshineAndRainbows staking contract with
      * locked-stake harvesting feature
@@ -78,6 +81,23 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
     }
 
     /**
+     * @dev Subtracts debts from the over-ridden `_earned` function. Debts
+     * are accrued when harvesting without updating the position.
+     */
+    function _earned(
+        uint posId,
+        uint idealPosition,
+        uint rewardsPerStakingDuration
+    ) internal view override returns (uint) {
+        uint earned = super._earned(
+            posId,
+            idealPosition,
+            rewardsPerStakingDuration
+        );
+        return earned - _debts[posId];
+    }
+
+    /**
      * @dev An analogue of `_harvest` function of the inherited contract,
      * without the `updatePosition` modifier. Since the position is not
      * updated, to prevent double rewards, harvested amount must be subtracted
@@ -89,10 +109,14 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
             position.owner == msg.sender,
             "SAR::_harvestWithoutUpdate: unauthorized"
         );
-        int reward = _earned(posId, _idealPosition, _rewardsPerStakingDuration);
-        assert(reward >= 0);
-        position.reward -= reward;
-        emit Harvested(posId, uint(reward));
-        return uint(reward);
+        uint reward = _earned(
+            posId,
+            _idealPosition,
+            _rewardsPerStakingDuration
+        );
+        // record earned amount as virtual debt as we have not updated position
+        _debts[posId] += reward;
+        emit Harvested(posId, reward);
+        return reward;
     }
 }
