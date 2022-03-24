@@ -113,6 +113,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
         bool updated;
         // only make changes if it wasn't already updated this instance
         if (position.lastUpdate != block.timestamp) {
+            _beforePositionUpdate(posId);
             updated = true;
             // calculated earned rewards when this isn't the first staking
             if (position.lastUpdate != 0) {
@@ -131,7 +132,10 @@ contract SunshineAndRainbows is ReentrancyGuard {
         }
         _;
         // update sum of entry times by adding new balance
-        if (updated) sumOfEntryTimes += (block.timestamp * position.balance);
+        if (updated) {
+            sumOfEntryTimes += (block.timestamp * position.balance);
+            _afterPositionUpdate(posId);
+        }
     }
 
     /**
@@ -355,6 +359,12 @@ contract SunshineAndRainbows is ReentrancyGuard {
                 rewardRegulator.claim()
             );
     }
+
+    /// @dev Hook that is called before a position is updated.
+    function _beforePositionUpdate(uint posId) internal virtual {}
+
+    /// @dev Hook that is called after a position is updated.
+    function _afterPositionUpdate(uint posId) internal virtual {}
 
     /**
      * @notice Gets the pending rewards of a position based on given reward

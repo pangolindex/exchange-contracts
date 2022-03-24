@@ -77,6 +77,10 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
         super._withdraw(posId, amount);
     }
 
+    function _afterPositionUpdate(uint posId) internal override {
+        _debts[posId] = 0;
+    }
+
     /**
      * @dev Subtracts debts from the over-ridden `_earned` function. Debts
      * are accrued when harvesting without updating the position.
