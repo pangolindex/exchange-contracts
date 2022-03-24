@@ -91,12 +91,11 @@ contract RewardRegulatorFundable is AccessControl {
      * @return The amount of reward tokens that became eligible for claiming
      */
     function claim() external returns (uint) {
-        address sender = msg.sender;
-        Recipient storage recipient = recipients[sender];
+        Recipient storage recipient = recipients[msg.sender];
 
         _globalUpdate();
 
-        uint reward = pendingRewards(sender);
+        uint reward = pendingRewards(msg.sender);
         require(reward != 0, "claim: no rewards");
 
         recipient.rewardPerWeightPaid = _rewardPerWeightStored;
@@ -104,8 +103,8 @@ contract RewardRegulatorFundable is AccessControl {
 
         _reserved -= reward;
 
-        rewardToken.safeTransfer(sender, reward);
-        emit Claimed(sender, reward);
+        rewardToken.safeTransfer(msg.sender, reward);
+        emit Claimed(msg.sender, reward);
 
         return reward;
     }
@@ -152,7 +151,6 @@ contract RewardRegulatorFundable is AccessControl {
      * @param reward The added amount of rewards
      */
     function notifyRewardAmount(uint reward) external onlyRole(FUNDER) {
-        uint blockTime = block.timestamp;
         require(totalWeight != 0, "notifyRewardAmount: no recipients");
         require(reward != 0, "notifyRewardAmount: zero reward");
         require(
@@ -163,15 +161,15 @@ contract RewardRegulatorFundable is AccessControl {
         _globalUpdate();
 
         // Set new reward rate after setting _rewardPerWeightStored
-        if (blockTime >= periodFinish) {
+        if (block.timestamp >= periodFinish) {
             rewardRate = reward / rewardsDuration;
         } else {
-            uint leftover = (periodFinish - blockTime) * rewardRate;
+            uint leftover = (periodFinish - block.timestamp) * rewardRate;
             rewardRate = (reward + leftover) / rewardsDuration;
         }
 
         // update the end of this period after setting reward rate
-        periodFinish = blockTime + rewardsDuration;
+        periodFinish = block.timestamp + rewardsDuration;
 
         _reserved += reward;
         emit RewardAdded(reward);
