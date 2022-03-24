@@ -56,9 +56,7 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
         uint childPosId = _createPosition(to);
 
         // record parent-child relation to lock the child position
-        Child storage child = children[childPosId];
-        child.parent = posId;
-        child.initTime = block.timestamp;
+        children[childPosId] = Child(posId, block.timestamp);
 
         // harvest parent position and stake its rewards to child position
         _stake(childPosId, _harvestWithoutUpdate(posId), address(this));
