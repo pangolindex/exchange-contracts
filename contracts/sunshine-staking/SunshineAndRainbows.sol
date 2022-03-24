@@ -5,7 +5,6 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
 
 interface IRewardRegulator {
     function pendingRewards(address account) external view returns (uint);
@@ -28,7 +27,6 @@ interface IRewardRegulator {
 contract SunshineAndRainbows is ReentrancyGuard {
     using EnumerableSet for EnumerableSet.UintSet;
     using SafeERC20 for IERC20;
-    using Math for uint;
 
     struct Position {
         // Amount of claimable rewards of the position
@@ -175,11 +173,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
      * @param amount Amount of tokens to stake
      * @param to Owner of the new position
      */
-    function stake(uint amount, address to)
-        external
-        virtual
-        nonReentrant
-    {
+    function stake(uint amount, address to) external virtual nonReentrant {
         _updateRewardVariables();
         _stake(_createPosition(to), amount, msg.sender);
     }
@@ -414,16 +408,10 @@ contract SunshineAndRainbows is ReentrancyGuard {
         return (
             // in eqn: sum (t times r over S)
             _idealPosition +
-                ((block.timestamp - initTime) * rewards * PRECISION).ceilDiv(
-                    stakingDuration
-                ),
+                ((block.timestamp - initTime) * rewards * PRECISION) /
+                stakingDuration,
             // in eqn: sum (r over S)
-            _rewardsPerStakingDuration +
-                (rewards * PRECISION).ceilDiv(stakingDuration)
+            _rewardsPerStakingDuration + (rewards * PRECISION) / stakingDuration
         );
-        // use ceiling division for less rewards in `_earned()`. this causes
-        // dust accumulation but prevents insufficient balance when all
-        // positions get harvested at the same time. dust accumulation is
-        // preferable to the latter.
     }
 }

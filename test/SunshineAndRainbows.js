@@ -17,17 +17,11 @@ function getRewards(duration) {
 }
 
 function updateRewardVariables(rewards, stakingDuration, sinceInit) {
-  var numerator1 = rewards.mul(PRECISION).mul(sinceInit);
-  var idealPosition = numerator1.div(stakingDuration);
-  if (!(numerator1.mod(stakingDuration).eq("0"))) {
-    idealPosition = idealPosition.add("1");
-  }
-
-  var numerator2 = rewards.mul(PRECISION);
-  var rewardsPerStakingDuration = numerator2.div(stakingDuration);
-  if (!(numerator2.mod(stakingDuration).eq("0"))) {
-    rewardsPerStakingDuration = rewardsPerStakingDuration.add("1");
-  }
+  var idealPosition = rewards
+    .mul(PRECISION)
+    .mul(sinceInit)
+    .div(stakingDuration);
+  var rewardsPerStakingDuration = rewards.mul(PRECISION).div(stakingDuration);
 
   return [idealPosition, rewardsPerStakingDuration];
 }
@@ -451,10 +445,7 @@ describe.only("SunshineAndRainbows.sol", function () {
 
       await ethers.provider.send("evm_increaseTime", [ONE_DAY.toNumber()]);
 
-      expect(await this.sunshine.exit([1])).to.emit(
-        this.sunshine,
-        "Withdrawn"
-      );
+      expect(await this.sunshine.exit([1])).to.emit(this.sunshine, "Withdrawn");
 
       blockNumber = await ethers.provider.getBlockNumber();
       var lastUpdate = (await ethers.provider.getBlock(blockNumber)).timestamp;
@@ -494,23 +485,19 @@ describe.only("SunshineAndRainbows.sol", function () {
       var arr = [];
 
       for (let i = 0; i < 10; i++) {
-        expect(await this.sunshine.stake(SUPPLY.div("10"), this.admin.address)).to.emit(
-          this.sunshine,
-          "Staked"
-        );
+        expect(
+          await this.sunshine.stake(SUPPLY.div("10"), this.admin.address)
+        ).to.emit(this.sunshine, "Staked");
         var bal = await this.stakingToken.balanceOf(this.admin.address);
         await ethers.provider.send("evm_increaseTime", [ONE_DAY.toNumber()]);
         arr.push(i + 1);
-      };
+      }
 
       expect(await this.stakingToken.balanceOf(this.sunshine.address)).to.equal(
         SUPPLY
       );
 
-      expect(await this.sunshine.exit(arr)).to.emit(
-        this.sunshine,
-        "Withdrawn"
-      );
+      expect(await this.sunshine.exit(arr)).to.emit(this.sunshine, "Withdrawn");
 
       var blockNumber = await ethers.provider.getBlockNumber();
       var lastUpdate = (await ethers.provider.getBlock(blockNumber)).timestamp;
