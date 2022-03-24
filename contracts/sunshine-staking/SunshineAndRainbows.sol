@@ -5,8 +5,6 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
 interface IRewardRegulator {
@@ -27,7 +25,7 @@ interface IRewardRegulator {
  * algorithm refer to the proof linked in `README.md`.
  * @author shung for Pangolin & cryptofrens.xyz
  */
-contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
+contract SunshineAndRainbows is ReentrancyGuard {
     using EnumerableSet for EnumerableSet.UintSet;
     using SafeERC20 for IERC20;
     using Math for uint;
@@ -137,7 +135,7 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Constructs the Sunshine And Rainbows contract and pauses it
+     * @notice Constructs the Sunshine And Rainbows contract
      * @param newStakingToken The token that will be staked for rewards
      * @param newRewardRegulator The contract that will determine the global
      * reward rate
@@ -150,12 +148,6 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         stakingToken = IERC20(newStakingToken);
         rewardRegulator = IRewardRegulator(newRewardRegulator);
         rewardToken = rewardRegulator.rewardToken();
-        _pause();
-    }
-
-    /// @notice Irreversibly unpauses the contract
-    function resume() external onlyOwner {
-        _unpause();
     }
 
     /**
@@ -183,7 +175,6 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         external
         virtual
         nonReentrant
-        whenNotPaused
     {
         _updateRewardVariables();
         _stake(_createPosition(to), amount, msg.sender);
@@ -411,12 +402,12 @@ contract SunshineAndRainbows is Pausable, Ownable, ReentrancyGuard {
         if (stakingDuration == 0)
             return (_idealPosition, _rewardsPerStakingDuration);
         return (
-            // in eqn: sum t times r over S
+            // in eqn: sum (t times r over S)
             _idealPosition +
                 ((block.timestamp - initTime) * rewards * PRECISION).ceilDiv(
                     stakingDuration
                 ),
-            // in eqn: r over S
+            // in eqn: sum (r over S)
             _rewardsPerStakingDuration +
                 (rewards * PRECISION).ceilDiv(stakingDuration)
         );

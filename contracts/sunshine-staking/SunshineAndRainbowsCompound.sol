@@ -48,7 +48,6 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
     function compound(uint posId, address to)
         external
         nonReentrant
-        whenNotPaused
     {
         // update the state variables that govern the reward distribution
         _updateRewardVariables();

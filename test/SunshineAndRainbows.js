@@ -72,7 +72,6 @@ describe.only("SunshineAndRainbows.sol", function () {
     );
     await this.sunshine.deployed();
 
-    await this.sunshine.resume();
     await this.rewardToken.transfer(this.regulator.address, SUPPLY);
     await this.stakingToken.approve(this.sunshine.address, SUPPLY);
 
