@@ -30,6 +30,7 @@ contract RewardRegulatorFundable is AccessControl {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
     using SafeMath for uint;
+    using SafeCast for uint;
     using SafeCast for int;
 
     struct Recipient {
@@ -198,7 +199,7 @@ contract RewardRegulatorFundable is AccessControl {
 
             uint oldWeight = recipient.weight;
             require(weight != oldWeight, "setRecipients: same weight");
-            weightChange += int(weight) - int(oldWeight);
+            weightChange += weight.toInt256() - oldWeight.toInt256();
 
             // add or remove the recipient to/from the set
             if (oldWeight == 0) _recipients.add(account);
@@ -218,17 +219,11 @@ contract RewardRegulatorFundable is AccessControl {
                 block.timestamp > periodFinish,
                 "setRecipients: active period"
             );
-
     }
 
     /// @notice Gets all the recipient addresses for easy access
     function getAllRecipients() external view returns (address[] memory) {
         return _recipients.values();
-    }
-
-    /// @notice Gets the `address` of recipient contract at `index`
-    function getRecipientAt(uint index) external view returns (address) {
-        return _recipients.at(index);
     }
 
     /// @notice Gets the tokens that can be withdrawn or added to rewards
