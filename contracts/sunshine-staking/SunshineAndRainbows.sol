@@ -108,11 +108,11 @@ contract SunshineAndRainbows is ReentrancyGuard {
      */
     modifier updatePosition(uint posId) {
         Position storage position = positions[posId];
-        bool updated;
+        // update sum of entry times by removing old balance
+        sumOfEntryTimes -= (position.lastUpdate * position.balance);
         // only make changes if it wasn't already updated this instance
         if (position.lastUpdate != block.timestamp) {
             _beforePositionUpdate(posId);
-            updated = true;
             // calculated earned rewards when this isn't the first staking
             if (position.lastUpdate != 0) {
                 position.reward = _earned(
@@ -120,20 +120,16 @@ contract SunshineAndRainbows is ReentrancyGuard {
                     _idealPosition,
                     _rewardsPerStakingDuration
                 );
-                // update sum of entry times by removing old balance
-                sumOfEntryTimes -= (position.lastUpdate * position.balance);
             }
             // update position's properties
             position.lastUpdate = block.timestamp;
             position.idealPosition = _idealPosition;
             position.rewardsPerStakingDuration = _rewardsPerStakingDuration;
+            _afterPositionUpdate(posId);
         }
         _;
         // update sum of entry times by adding new balance
-        if (updated) {
-            sumOfEntryTimes += (block.timestamp * position.balance);
-            _afterPositionUpdate(posId);
-        }
+        sumOfEntryTimes += (block.timestamp * position.balance);
     }
 
     /**
