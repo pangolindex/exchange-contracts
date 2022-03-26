@@ -186,10 +186,7 @@ contract RewardRegulatorFundable is AccessControl {
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         uint length = weights.length;
-        require(
-            accounts.length == length,
-            "setRecipients: arrays must be of equal lengths"
-        );
+        require(accounts.length == length, "setRecipients: unequal lengths");
 
         _globalUpdate();
 
