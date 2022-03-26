@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 /**
@@ -29,6 +30,7 @@ contract RewardRegulatorFundable is AccessControl {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
     using SafeMath for uint;
+    using SafeCast for int;
 
     struct Recipient {
         uint weight; // The emission weight of the recipient
@@ -149,7 +151,7 @@ contract RewardRegulatorFundable is AccessControl {
      * @param reward The added amount of rewards
      */
     function notifyRewardAmount(uint reward) external onlyRole(FUNDER) {
-        require(totalWeight != 0, "notifyRewardAmount: no recipients");
+        require(totalWeight > 0, "notifyRewardAmount: no recipients");
         require(reward != 0, "notifyRewardAmount: zero reward");
         require(
             unreserved() >= reward,
@@ -190,6 +192,7 @@ contract RewardRegulatorFundable is AccessControl {
 
         _globalUpdate();
 
+        int weightChange;
         for (uint i; i < weights.length; ++i) {
             address account = accounts[i];
             uint weight = weights[i];
@@ -197,13 +200,7 @@ contract RewardRegulatorFundable is AccessControl {
 
             uint oldWeight = recipient.weight;
             require(weight != oldWeight, "setRecipients: same weight");
-            require(
-                totalWeight + weight >= oldWeight,
-                "setRecipients: weight too low"
-            );
-            unchecked {
-                totalWeight += weight - oldWeight;
-            }
+            weightChange += int(weight) - int(oldWeight);
 
             // add or remove the recipient to/from the set
             if (oldWeight == 0) _recipients.add(account);
@@ -217,10 +214,13 @@ contract RewardRegulatorFundable is AccessControl {
             emit RecipientSet(account, weight);
         }
 
-        require(
-            totalWeight != 0 || block.timestamp > periodFinish,
-            "setRecipients: ongoing period"
-        );
+        totalWeight = (int(totalWeight) + weightChange).toUint256();
+        if (totalWeight == 0)
+            require(
+                block.timestamp > periodFinish,
+                "setRecipients: active period"
+            );
+
     }
 
     /// @notice Gets the total rewards for the current period
