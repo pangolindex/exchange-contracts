@@ -197,7 +197,13 @@ contract RewardRegulatorFundable is AccessControl {
 
             uint oldWeight = recipient.weight;
             require(weight != oldWeight, "setRecipients: same weight");
-            totalWeight += weight - oldWeight;
+            require(
+                totalWeight + weight >= oldWeight,
+                "setRecipients: weight too low"
+            );
+            unchecked {
+                totalWeight += weight - oldWeight;
+            }
 
             // add or remove the recipient to/from the set
             if (oldWeight == 0) _recipients.add(account);
