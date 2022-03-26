@@ -4,10 +4,10 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 /**
  * @title Fundable Reward Regulator
@@ -221,11 +221,6 @@ contract RewardRegulatorFundable is AccessControl {
                 "setRecipients: active period"
             );
 
-    }
-
-    /// @notice Gets the total rewards for the current period
-    function getRewardForDuration() external view returns (uint) {
-        return rewardRate * rewardsDuration;
     }
 
     /// @notice Gets all the recipient addresses for easy access
