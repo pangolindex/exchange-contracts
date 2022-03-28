@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "./FullMath.sol";
 
 interface IRewardRegulator {
     function pendingRewards(address account) external view returns (uint);
@@ -27,6 +28,7 @@ interface IRewardRegulator {
 contract SunshineAndRainbows is ReentrancyGuard {
     using EnumerableSet for EnumerableSet.UintSet;
     using SafeERC20 for IERC20;
+    using FullMath for FullMath.Uint512;
 
     struct Position {
         // Amount of claimable rewards of the position
@@ -36,9 +38,9 @@ contract SunshineAndRainbows is ReentrancyGuard {
         // Last time the position was updated
         uint lastUpdate;
         // `_rewardsPerStakingDuration` on position's last update
-        uint rewardsPerStakingDuration;
+        FullMath.Uint512 rewardsPerStakingDuration;
         // `_idealPosition` on position's last update
-        uint idealPosition;
+        FullMath.Uint512 idealPosition;
         // Owner of the position
         address owner;
     }
@@ -71,28 +73,17 @@ contract SunshineAndRainbows is ReentrancyGuard {
     uint public sumOfEntryTimes;
 
     /**
-     * @dev We have the precision to prevent zero rewards on rewardVariable
-     * calculations, which can happen when staked tokens are more than reward
-     * tokens. This precision is sufficient when the reward rate per second
-     * to total staked supply ratio is above 1/(3*10^18). This high precision
-     * introduces the risk of DOS due to overflow. To prevent overflow, one
-     * must ensure that the amount of rewards emitted in total must never pass
-     * 10^35. This guarantees +100 years of operations.
-     */
-    uint private constant PRECISION = 10**30;
-
-    /**
      * @notice Sum of all intervals' (`rewards`/`stakingDuration`)
      * @dev Refer to `sum of r/S` in the proof for more details.
      */
-    uint internal _rewardsPerStakingDuration;
+    FullMath.Uint512 internal _rewardsPerStakingDuration;
 
     /**
      * @notice Hypothetical rewards accumulated by an ideal position whose
      * `lastUpdate` equals `initTime`, and `balance` equals one.
      * @dev Refer to `sum of I` in the proof for more details.
      */
-    uint internal _idealPosition;
+    FullMath.Uint512 internal _idealPosition;
 
     event Harvested(uint position, uint reward);
     event Staked(uint position, uint amount);
@@ -215,9 +206,10 @@ contract SunshineAndRainbows is ReentrancyGuard {
         view
         returns (uint[] memory)
     {
-        (uint x, uint y) = _rewardVariables(
-            rewardRegulator.pendingRewards(address(this))
-        );
+        (
+            FullMath.Uint512 memory x,
+            FullMath.Uint512 memory y
+        ) = _rewardVariables(rewardRegulator.pendingRewards(address(this)));
         uint[] memory rewards = new uint[](posIds.length);
         for (uint i; i < posIds.length; ++i) {
             rewards[i] = _earned(posIds[i], x, y);
@@ -368,25 +360,27 @@ contract SunshineAndRainbows is ReentrancyGuard {
      */
     function _earned(
         uint posId,
-        uint idealPosition,
-        uint rewardsPerStakingDuration
+        FullMath.Uint512 memory idealPosition,
+        FullMath.Uint512 memory rewardsPerStakingDuration
     ) internal view virtual returns (uint) {
         Position memory position = positions[posId];
         if (position.lastUpdate == 0) return position.reward;
         /*
-         * core formula in eqn:
+         * core formula in EQN(7):
          * ( ( sum I from 1 to m - sum I from 1 to n-1 ) -
          * ( sum (R/s) from 1 to m - sum (R/s) from 1 to n-1 )
          * times ( sum t from 1 to n-1 ) ) times y
          */
         return
-            ((idealPosition -
-                position.idealPosition -
-                (rewardsPerStakingDuration -
-                    position.rewardsPerStakingDuration) *
-                (position.lastUpdate - initTime)) * position.balance) /
-            PRECISION +
-            position.reward;
+            idealPosition
+                .sub(position.idealPosition)
+                .sub(
+                    rewardsPerStakingDuration
+                        .sub(position.rewardsPerStakingDuration)
+                        .mul(position.lastUpdate - initTime)
+                )
+                .mul(position.balance)
+                .shiftToUint256() + position.reward;
     }
 
     /**
@@ -397,17 +391,26 @@ contract SunshineAndRainbows is ReentrancyGuard {
      * @param rewards The rewards this contract is eligible to distribute
      * during the last interval (i.e., since the last update)
      */
-    function _rewardVariables(uint rewards) private view returns (uint, uint) {
+    function _rewardVariables(uint rewards)
+        private
+        view
+        returns (FullMath.Uint512 memory, FullMath.Uint512 memory)
+    {
         uint stakingDuration = block.timestamp * totalSupply - sumOfEntryTimes;
         if (stakingDuration == 0)
             return (_idealPosition, _rewardsPerStakingDuration);
         return (
-            // in eqn: sum (t times r over S)
-            _idealPosition +
-                ((block.timestamp - initTime) * rewards * PRECISION) /
-                stakingDuration,
-            // in eqn: sum (r over S)
-            _rewardsPerStakingDuration + (rewards * PRECISION) / stakingDuration
+            // `sum (t times r over S)` with 2**256 fixed denominator
+            _idealPosition.add(
+                FullMath.mul(
+                    (block.timestamp - initTime) * rewards,
+                    FullMath.div256(stakingDuration)
+                )
+            ),
+            // `sum (r over S)` with 2**256 fixed denominator
+            _rewardsPerStakingDuration.add(
+                FullMath.mul(rewards, FullMath.div256(stakingDuration))
+            )
         );
     }
 }

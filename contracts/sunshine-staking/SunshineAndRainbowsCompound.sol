@@ -87,8 +87,8 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
      */
     function _earned(
         uint posId,
-        uint idealPosition,
-        uint rewardsPerStakingDuration
+        FullMath.Uint512 memory idealPosition,
+        FullMath.Uint512 memory rewardsPerStakingDuration
     ) internal view override returns (uint) {
         uint earned = super._earned(
             posId,
