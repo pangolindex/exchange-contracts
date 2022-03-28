@@ -13,7 +13,7 @@ user’s (position’s) reward, *P*, is defined as follows.
 
 ![Simple Staking](https://latex.codecogs.com/svg.latex?P%3D%5Cfrac%7By%7D%7B%5Csum%7By%7D%7Dr )
 
-To encourage long-term staking and prevent sell pressure on the reward token,
+To encourage long-term staking and reduce sell pressure on the reward token,
 SAR adds staking duration, *x*, to the equation above.
 
 ![SAR Staking](https://latex.codecogs.com/svg.latex?P%3D%5Cfrac%7Bxy%7D%7B%5Csum%7Bxy%7D%7Dr )
