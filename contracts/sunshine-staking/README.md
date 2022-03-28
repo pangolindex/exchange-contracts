@@ -1,4 +1,4 @@
-# Sunshine And Rainbows
+# Sunshine And Rainbows (🌞,🌈)
 
 Sunshine and Rainbows (SAR) is a novel staking algorithm. SAR contracts utilize
 not only a novel algorithm, but also introduce multiple new concepts both in
