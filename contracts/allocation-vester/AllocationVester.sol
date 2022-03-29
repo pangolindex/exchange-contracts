@@ -45,6 +45,12 @@ contract AllocationVester is Claimable {
     /// @notice The event emitted when a new allocation is defined for a member
     event AllocationSet(address indexed member, uint allocation, uint duration);
 
+    /// @notice The event emitted when a user harvests their rewards
+    event Harvested(address indexed member, uint amount);
+
+    /// @notice The event emitted when the owner withdraws tokens
+    event Withdrawn(uint amount);
+
     /**
      * @notice Constructs a new AllocationVester contract
      * @param distributionToken The address of the token to be distributed
@@ -75,6 +81,7 @@ contract AllocationVester is Claimable {
         if (member.reserve == 0) _membersAddresses.remove(account);
 
         token.safeTransfer(account, amount);
+        emit Harvested(account, amount);
     }
 
     /**
@@ -84,6 +91,7 @@ contract AllocationVester is Claimable {
     function withdraw(uint amount) external onlyOwner {
         require(unreserved() >= amount, "low balance");
         token.safeTransfer(msg.sender, amount);
+        emit Withdrawn(amount);
     }
 
     /**
