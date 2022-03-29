@@ -18,7 +18,7 @@ async function main() {
     const initBalance = await deployer.getBalance();
     console.log("Account balance:", initBalance.toString());
 
-    csvFile = await csv({noheader:true}).fromFile("airdrop/avalanche_fuji.csv")
+    csvFile = await csv({noheader:true}).fromFile(`airdrop/${network.name}.csv`)
     let airdropAddresses = [], airdropAmounts = [];
     for(i = 0; i < csvFile.length; i++) {
         airdropAddresses.push(csvFile[i].field1);
