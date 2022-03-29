@@ -37,6 +37,7 @@
     "@nomiclabs/hardhat-etherscan": "^3.0.0",
     "@pangolindex/sdk": "^1.4.0",
     "chance": "^1.1.8",
+    "csvtojson": "^2.0.10",
     "dotenv": "^14.2.0"
   }
 }
