@@ -186,12 +186,14 @@ contract RewardRegulatorFundable is AccessControl {
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(accounts.length == weights.length, "setRecipients: unequal lengths");
+        uint length = accounts.length;
+        require(length == weights.length, "setRecipients: unequal lengths");
+        require(length < 21, "setRecipients: long array");
 
         _globalUpdate();
 
         int weightChange;
-        for (uint i; i < weights.length; ++i) {
+        for (uint i; i < length; ++i) {
             address account = accounts[i];
             uint weight = weights[i];
             Recipient storage recipient = recipients[account];

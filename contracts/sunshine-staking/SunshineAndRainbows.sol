@@ -145,6 +145,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
      * @param posIds IDs of the positions to harvest from
      */
     function harvest(uint[] calldata posIds) external nonReentrant {
+        require(posIds.length < 21, "SAR::harvest: long array");
         _updateRewardVariables();
         for (uint i; i < posIds.length; ++i) {
             require(
@@ -176,6 +177,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
         virtual
         nonReentrant
     {
+        require(posIds.length < 21, "SAR::withdraw: long array");
         _updateRewardVariables();
         for (uint i; i < posIds.length; ++i) {
             _withdraw(posIds[i], amounts[i]);
@@ -188,6 +190,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
      * @param posIds The list of IDs of the positions to exit from
      */
     function exit(uint[] calldata posIds) external virtual nonReentrant {
+        require(posIds.length < 11, "SAR::exit: long array");
         _updateRewardVariables(); // saves gas by updating only once
         for (uint i; i < posIds.length; ++i) {
             uint posId = posIds[i];
