@@ -24,3 +24,13 @@ To get some info on the Airdrop contract you have Airdrop/AirdropInfo.js.
 You must also add your private key to the `.env` file.
 
 To execute a script use: `npx hardhat --network avalanche_fuji run yourScriptPath`
+
+## Test on fuji
+
+1. make sure you are single owner of multisig in constants  avalanche fuji.js
+2. deploy contracts ``yarn deploy --network avalanche_fuji``
+3. check airdrop info `npx hardhat --network avalanche_fuji run scripts/Airdrop/AirdropInfo.js`
+4. fill list data in scripts/Airdrop/lists/avalanche_fuji.csv
+4. set up airdrop `npx hardhat --network avalanche_fuji run scripts/Airdrop/Airdrop.js`
+5. check new airdrop info `npx hardhat --network avalanche_fuji run scripts/Airdrop/AirdropInfo.js`
+5. end airdrop `npx hardhat --network avalanche_fuji run scripts/Airdrop/EndAirdrop.js`

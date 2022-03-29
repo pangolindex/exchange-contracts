@@ -20,7 +20,7 @@ async function main() {
     const initBalance = await deployer.getBalance();
     console.log("Account balance:", initBalance.toString());
 
-    csvFile = await csv({noheader:true}).fromFile(`airdrop/${network.name}.csv`)
+    csvFile = await csv({noheader:true}).fromFile(`scripts/Airdrop/lists/${network.name}.csv`)
     let airdropAddresses = [], airdropAmounts = [];
     for(i = 0; i < csvFile.length; i++) {
         airdropAddresses.push(csvFile[i].field1);
@@ -28,7 +28,7 @@ async function main() {
     }
     
     if (airdropAddresses.length != airdropAmounts.length) {
-        console.log("Airdrop address length need to be egal with airdrop amounts lenght");
+        console.log("Airdrop address length need to be equal with airdrop amounts length");
         process.exit(1);
     }
 
@@ -43,7 +43,7 @@ async function main() {
 
     tx = await Airdrop.whitelistAddresses(airdropAddresses, airdropAmounts);
     await tx.wait();    
-    console.log("Whitedlist has been added");
+    console.log("Whitelist has been added");
 
     const endBalance = await deployer.getBalance();
     console.log("Deploy cost: ", initBalance.sub(endBalance).toString())
