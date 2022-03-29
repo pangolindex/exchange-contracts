@@ -50,6 +50,7 @@ contract AllocationVester is Claimable {
      * @param distributionToken The address of the token to be distributed
      */
     constructor(IERC20 distributionToken) {
+        require(address(distributionToken) != address(0), "zero address");
         token = distributionToken;
     }
 
