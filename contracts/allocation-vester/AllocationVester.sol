@@ -108,6 +108,7 @@ contract AllocationVester is Claimable {
     ) external onlyOwner {
         uint length = accounts.length;
         require(length != 0, "empty array");
+        require(length <= 40, "long array");
         require(
             length == allocations.length && length == durations.length,
             "varying-length arrays"
@@ -143,7 +144,7 @@ contract AllocationVester is Claimable {
 
                 // add vesting info for the member
                 member.reserve += allocation;
-                member.rate = allocation * PRECISION / duration;
+                member.rate = (allocation * PRECISION) / duration;
                 member.lastUpdate = block.timestamp;
 
                 // add the member to the set
@@ -174,8 +175,8 @@ contract AllocationVester is Claimable {
         Member memory member = members[account];
 
         uint amount = member.stash +
-            (block.timestamp - member.lastUpdate) *
-            member.rate / PRECISION;
+            ((block.timestamp - member.lastUpdate) * member.rate) /
+            PRECISION;
         return amount > member.reserve ? member.reserve : amount;
     }
 
