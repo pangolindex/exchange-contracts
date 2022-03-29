@@ -34,7 +34,7 @@ contract AllocationVester is Claimable {
 
     /// @notice The minimum & maximum durations a vesting can last
     uint private constant MIN_DURATION = 8 weeks;
-    uint private constant MAX_DURATION = 1_000 * 356 days;
+    uint private constant MAX_DURATION = 1_000 * 365 days;
 
     /// @notice The multiplier for precision when calculationg reward rate
     uint private constant PRECISION = 10_000 * 365 days;
