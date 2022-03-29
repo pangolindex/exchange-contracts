@@ -23,40 +23,26 @@ contract AllocationVester is Claimable {
         uint lastUpdate; // timestamp of last harvest
     }
 
-    /**
-     * @notice The mapping of member addresses to their properties
-     */
+    /// @notice The mapping of member addresses to their properties
     mapping(address => Member) public members;
 
-    /**
-     * @notice The set of members who have remaining allocation
-     */
+    /// @notice The set of members who have remaining allocation
     EnumerableSet.AddressSet private _membersAddresses;
 
-    /**
-     * @notice The token to be distributed
-     */
+    /// @notice The token to be distributed
     IERC20 public immutable token;
 
-    /**
-     * @notice The minimum duration a vesting can last after it is updated
-     */
+    /// @notice The minimum & maximum durations a vesting can last
     uint private constant MIN_DURATION = 8 weeks;
-
-    /// @notice The maximum duration a vesting can last after it is updated
     uint private constant MAX_DURATION = 1_000 * 356 days;
 
     /// @notice The multiplier for precision when calculationg reward rate
     uint private constant PRECISION = 10_000 * 365 days;
 
-    /**
-     * @notice The total amount of tokens set to be streamed to all members
-     */
+    /// @notice The total amount of tokens set to be streamed to all members
     uint public reserve;
 
-    /**
-     * @notice The event emitted when a new allocation is defined for a member
-     */
+    /// @notice The event emitted when a new allocation is defined for a member
     event AllocationSet(address indexed member, uint allocation, uint duration);
 
     /**
@@ -67,9 +53,7 @@ contract AllocationVester is Claimable {
         token = distributionToken;
     }
 
-    /**
-     * @notice Claims all the pending rewards of the member
-     */
+    /// @notice Claims all the pending rewards of the member
     function harvest() external {
         address account = msg.sender;
         Member storage member = members[account];
