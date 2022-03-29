@@ -43,6 +43,12 @@ contract AllocationVester is Claimable {
      */
     uint private constant MIN_DURATION = 8 weeks;
 
+    /// @notice The maximum duration a vesting can last after it is updated
+    uint private constant MAX_DURATION = 1_000 * 356 days;
+
+    /// @notice The multiplier for precision when calculationg reward rate
+    uint private constant PRECISION = 10_000 * 365 days;
+
     /**
      * @notice The total amount of tokens set to be streamed to all members
      */
@@ -136,6 +142,7 @@ contract AllocationVester is Claimable {
             // check the member's new allocation
             if (allocation != 0) {
                 require(duration >= MIN_DURATION, "short vesting duration");
+                require(duration <= MAX_DURATION, "long vesting duration");
 
                 // lock tokens as reserve and ensure sufficient balance
                 reserve += allocation;
@@ -143,7 +150,7 @@ contract AllocationVester is Claimable {
 
                 // add vesting info for the member
                 member.reserve += allocation;
-                member.rate = allocation / duration;
+                member.rate = allocation * PRECISION / duration;
                 member.lastUpdate = block.timestamp;
 
                 // add the member to the set
@@ -175,7 +182,7 @@ contract AllocationVester is Claimable {
 
         uint amount = member.stash +
             (block.timestamp - member.lastUpdate) *
-            member.rate;
+            member.rate / PRECISION;
         return amount > member.reserve ? member.reserve : amount;
     }
 
