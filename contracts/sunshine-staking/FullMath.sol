@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.0;
 
 /**
  * @notice A barebones 512-bits math library for Sunshine and Rainbows (SAR)

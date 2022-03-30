@@ -31,8 +31,8 @@ contract SunshineAndRainbows is ReentrancyGuard {
     using FullMath for FullMath.Uint512;
 
     struct Position {
-        // Amount of claimable rewards of the position
-        uint reward;
+        // Owner of the position
+        address owner;
         // Amount of tokens staked in the position
         uint balance;
         // Last time the position was updated
@@ -41,12 +41,10 @@ contract SunshineAndRainbows is ReentrancyGuard {
         FullMath.Uint512 rewardsPerStakingDuration;
         // `_idealPosition` on position's last update
         FullMath.Uint512 idealPosition;
-        // Owner of the position
-        address owner;
     }
 
     /// @notice The mapping of positions' ids to their properties
-    mapping(uint => Position) public positions;
+    Position[] public positions;
 
     /// @notice A set of all positions of a user used for interfacing
     mapping(address => EnumerableSet.UintSet) internal _userPositions;
@@ -59,18 +57,6 @@ contract SunshineAndRainbows is ReentrancyGuard {
 
     /// @notice The token that can be staked in the contract
     IERC20 public immutable stakingToken;
-
-    /// @notice Total amount of tokens staked in the contract
-    uint public totalSupply;
-
-    /// @notice Number of all positions created with the contract
-    uint public positionsLength;
-
-    /// @notice Time stamp of first stake event
-    uint public initTime;
-
-    /// @notice Sum of all active positions' `lastUpdate * balance`
-    uint public sumOfEntryTimes;
 
     /**
      * @notice Sum of all intervals' (`rewards`/`stakingDuration`)
@@ -85,43 +71,17 @@ contract SunshineAndRainbows is ReentrancyGuard {
      */
     FullMath.Uint512 internal _idealPosition;
 
-    event Harvested(uint position, uint reward);
-    event Staked(uint position, uint amount);
-    event Withdrawn(uint position, uint amount);
+    /// @notice Time stamp of first stake event
+    uint public initTime;
 
-    /**
-     * @notice Makes state changes to the properties' of a position whenever it
-     * is staked, withdrawn, or harvested. Those events resets to reward rate
-     * of a position to zero, which then gradually increase.
-     * @dev Note that the modifier mostly concerns with the position being
-     * updated. The only exception is sumOfEntryTimes, which is concerned with
-     * the global reward rate.
-     */
-    modifier updatePosition(uint posId) {
-        Position storage position = positions[posId];
-        // update sum of entry times by removing old balance
-        sumOfEntryTimes -= (position.lastUpdate * position.balance);
-        // only make changes if it wasn't already updated this instance
-        if (position.lastUpdate != block.timestamp) {
-            _beforePositionUpdate(posId);
-            // calculated earned rewards when this isn't the first staking
-            if (position.lastUpdate != 0) {
-                position.reward = _earned(
-                    posId,
-                    _idealPosition,
-                    _rewardsPerStakingDuration
-                );
-            }
-            // update position's properties
-            position.lastUpdate = block.timestamp;
-            position.idealPosition = _idealPosition;
-            position.rewardsPerStakingDuration = _rewardsPerStakingDuration;
-            _afterPositionUpdate(posId);
-        }
-        _;
-        // update sum of entry times by adding new balance
-        sumOfEntryTimes += (block.timestamp * position.balance);
-    }
+    /// @notice Total amount of tokens staked in the contract
+    uint public totalSupply;
+
+    /// @notice Sum of all active positions' `lastUpdate * balance`
+    uint public sumOfEntryTimes;
+
+    event Staked(uint position, uint amount);
+    event Exited(uint position, uint amount, uint reward);
 
     /**
      * @notice Constructs the Sunshine And Rainbows contract
@@ -136,52 +96,26 @@ contract SunshineAndRainbows is ReentrancyGuard {
         );
         stakingToken = IERC20(newStakingToken);
         rewardRegulator = IRewardRegulator(newRewardRegulator);
-        rewardToken = rewardRegulator.rewardToken();
-    }
-
-    /**
-     * @notice Harvests the accumulated rewards from multiple positions
-     * @dev This call also resets the positions' reward rates to zero
-     * @param posIds IDs of the positions to harvest from
-     */
-    function harvest(uint[] calldata posIds) external nonReentrant {
-        require(posIds.length < 21, "SAR::harvest: long array");
-        _updateRewardVariables();
-        for (uint i; i < posIds.length; ++i) {
-            require(
-                _harvest(posIds[i], msg.sender) != 0,
-                "SAR::harvest: no reward"
-            );
-        }
+        rewardToken = IRewardRegulator(newRewardRegulator).rewardToken();
     }
 
     /**
      * @notice Creates a new position and stakes tokens to it
      * @dev The reward rate of the new position starts from zero
      * @param amount Amount of tokens to stake
-     * @param to Owner of the new position
      */
-    function stake(uint amount, address to) external virtual nonReentrant {
+    function stake(uint amount) external virtual nonReentrant {
         _updateRewardVariables();
-        _stake(_createPosition(to), amount, msg.sender);
+        _stake(amount, msg.sender);
     }
 
     /**
-     * @notice Withdraws tokens from multiple positions
-     * @dev This call also resets the positions' reward rates to zero
-     * @param posIds IDs of the positions to withdraw from
-     * @param amounts Amount of tokens to withdraw from corresponding positions
+     * @notice Exit from a position by withdrawing & harvesting all
+     * @param posId The ID of the position to exit from
      */
-    function withdraw(uint[] calldata posIds, uint[] calldata amounts)
-        external
-        virtual
-        nonReentrant
-    {
-        require(posIds.length < 21, "SAR::withdraw: long array");
+    function exit(uint posId) external virtual nonReentrant {
         _updateRewardVariables();
-        for (uint i; i < posIds.length; ++i) {
-            _withdraw(posIds[i], amounts[i]);
-        }
+        _exit(posId);
     }
 
     /**
@@ -189,14 +123,10 @@ contract SunshineAndRainbows is ReentrancyGuard {
      * and harvesting all the rewards
      * @param posIds The list of IDs of the positions to exit from
      */
-    function exit(uint[] calldata posIds) external virtual nonReentrant {
-        require(posIds.length < 11, "SAR::exit: long array");
+    function massExit(uint[] calldata posIds) external virtual nonReentrant {
+        require(posIds.length <= 20, "SAR::massExit: long array");
         _updateRewardVariables(); // saves gas by updating only once
-        for (uint i; i < posIds.length; ++i) {
-            uint posId = posIds[i];
-            _withdraw(posId, positions[posId].balance);
-            _harvest(posId, msg.sender);
-        }
+        for (uint i; i < posIds.length; ++i) _exit(posIds[i]);
     }
 
     /**
@@ -257,84 +187,72 @@ contract SunshineAndRainbows is ReentrancyGuard {
     }
 
     /**
-     * @notice Updates position then withdraws tokens it
+     * @notice Updates position then withdraws all its tokens
      * @dev It must always be called after `_updateRewardVariables()`
-     * @param amount Amount of tokens to withdraw
      * @param posId ID of the position to withdraw from
      */
-    function _withdraw(uint posId, uint amount)
-        internal
-        virtual
-        updatePosition(posId)
-    {
+    function _exit(uint posId) internal virtual {
         Position storage position = positions[posId];
-        require(amount != 0, "SAR::_withdraw: zero amount");
-        require(position.owner == msg.sender, "SAR::_withdraw: unauthorized");
-        require(position.balance >= amount, "SAR::_withdraw: low balance");
-        unchecked {
-            position.balance -= amount;
-        }
+        require(position.owner == msg.sender, "SAR::_exit: unauthorized");
+        uint amount = position.balance;
+        require(amount != 0, "SAR::_exit: zero amount");
+
+        // update global variables
+        sumOfEntryTimes -= (position.lastUpdate * amount);
         totalSupply -= amount;
+
+        // remove position from the set of the user
+        _userPositions[msg.sender].remove(posId);
+
+        // get earned rewards
+        uint reward = _earned(
+            posId,
+            _idealPosition,
+            _rewardsPerStakingDuration
+        );
+
+        // disables the position
+        delete position.balance;
+
+        // transfer rewards & stake balance to owner
+        if (reward != 0) rewardToken.safeTransfer(msg.sender, reward);
         stakingToken.safeTransfer(msg.sender, amount);
-        emit Withdrawn(posId, amount);
+
+        emit Exited(posId, amount, reward);
     }
 
     /**
-     * @notice Updates positions then stakes tokens to it
-     * @param posId ID of the position to stake to
+     * @notice Creates positions then stakes tokens to it
      * @param amount Amount of tokens to stake
      * @param from The address that will supply the tokens for the position
      */
-    function _stake(
-        uint posId,
-        uint amount,
-        address from
-    ) internal virtual updatePosition(posId) {
+    function _stake(uint amount, address from) internal virtual {
         require(amount != 0, "SAR::_stake: zero amount");
-        if (initTime == 0) initTime = block.timestamp;
+
+        // update global variables
+        sumOfEntryTimes += (block.timestamp * amount);
         totalSupply += amount;
-        positions[posId].balance += amount;
+        if (initTime == 0) initTime = block.timestamp;
+
+        // update position variables
+        uint posId = positions.length;
+        positions.push(
+            Position(
+                msg.sender,
+                amount,
+                block.timestamp,
+                _rewardsPerStakingDuration,
+                _idealPosition
+            )
+        );
+
+        // add position to the set for interfacing
+        _userPositions[msg.sender].add(posId);
+
+        // transfer tokesn from user to the contract
         if (from != address(this))
             stakingToken.safeTransferFrom(from, address(this), amount);
         emit Staked(posId, amount);
-    }
-
-    /**
-     * @notice Updates position then harvests its rewards
-     * @param posId ID of the position to harvest from
-     * @param to The address that will receive the rewards of the position
-     */
-    function _harvest(uint posId, address to)
-        internal
-        updatePosition(posId)
-        returns (uint)
-    {
-        Position storage position = positions[posId];
-        require(position.owner == msg.sender, "SAR::_harvest: unauthorized");
-        // Remove position from the set: Due to `!= 0` check in `harvest()`
-        // function, if position has no rewards the position will not be
-        // removed. This is not ideal but we can live with it.
-        if (position.balance == 0) _userPositions[msg.sender].remove(posId);
-        uint reward = position.reward;
-        if (reward != 0) {
-            position.reward = 0;
-            rewardToken.safeTransfer(to, reward);
-            emit Harvested(posId, reward);
-        }
-        return reward;
-    }
-
-    /**
-     * @notice Creates a new position
-     * @param to The address that will own the position
-     * @return The ID of the position that was created
-     */
-    function _createPosition(address to) internal returns (uint) {
-        require(to != address(0), "SAR::_createPosition: bad recipient");
-        positionsLength++; // posIds start from 1
-        _userPositions[to].add(positionsLength); // for interfacing
-        positions[positionsLength].owner = to;
-        return positionsLength;
     }
 
     /// @notice Updates the two variables that govern the reward distribution
@@ -344,12 +262,6 @@ contract SunshineAndRainbows is ReentrancyGuard {
                 rewardRegulator.claim()
             );
     }
-
-    /// @dev Hook that is called before a position is updated.
-    function _beforePositionUpdate(uint posId) internal virtual {}
-
-    /// @dev Hook that is called after a position is updated.
-    function _afterPositionUpdate(uint posId) internal virtual {}
 
     /**
      * @notice Gets the pending rewards of a position based on given reward
@@ -367,7 +279,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
         FullMath.Uint512 memory rewardsPerStakingDuration
     ) internal view virtual returns (uint) {
         Position memory position = positions[posId];
-        if (position.lastUpdate == 0) return position.reward;
+        if (position.lastUpdate == 0) return 0;
         /*
          * core formula in EQN(7):
          * ( ( sum I from 1 to m - sum I from 1 to n-1 ) -
@@ -383,7 +295,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
                         .mul(position.lastUpdate - initTime)
                 )
                 .mul(position.balance)
-                .shiftToUint256() + position.reward;
+                .shiftToUint256();
     }
 
     /**

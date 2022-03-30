@@ -22,6 +22,9 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
     /// @notice A mapping of position to its reward debt
     mapping(uint => uint) private _debts;
 
+    /// @notice Emitted when rewards from a position creatas another position
+    event Compounded(uint parentPosId, uint childPosId, uint amount);
+
     /**
      * @notice Constructs a new SunshineAndRainbows staking contract with
      * locked-stake harvesting feature
@@ -43,9 +46,8 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
      * @dev New position is considered locked, and it cannot be withdrawn until
      * the parent position is updated after the creation of the new position
      * @param posId ID of the parent position whose rewards are harvested
-     * @param to Address of the recipient of the new position
      */
-    function compound(uint posId, address to)
+    function compound(uint posId)
         external
         nonReentrant
     {
@@ -53,13 +55,18 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
         _updateRewardVariables();
 
         // create a new position
-        uint childPosId = _createPosition(to);
+        uint childPosId = positions.length;
 
         // record parent-child relation to lock the child position
         children[childPosId] = Child(posId, block.timestamp);
 
-        // harvest parent position and stake its rewards to child position
-        _stake(childPosId, _harvestWithoutUpdate(posId), address(this));
+        // harvest parent position
+        uint amount =  _harvestWithDebt(posId);
+
+        // stake parent position rewards to child position
+        _stake(amount, address(this));
+
+        emit Compounded(posId, childPosId, amount);
     }
 
     /**
@@ -67,18 +74,14 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
      * that disables withdrawal if the parent position was not updated at least
      * once after the creation of the child position
      */
-    function _withdraw(uint posId, uint amount) internal override {
+    function _exit(uint posId) internal override {
         Child memory child = children[posId];
         if (child.initTime != 0)
             require(
                 child.initTime < positions[child.parent].lastUpdate,
                 "SAR::_withdraw: parent position not updated"
             );
-        super._withdraw(posId, amount);
-    }
-
-    function _afterPositionUpdate(uint posId) internal override {
-        _debts[posId] = 0;
+        super._exit(posId);
     }
 
     /**
@@ -99,25 +102,28 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
     }
 
     /**
-     * @dev An analogue of `_harvest` function of the inherited contract,
-     * without the `updatePosition` modifier. Since the position is not
-     * updated, to prevent double rewards, harvested amount must be subtracted
-     * from `position.reward`.
+     * @notice Harvests without update and records reward as debt
+     * @dev Special harvest method that does not update the position,
+     * therefore records 'earned' as debt.
+     * @param posId ID of the position to harvest rewards from
+     * @return The reward amount
      */
-    function _harvestWithoutUpdate(uint posId) private returns (uint) {
+    function _harvestWithDebt(uint posId) private returns (uint) {
         Position storage position = positions[posId];
         require(
             position.owner == msg.sender,
-            "SAR::_harvestWithoutUpdate: unauthorized"
+            "SAR::_harvestWithDebt: unauthorized"
         );
+        // get pending rewards (expects _updateRewardVariables is called)
         uint reward = _earned(
             posId,
             _idealPosition,
             _rewardsPerStakingDuration
         );
-        // record earned amount as virtual debt as we have not updated position
+        // record earned amount as virtual debt as we will not update position.
+        // exclude position.reward as it will be reset by _harvestWithoutUpdate
         _debts[posId] += reward;
-        emit Harvested(posId, reward);
+        // harvest the position and return reward amount
         return reward;
     }
 }
