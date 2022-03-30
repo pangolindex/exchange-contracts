@@ -80,8 +80,8 @@ contract SunshineAndRainbows is ReentrancyGuard {
     /// @notice Sum of all active positions' `lastUpdate * balance`
     uint public sumOfEntryTimes;
 
-    event Staked(uint position, uint amount);
-    event Exited(uint position, uint amount, uint reward);
+    event Opened(uint position, uint amount);
+    event Closed(uint position, uint amount, uint reward);
 
     /**
      * @notice Constructs the Sunshine And Rainbows contract
@@ -104,7 +104,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
      * @dev The reward rate of the new position starts from zero
      * @param amount Amount of tokens to stake
      */
-    function stake(uint amount) external virtual nonReentrant {
+    function open(uint amount) external virtual nonReentrant {
         if (totalSupply != 0) {
             _updateRewardVariables();
         } else if (initTime == 0) {
@@ -117,7 +117,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
      * @notice Exit from a position by withdrawing & harvesting all
      * @param posId The ID of the position to exit from
      */
-    function exit(uint posId) external virtual nonReentrant {
+    function close(uint posId) external virtual nonReentrant {
         _updateRewardVariables();
         _exit(posId);
     }
@@ -127,7 +127,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
      * and harvesting all the rewards
      * @param posIds The list of IDs of the positions to exit from
      */
-    function massExit(uint[] calldata posIds) external virtual nonReentrant {
+    function massClose(uint[] calldata posIds) external virtual nonReentrant {
         require(posIds.length <= 20, "SAR::massExit: long array");
         _updateRewardVariables(); // saves gas by updating only once
         for (uint i; i < posIds.length; ++i) _exit(posIds[i]);
@@ -222,7 +222,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
         if (reward != 0) rewardToken.safeTransfer(msg.sender, reward);
         stakingToken.safeTransfer(msg.sender, amount);
 
-        emit Exited(posId, amount, reward);
+        emit Closed(posId, amount, reward);
     }
 
     /**
@@ -255,7 +255,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
         // transfer tokesn from user to the contract
         if (from != address(this))
             stakingToken.safeTransferFrom(from, address(this), amount);
-        emit Staked(posId, amount);
+        emit Opened(posId, amount);
     }
 
     /// @notice Updates the two variables that govern the reward distribution
