@@ -105,7 +105,11 @@ contract SunshineAndRainbows is ReentrancyGuard {
      * @param amount Amount of tokens to stake
      */
     function stake(uint amount) external virtual nonReentrant {
-        _updateRewardVariables();
+        if (totalSupply != 0) {
+            _updateRewardVariables();
+        } else if (initTime == 0) {
+            initTime = block.timestamp;
+        }
         _stake(amount, msg.sender);
     }
 
@@ -232,7 +236,6 @@ contract SunshineAndRainbows is ReentrancyGuard {
         // update global variables
         sumOfEntryTimes += (block.timestamp * amount);
         totalSupply += amount;
-        if (initTime == 0) initTime = block.timestamp;
 
         // update position variables
         uint posId = positions.length;
@@ -257,10 +260,9 @@ contract SunshineAndRainbows is ReentrancyGuard {
 
     /// @notice Updates the two variables that govern the reward distribution
     function _updateRewardVariables() internal {
-        if (totalSupply != 0)
-            (_idealPosition, _rewardsPerStakingDuration) = _rewardVariables(
-                rewardRegulator.claim()
-            );
+        (_idealPosition, _rewardsPerStakingDuration) = _rewardVariables(
+            rewardRegulator.claim()
+        );
     }
 
     /**
