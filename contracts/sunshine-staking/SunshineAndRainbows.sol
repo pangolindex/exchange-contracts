@@ -292,7 +292,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
      * as a newly opened position
      * @param posId The Id of position to harvest the rewards from
      */
-    function _harvest(uint posId) internal {
+    function _harvest(uint posId) internal virtual {
         Position storage position = positions[posId];
         require(position.owner == msg.sender, "SAR::_harvest: unauthorized");
 
@@ -323,7 +323,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
      * @param posId The Id of position to withdraw from
      * @param amount The amount of tokens to withdraw
      */
-    function _withdraw(uint posId, uint amount) internal {
+    function _withdraw(uint posId, uint amount) internal virtual {
         Position storage position = positions[posId];
         require(position.owner == msg.sender, "SAR::_withdraw: unauthorized");
         require(position.balance > amount, "SAR::_withdraw: use `close()`");

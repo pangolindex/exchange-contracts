@@ -84,6 +84,31 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
     }
 
     /**
+     * @dev Reset debts after harvesting rewards. In the harvest function, the
+     * rewards are calculated based on the modified `_earned()` function below,
+     * hence debts are paid.
+     */
+    function _harvest(uint posId) internal override {
+        super._harvest(posId);
+        _debts[posId] = 0;
+    }
+
+    /// @dev Adjust debts before and after balance change & reward harvest
+    function _withdraw(uint posId, uint amount) internal override {
+        uint balance = positions[posId].balance;
+
+        // update debt before & after withdrawal:
+        // The debt calculated in `harvestWithDebt()` considers the whole
+        // balance. In `_withdraw()`, we're only harvesting rewards for a
+        // portion of the position's balance. So we do this little hack to make
+        // `_earned()` subtract only the debt of the harvested portion.
+        uint remainingDebt = _debts[posId] * (balance - amount) / balance;
+        _debts[posId] -= remainingDebt;
+        super._withdraw(posId, amount);
+        _debts[posId] = remainingDebt;
+    }
+
+    /**
      * @dev Subtracts debts from the over-ridden `_earned` function.
      * Debts are accrued when harvesting without updating the position.
      * `pendingRewards()` will not be effected by this override. Therefore any
