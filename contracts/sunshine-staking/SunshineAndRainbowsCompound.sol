@@ -64,40 +64,33 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
         uint amount =  _harvestWithDebt(posId);
 
         // stake parent position rewards to child position
-        _stake(amount, address(this));
+        _open(amount, address(this));
 
         emit Compounded(posId, childPosId, amount);
     }
 
     /**
-     * @dev Prepends to the over-ridden `_withdraw` function a special rule
-     * that disables withdrawal if the parent position was not updated at least
-     * once after the creation of the child position
+     * @dev Prepends to the over-ridden `_close` function a special rule
+     * that disables withdrawal until the parent position is closed
      */
-    function _exit(uint posId) internal override {
+    function _close(uint posId) internal override {
         Child memory child = children[posId];
         if (child.initTime != 0)
             require(
                 child.initTime < positions[child.parent].lastUpdate,
                 "SAR::_withdraw: parent position not updated"
             );
-        super._exit(posId);
+        super._close(posId);
     }
 
     /**
-     * @dev Subtracts debts from the over-ridden `_earned` function. Debts
-     * are accrued when harvesting without updating the position.
+     * @dev Subtracts debts from the over-ridden `_earned` function.
+     * Debts are accrued when harvesting without updating the position.
+     * `pendingRewards()` will not be effected by this override. Therefore any
+     * user interface must subtract debt from pendingRewards.
      */
-    function _earned(
-        uint posId,
-        FullMath.Uint512 memory idealPosition,
-        FullMath.Uint512 memory rewardsPerStakingDuration
-    ) internal view override returns (uint) {
-        uint earned = super._earned(
-            posId,
-            idealPosition,
-            rewardsPerStakingDuration
-        );
+    function _earned(uint posId) internal view override returns (uint) {
+        uint earned = super._earned(posId);
         return earned - _debts[posId];
     }
 
@@ -115,11 +108,7 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
             "SAR::_harvestWithDebt: unauthorized"
         );
         // get pending rewards (expects _updateRewardVariables is called)
-        uint reward = _earned(
-            posId,
-            _idealPosition,
-            _rewardsPerStakingDuration
-        );
+        uint reward = _earned(posId);
         // record earned amount as virtual debt as we will not update position.
         // exclude position.reward as it will be reset by _harvestWithoutUpdate
         _debts[posId] += reward;
