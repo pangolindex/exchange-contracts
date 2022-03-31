@@ -36,7 +36,8 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
         SunshineAndRainbows(newStakingToken, newRewardRegulator)
     {
         require(
-            newStakingToken == address(rewardToken),
+            newStakingToken ==
+                address(IRewardRegulator(newRewardRegulator).rewardToken()),
             "SAR::Constructor: staking token is different than reward token"
         );
     }
@@ -47,10 +48,7 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
      * the parent position is updated after the creation of the new position
      * @param posId ID of the parent position whose rewards are harvested
      */
-    function compound(uint posId)
-        external
-        nonReentrant
-    {
+    function compound(uint posId) external nonReentrant {
         // update the state variables that govern the reward distribution
         _updateRewardVariables();
 
@@ -61,7 +59,7 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
         children[childPosId] = Child(posId, block.timestamp);
 
         // harvest parent position
-        uint amount =  _harvestWithDebt(posId);
+        uint amount = _harvestWithDebt(posId);
 
         // stake parent position rewards to child position
         _open(amount, address(this));
@@ -102,7 +100,7 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
         // balance. In `_withdraw()`, we're only harvesting rewards for a
         // portion of the position's balance. So we do this little hack to make
         // `_earned()` subtract only the debt of the harvested portion.
-        uint remainingDebt = _debts[posId] * (balance - amount) / balance;
+        uint remainingDebt = (_debts[posId] * (balance - amount)) / balance;
         _debts[posId] -= remainingDebt;
         super._withdraw(posId, amount);
         _debts[posId] = remainingDebt;
