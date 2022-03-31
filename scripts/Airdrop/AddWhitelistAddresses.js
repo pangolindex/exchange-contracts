@@ -32,7 +32,7 @@ async function main() {
         process.exit(1);
     }
 
-    const Airdrop = await attach("Airdrop", ADDRESSES[10].address);
+    const Airdrop = await attach("Airdrop", ADDRESSES[10 - (16 - ADDRESSES.length) ].address);
 
     let info, tx;
     
