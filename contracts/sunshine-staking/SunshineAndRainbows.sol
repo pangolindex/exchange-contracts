@@ -149,7 +149,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
      * @param posIds The list of IDs of the positions to exit from
      */
     function multiClose(uint[] calldata posIds) external virtual nonReentrant {
-        require(posIds.length <= 20, "SAR::multiClose: long array");
+        require(posIds.length <= 40, "SAR::multiClose: long array");
         _updateRewardVariables(); // saves gas by updating only once
         for (uint i; i < posIds.length; ++i) _close(posIds[i]);
     }
