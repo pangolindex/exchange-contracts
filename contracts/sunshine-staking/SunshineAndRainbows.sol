@@ -66,7 +66,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
 
     /**
      * @notice Hypothetical rewards accumulated by an ideal position whose
-     * `lastUpdate` equals `_initTime`, and `balance` equals one.
+     * `lastUpdate` equals `initTime`, and `balance` equals one.
      * @dev Refer to `sum of I` in the proof for more details.
      */
     FullMath.Uint512 private _idealPosition;
@@ -78,7 +78,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
     uint public sumOfEntryTimes;
 
     /// @notice Time stamp of first stake event
-    uint private _initTime;
+    uint public initTime;
 
     event Opened(uint position, uint amount);
     event Closed(uint position, uint amount, uint reward);
@@ -109,8 +109,8 @@ contract SunshineAndRainbows is ReentrancyGuard {
     function open(uint amount) external virtual nonReentrant {
         if (totalSupply != 0) {
             _updateRewardVariables();
-        } else if (_initTime == 0) {
-            _initTime = block.timestamp;
+        } else if (initTime == 0) {
+            initTime = block.timestamp;
         }
         _open(amount, msg.sender);
     }
@@ -178,7 +178,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
                 .sub(
                     rewardsPerStakingDuration
                         .sub(position.rewardsPerStakingDuration)
-                        .mul(position.lastUpdate - _initTime)
+                        .mul(position.lastUpdate - initTime)
                 )
                 .mul(position.balance)
                 .shiftToUint256();
@@ -243,7 +243,8 @@ contract SunshineAndRainbows is ReentrancyGuard {
         // get earned rewards
         uint reward = _earned(posId);
 
-        // disables the position
+        // disables the position: zero balanced position becomes unusable,
+        // therefore no need to update other position properties
         position.balance = 0;
 
         // transfer rewards & stake balance to owner
@@ -377,7 +378,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
                 .sub(
                     _rewardsPerStakingDuration
                         .sub(position.rewardsPerStakingDuration)
-                        .mul(position.lastUpdate - _initTime)
+                        .mul(position.lastUpdate - initTime)
                 )
                 .mul(position.balance)
                 .shiftToUint256();
@@ -403,7 +404,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
             // `sum (t times r over S)` with 2**256 fixed denominator
             _idealPosition.add(
                 FullMath.mul(
-                    (block.timestamp - _initTime) * rewards,
+                    (block.timestamp - initTime) * rewards,
                     FullMath.div256(stakingDuration)
                 )
             ),
