@@ -171,8 +171,15 @@ describe.only("SunshineAndRainbows.sol", function () {
       blockNumber = await ethers.provider.getBlockNumber();
       var lastUpdate = (await ethers.provider.getBlock(blockNumber)).timestamp;
 
+      var reward = getRewards(lastUpdate - this.notifyRewardTime);
+      var pending = await this.sunshine.pendingRewards(["0"]);
+      expect(pending[0]).to.be.within(reward.sub("2"), reward);
+
       expect(await this.stakingToken.balanceOf(this.sunshine.address)).to.equal(
         SUPPLY
+      );
+      expect(await this.rewardToken.balanceOf(this.sunshine.address)).to.equal(
+        reward
       );
       expect(await this.sunshine.totalSupply()).to.equal(SUPPLY);
       expect(await this.sunshine.sumOfEntryTimes()).to.equal(
@@ -226,10 +233,14 @@ describe.only("SunshineAndRainbows.sol", function () {
       var reward = getRewards(lastUpdate - this.notifyRewardTime);
       var distributed = await this.rewardToken.balanceOf(this.admin.address);
 
+
+      var pending = await this.sunshine.pendingRewards(["0"]);
+      expect(pending[0]).to.equal("0");
+
       expect(await this.stakingToken.balanceOf(this.admin.address)).to.equal(
         SUPPLY
       );
-      expect(distributed).to.be.within(reward.sub("2"), reward.add("2"));
+      expect(distributed).to.be.within(reward.sub("2"), reward);
 
       var remaining = reward.sub(distributed); // remaining dust in the contract
 
@@ -321,7 +332,10 @@ describe.only("SunshineAndRainbows.sol", function () {
       expect(await this.stakingToken.balanceOf(this.sunshine.address)).to.equal(
         SUPPLY
       );
-      expect(distributed).to.be.within(reward.sub("2"), reward.add("2"));
+      expect(distributed).to.be.within(reward.sub("2"), reward);
+
+      var pending = await this.sunshine.pendingRewards(["0"]);
+      expect(pending[0]).to.equal("0");
 
       var remaining = reward.sub(distributed); // remaining dust in the contract
 
@@ -418,7 +432,7 @@ describe.only("SunshineAndRainbows.sol", function () {
       expect(await this.stakingToken.balanceOf(this.sunshine.address)).to.equal(
         "0"
       );
-      expect(distributed).to.be.within(reward.sub("20"), reward.add("20"));
+      expect(distributed).to.be.within(reward.sub("20"), reward);
 
       var remaining = reward.sub(distributed); // remaining dust in the contract
 
@@ -430,4 +444,95 @@ describe.only("SunshineAndRainbows.sol", function () {
       expect(await this.sunshine.sumOfEntryTimes()).to.equal("0");
     });
   });
+
+  //////////////////////////////
+  //     withdraw
+  //////////////////////////////
+  describe("withdraw", function () {
+    it("withdraws half after staking", async function () {
+      await expect(this.sunshine.open(SUPPLY)).to.emit(this.sunshine, "Opened");
+
+      var blockNumber = await ethers.provider.getBlockNumber();
+      var initTime = (await ethers.provider.getBlock(blockNumber)).timestamp;
+
+      await ethers.provider.send("evm_increaseTime", [ONE_DAY.toNumber()]);
+
+      await expect(this.sunshine.withdraw("0", SUPPLY.div("2"))).to.emit(
+        this.sunshine,
+        "Withdrawn"
+      );
+
+      blockNumber = await ethers.provider.getBlockNumber();
+      var lastUpdate = (await ethers.provider.getBlock(blockNumber)).timestamp;
+
+      var interval = lastUpdate - initTime; // also the stakingDuration
+      var reward = getRewards(lastUpdate - this.notifyRewardTime);
+      var distributed = await this.rewardToken.balanceOf(this.admin.address);
+
+      expect(await this.stakingToken.balanceOf(this.admin.address)).to.equal(
+        SUPPLY.div("2")
+      );
+      expect(await this.stakingToken.balanceOf(this.sunshine.address)).to.equal(
+        SUPPLY.div("2")
+      );
+      expect(distributed).to.be.within(reward.div("2").sub("2"), reward.div("2"));
+
+      var remaining = reward.sub(distributed); // remaining dust in the contract
+
+      expect(await this.rewardToken.balanceOf(this.sunshine.address)).to.equal(
+        remaining
+      );
+      expect(await this.sunshine.totalSupply()).to.equal(SUPPLY.div("2"));
+      expect(await this.sunshine.sumOfEntryTimes()).to.equal(
+        SUPPLY.div("2").mul(initTime)
+      );
+      expect(await this.sunshine.initTime()).to.equal(initTime);
+
+      var pending = await this.sunshine.pendingRewards(["0"]);
+      expect(pending[0]).to.be.within(remaining.sub("2"), remaining);
+
+      var position = await this.sunshine.positions("0");
+
+      expect(position.balance).to.equal(SUPPLY.div("2"));
+      expect(position.lastUpdate).to.equal(initTime);
+      expect(position.owner).to.equal(this.admin.address);
+      expect(position.idealPosition.r0).to.equal("0");
+      expect(position.idealPosition.r1).to.equal("0");
+      expect(position.rewardsPerStakingDuration.r0).to.equal("0");
+      expect(position.rewardsPerStakingDuration.r1).to.equal("0");
+    });
+
+    it("cannot withdraw from others’ position", async function () {
+      await expect(this.sunshine.open(SUPPLY)).to.emit(this.sunshine, "Opened");
+
+      await ethers.provider.send("evm_increaseTime", [ONE_DAY.toNumber()]);
+
+      sunshine = await this.sunshine.connect(this.unauthorized);
+
+      await expect(sunshine.withdraw("0", SUPPLY.div("2"))).to.be.revertedWith(
+        "SAR::_withdraw: unauthorized"
+      );
+    });
+
+    it("cannot withdraw zero", async function () {
+      await expect(this.sunshine.open(SUPPLY)).to.emit(this.sunshine, "Opened");
+
+      await ethers.provider.send("evm_increaseTime", [ONE_DAY.toNumber()]);
+
+      await expect(this.sunshine.withdraw("0", "0")).to.be.revertedWith(
+        "SAR::_withdraw: zero amount"
+      );
+    });
+
+    it("cannot withdraw more or equal to balance", async function () {
+      await expect(this.sunshine.open(SUPPLY)).to.emit(this.sunshine, "Opened");
+
+      await ethers.provider.send("evm_increaseTime", [ONE_DAY.toNumber()]);
+
+      await expect(this.sunshine.withdraw("0", SUPPLY)).to.be.revertedWith(
+        "SAR::_withdraw: use `close()`"
+      );
+    });
+  });
+
 });
