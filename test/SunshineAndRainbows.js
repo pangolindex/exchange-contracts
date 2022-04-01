@@ -114,6 +114,20 @@ describe("SunshineAndRainbows.sol", function () {
     it("default: sumOfEntryTimes", async function () {
       expect(await this.sunshine.sumOfEntryTimes()).to.equal("0");
     });
+
+    it("deploy: zero address staking token", async function () {
+      await expect(this.Sunshine.deploy(
+        ZERO_ADDRESS,
+        this.regulator.address
+      )).to.be.revertedWith("SAR::Constructor: zero address");
+    });
+
+    it("deploy: zero address reward regulator", async function () {
+      await expect(this.Sunshine.deploy(
+        this.stakingToken.address,
+        ZERO_ADDRESS
+      )).to.be.revertedWith("SAR::Constructor: zero address");
+    });
   });
 
   //////////////////////////////
@@ -394,13 +408,14 @@ describe("SunshineAndRainbows.sol", function () {
   //     multiClose
   //////////////////////////////
   describe("multiClose", function () {
-    it("exits 10 positions", async function () {
+    it("exits 40 positions", async function () {
       var arr = [];
       var blockNumber;
       var initTime;
+      var len = 40;
 
-      for (let i = 0; i < 10; i++) {
-        await expect(this.sunshine.open(SUPPLY.div("10"))).to.emit(
+      for (let i = 0; i < len; i++) {
+        await expect(this.sunshine.open(SUPPLY.div(len))).to.emit(
           this.sunshine,
           "Opened"
         );
@@ -415,6 +430,21 @@ describe("SunshineAndRainbows.sol", function () {
       expect(await this.stakingToken.balanceOf(this.sunshine.address)).to.equal(
         SUPPLY
       );
+
+      var rates = await this.sunshine.rewardRates(arr);
+      var previousRate;
+      for (let i = 0; i < len; i++) {
+        if (i != 0) expect(rates[i]).to.be.below(previousRate);
+        previousRate = rates[i];
+      }
+
+      await ethers.provider.send("evm_increaseTime", [ONE_DAY.mul("40").toNumber()]);
+      await network.provider.send("evm_mine")
+
+      var positions = await this.sunshine.positionsOf(this.admin.address);
+      for (let i = 0; i < len; i++) {
+        expect(positions[i].toNumber()).to.equal(arr[i]);
+      }
 
       expect(await this.sunshine.multiClose(arr)).to.emit(
         this.sunshine,
@@ -434,7 +464,7 @@ describe("SunshineAndRainbows.sol", function () {
       expect(await this.stakingToken.balanceOf(this.sunshine.address)).to.equal(
         "0"
       );
-      expect(distributed).to.be.within(reward.sub("20"), reward);
+      expect(distributed).to.be.within(reward.sub("80"), reward);
 
       var remaining = reward.sub(distributed); // remaining dust in the contract
 
@@ -444,6 +474,29 @@ describe("SunshineAndRainbows.sol", function () {
 
       expect(await this.sunshine.totalSupply()).to.equal("0");
       expect(await this.sunshine.sumOfEntryTimes()).to.equal("0");
+    });
+
+    it("cannot exit more than 40 positions", async function () {
+      var arr = [];
+      var blockNumber;
+      var initTime;
+
+      for (let i = 0; i < 41; i++) {
+        await expect(this.sunshine.open(SUPPLY.div("41"))).to.emit(
+          this.sunshine,
+          "Opened"
+        );
+        if (i == 0) {
+          blockNumber = await ethers.provider.getBlockNumber();
+          initTime = (await ethers.provider.getBlock(blockNumber)).timestamp;
+        }
+        await ethers.provider.send("evm_increaseTime", [ONE_DAY.toNumber()]);
+        arr.push(i);
+      }
+
+      await expect(this.sunshine.multiClose(arr)).to.be.revertedWith(
+        "SAR::multiClose: long array"
+      );
     });
   });
 
