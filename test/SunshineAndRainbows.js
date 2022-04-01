@@ -793,7 +793,7 @@ describe("FullMath.sol", function () {
 
     // get contract factories
     this.FullMath = await ethers.getContractFactory(
-      "contracts/sunshine-staking/FullMathTest.sol:FullMathTest"
+      "contracts/sunshine-staking/test/FullMathTest.sol:FullMathTest"
     );
   });
 
