@@ -1,6 +1,6 @@
 const { ethers, network } = require("hardhat");
 const fs = require("fs");
-const { CHAINS } = require("@pangolindex/sdk");
+const { THEGRAPHS } = require("@pangolindex/sdk");
 
 function writeSrcFile(fileName, data) {
     fs.writeFileSync(
@@ -10,9 +10,9 @@ function writeSrcFile(fileName, data) {
 }
 
 function fetchChain() { 
-    for (let i = 0; i < CHAINS.length; i++) {
-        if (network.name === CHAINS[i].id) {
-            return CHAINS[i];
+    for (let i = 0; i < THEGRAPHS.length; i++) {
+        if (network.name === THEGRAPHS[i].id) {
+            return THEGRAPHS[i];
         }   
     }
 }
