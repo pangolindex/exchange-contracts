@@ -67,6 +67,19 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
         emit Compounded(posId, childPosId, amount);
     }
 
+    /// @dev Subtracts debts from the over-ridden `pendingRewards` function
+    function pendingRewards(uint[] memory posIds)
+        public
+        view
+        override
+        returns (uint[] memory)
+    {
+        uint[] memory rewards = new uint[](posIds.length);
+        rewards = super.pendingRewards(posIds);
+        for (uint i; i < posIds.length; ++i) rewards[i] -= _debts[posIds[i]];
+        return rewards;
+    }
+
     /**
      * @dev Prepends to the over-ridden `_close` function a special rule
      * that disables withdrawal until the parent position is closed
@@ -109,8 +122,6 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
     /**
      * @dev Subtracts debts from the over-ridden `_earned` function.
      * Debts are accrued when harvesting without updating the position.
-     * `pendingRewards()` will not be effected by this override. Therefore any
-     * user interface must subtract debt from pendingRewards.
      */
     function _earned(uint posId) internal view override returns (uint) {
         uint earned = super._earned(posId);

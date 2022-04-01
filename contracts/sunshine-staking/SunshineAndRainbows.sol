@@ -155,35 +155,15 @@ contract SunshineAndRainbows is ReentrancyGuard {
     }
 
     /**
-     * @notice Returns the pending rewards of multiple positions
-     * @param posIds The IDs of the positions to check the rewards
-     * @return The amount of tokens that can be claimed for each position
+     * @notice Simple interfacing function to list all positions of a user
+     * @return The list of user's positions
      */
-    function pendingRewards(uint[] calldata posIds)
+    function positionsOf(address account)
         external
         view
         returns (uint[] memory)
     {
-        (
-            FullMath.Uint512 memory idealPosition,
-            FullMath.Uint512 memory rewardsPerStakingDuration
-        ) = _rewardVariables(rewardRegulator.pendingRewards(address(this)));
-        uint[] memory rewards = new uint[](posIds.length);
-        for (uint i; i < posIds.length; ++i) {
-            Position memory position = positions[posIds[i]];
-            if (position.lastUpdate == 0) rewards[i] = 0;
-            // duplicate of `_earned()` with temporary reward variables
-            rewards[i] = idealPosition
-                .sub(position.idealPosition)
-                .sub(
-                    rewardsPerStakingDuration
-                        .sub(position.rewardsPerStakingDuration)
-                        .mul(position.lastUpdate - initTime)
-                )
-                .mul(position.balance)
-                .shiftToUint256();
-        }
-        return rewards;
+        return _userPositions[account].values();
     }
 
     /**
@@ -198,11 +178,12 @@ contract SunshineAndRainbows is ReentrancyGuard {
     {
         uint[] memory rates = new uint[](posIds.length);
         uint stakingDuration = block.timestamp * totalSupply - sumOfEntryTimes;
-        if (stakingDuration == 0) return rates;
+        require(stakingDuration != 0, "SAR::rewardRates: zero stake duration");
+        uint globalRate = rewardRegulator.rewardRate();
         for (uint i; i < posIds.length; ++i) {
             Position memory position = positions[posIds[i]];
             rates[i] =
-                (rewardRegulator.rewardRate() *
+                (globalRate *
                     (block.timestamp - position.lastUpdate) *
                     position.balance) /
                 stakingDuration;
@@ -211,15 +192,35 @@ contract SunshineAndRainbows is ReentrancyGuard {
     }
 
     /**
-     * @notice Simple interfacing function to list all positions of a user
-     * @return The list of user's positions
+     * @notice Returns the pending rewards of multiple positions
+     * @param posIds The IDs of the positions to check the rewards
+     * @return The amount of tokens that can be claimed for each position
      */
-    function positionsOf(address account)
-        external
+    function pendingRewards(uint[] memory posIds)
+        public
         view
+        virtual
         returns (uint[] memory)
     {
-        return _userPositions[account].values();
+        (
+            FullMath.Uint512 memory idealPosition,
+            FullMath.Uint512 memory rewardsPerStakingDuration
+        ) = _rewardVariables(rewardRegulator.pendingRewards(address(this)));
+        uint[] memory rewards = new uint[](posIds.length);
+        for (uint i; i < posIds.length; ++i) {
+            Position memory position = positions[posIds[i]];
+            // duplicate of `_earned()` with temporary reward variables
+            rewards[i] = idealPosition
+                .sub(position.idealPosition)
+                .sub(
+                    rewardsPerStakingDuration
+                        .sub(position.rewardsPerStakingDuration)
+                        .mul(position.lastUpdate - initTime)
+                )
+                .mul(position.balance)
+                .shiftToUint256();
+        }
+        return rewards;
     }
 
     /**
@@ -402,14 +403,13 @@ contract SunshineAndRainbows is ReentrancyGuard {
         return (
             // `sum (t times r over S)` with 2**256 fixed denominator
             _idealPosition.add(
-                FullMath.mul(
-                    (block.timestamp - initTime) * rewards,
-                    FullMath.div256(stakingDuration)
+                FullMath.div256(stakingDuration).mul(
+                    (block.timestamp - initTime) * rewards
                 )
             ),
             // `sum (r over S)` with 2**256 fixed denominator
             _rewardsPerStakingDuration.add(
-                FullMath.mul(rewards, FullMath.div256(stakingDuration))
+                FullMath.div256(stakingDuration).mul(rewards)
             )
         );
     }

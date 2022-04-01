@@ -24,4 +24,12 @@ contract FullMathTest {
     function mul512(FullMath.Uint512 memory a, uint b) external {
         testValue = a.mul(b);
     }
+
+    function div256(uint a) external {
+        testValue = FullMath.div256(a);
+    }
+
+    function shiftToUint256(FullMath.Uint512 memory a) external {
+        testValue2 = a.shiftToUint256();
+    }
 }

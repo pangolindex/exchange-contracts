@@ -58,11 +58,15 @@ library FullMath {
     }
 
     /// @dev ⌊2^256/a⌋_2^256 when (a > 1)
-    function div256(uint256 a) internal pure returns (uint256 r) {
-        require(a > 1, "FullMath: division by zero or one");
+    function div256(uint256 a) internal pure returns (Uint512 memory) {
+        require(a != 0, "FullMath: division by zero");
+        uint256 r0;
+        uint256 r1;
         assembly {
-            r := add(div(sub(0, a), a), 1)
+            r0 := add(div(sub(0, a), a), 1)
+            r1 := eq(a, 1)
         }
+        return Uint512(r0, r1);
     }
 
     /// @dev ⌊a/2^256⌋
