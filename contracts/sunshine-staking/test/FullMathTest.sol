@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "./FullMath.sol";
+import "../FullMath.sol";
 
 contract FullMathTest {
     using FullMath for FullMath.Uint512;

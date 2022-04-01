@@ -26,6 +26,20 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
     event Compounded(uint parentPosId, uint childPosId, uint amount);
 
     /**
+     * @dev Disables withdrawing from a position if it has an active parent
+     * position which was not updated after creation of the child position
+     */
+    modifier whenNotLocked(uint posId) {
+        Child memory child = children[posId];
+        if (child.initTime != 0)
+            Position memory parent = positions[child.parent];
+            require(
+                parent.balance == 0 || child.initTime < parent.lastUpdate,
+                "SAR::_withdraw: parent position not updated"
+            );
+    }
+
+    /**
      * @notice Constructs a new SunshineAndRainbows staking contract with
      * locked-stake harvesting feature
      * @param newStakingToken Contract address of the staking token
@@ -84,13 +98,7 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
      * @dev Prepends to the over-ridden `_close` function a special rule
      * that disables withdrawal until the parent position is closed
      */
-    function _close(uint posId) internal override {
-        Child memory child = children[posId];
-        if (child.initTime != 0)
-            require(
-                child.initTime < positions[child.parent].lastUpdate,
-                "SAR::_withdraw: parent position not updated"
-            );
+    function _close(uint posId) internal override whenNotLocked(posId) {
         super._close(posId);
     }
 
@@ -105,7 +113,11 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
     }
 
     /// @dev Adjust debts before and after balance change & reward harvest
-    function _withdraw(uint posId, uint amount) internal override {
+    function _withdraw(uint posId, uint amount)
+        internal
+        override
+        whenNotLocked(posId)
+    {
         uint balance = positions[posId].balance;
 
         // update debt before & after withdrawal:

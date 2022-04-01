@@ -76,6 +76,7 @@ contract RewardRegulatorFundable is AccessControl {
     event Claimed(address indexed account, uint reward);
     event RewardAdded(uint reward);
     event RewardsDurationUpdated(uint newDuration);
+    event Recovered(address indexed token, uint amount);
 
     /**
      * @notice Construct a new RewardRegulatorFundable contract
@@ -124,6 +125,7 @@ contract RewardRegulatorFundable is AccessControl {
             "recover: insufficient unlocked supply"
         );
         token.safeTransfer(msg.sender, amount);
+        emit Recovered(address(token), amount);
     }
 
     /**

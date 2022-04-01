@@ -4,7 +4,6 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { BigNumber } = require("ethers");
 
-const DENOMINATOR = BigNumber.from("10000");
 const ONE_DAY = BigNumber.from("86400");
 const SUPPLY = ethers.utils.parseUnits("10000000", 18);
 const ZERO_ADDRESS = ethers.constants.AddressZero;
@@ -25,7 +24,14 @@ function updateRewardVariables(rewards, stakingDuration, sinceInit) {
   return [idealPosition, rewardsPerStakingDuration];
 }
 
-// Start test block
+/*********************
+  ____    _    ____
+ / ___|  / \  |  _ \
+ \___ \ / _ \ | |_) |
+  ___) / ___ \|  _ <
+ |____/_/   \_\_| \_\
+
+**********************/
 describe("SunshineAndRainbows.sol", function () {
   before(async function () {
     // Get all signers
@@ -679,8 +685,8 @@ describe("SunshineAndRainbows.sol", function () {
         if (i == 0) {
           blockNumber = await ethers.provider.getBlockNumber();
           initTime = (await ethers.provider.getBlock(blockNumber)).timestamp;
-        };
-      };
+        }
+      }
 
       for (let i = 0; i < 2; i++) {
         await expect(this.sunshine.harvest("0")).to.emit(
@@ -688,12 +694,9 @@ describe("SunshineAndRainbows.sol", function () {
           "Harvested"
         );
         await ethers.provider.send("evm_increaseTime", [ONE_DAY.toNumber()]);
-      };
+      }
 
-      await expect(this.sunshine.close("2")).to.emit(
-        this.sunshine,
-        "Closed"
-      );
+      await expect(this.sunshine.close("2")).to.emit(this.sunshine, "Closed");
       await ethers.provider.send("evm_increaseTime", [ONE_DAY.toNumber()]);
 
       await expect(this.sunshine.multiClose(["0", "1", "3"])).to.emit(
@@ -737,26 +740,22 @@ describe("SunshineAndRainbows.sol", function () {
         if (i == 0) {
           blockNumber = await ethers.provider.getBlockNumber();
           initTime = (await ethers.provider.getBlock(blockNumber)).timestamp;
-        };
-      };
+        }
+      }
 
       await expect(this.sunshine.multiClose(["0", "1", "2", "3"])).to.emit(
         this.sunshine,
         "Closed"
       );
-      await ethers.provider.send("evm_increaseTime", [ONE_DAY.mul("5").toNumber()]);
+      await ethers.provider.send("evm_increaseTime", [
+        ONE_DAY.mul("5").toNumber(),
+      ]);
 
       await this.stakingToken.approve(this.sunshine.address, SUPPLY);
-      await expect(this.sunshine.open(SUPPLY)).to.emit(
-        this.sunshine,
-        "Opened"
-      );
+      await expect(this.sunshine.open(SUPPLY)).to.emit(this.sunshine, "Opened");
       await ethers.provider.send("evm_increaseTime", [ONE_DAY.toNumber()]);
 
-      await expect(this.sunshine.close("4")).to.emit(
-        this.sunshine,
-        "Closed"
-      );
+      await expect(this.sunshine.close("4")).to.emit(this.sunshine, "Closed");
 
       blockNumber = await ethers.provider.getBlockNumber();
       var lastUpdate = (await ethers.provider.getBlock(blockNumber)).timestamp;
@@ -786,6 +785,14 @@ describe("SunshineAndRainbows.sol", function () {
   });
 });
 
+/****************************************
+  _____      _ _ __  __       _   _
+ |  ___|   _| | |  \/  | __ _| |_| |__
+ | |_ | | | | | | |\/| |/ _` | __| '_ \
+ |  _|| |_| | | | |  | | (_| | |_| | | |
+ |_|   \__,_|_|_|_|  |_|\__,_|\__|_| |_|
+
+*****************************************/
 describe("FullMath.sol", function () {
   before(async function () {
     // get signers
@@ -941,7 +948,9 @@ describe("FullMath.sol", function () {
 
   describe("div256(uint256)", function () {
     it("div by zero", async function () {
-      await expect(this.math.div256("0")).to.be.revertedWith("FullMath: division by zero");
+      await expect(this.math.div256("0")).to.be.revertedWith(
+        "FullMath: division by zero"
+      );
     });
     it("div by one", async function () {
       await this.math.div256("1");
@@ -952,7 +961,9 @@ describe("FullMath.sol", function () {
     it("div by small number", async function () {
       await this.math.div256("319487312");
       var value = await this.math.testValue();
-      expect(value.r0).to.equal("362430947609325391374449903064344251183502350370773297061191538047411");
+      expect(value.r0).to.equal(
+        "362430947609325391374449903064344251183502350370773297061191538047411"
+      );
       expect(value.r1).to.equal("0");
     });
     it("div by large number", async function () {
@@ -962,10 +973,112 @@ describe("FullMath.sol", function () {
       expect(value.r1).to.equal("0");
     });
     it("div by very large number", async function () {
-      await this.math.div256("115792089237316195423570985008687907853269984665640564039143665760720294927033");
+      await this.math.div256(
+        "115792089237316195423570985008687907853269984665640564039143665760720294927033"
+      );
       var value = await this.math.testValue();
       expect(value.r0).to.equal("1");
       expect(value.r1).to.equal("0");
+    });
+  });
+});
+
+/**********************************************
+  ____                  _       _
+ |  _ \ ___  __ _ _   _| | __ _| |_ ___  _ __
+ | |_) / _ \/ _` | | | | |/ _` | __/ _ \| '__|
+ |  _ <  __/ (_| | |_| | | (_| | || (_) | |
+ |_| \_\___|\__, |\__,_|_|\__,_|\__\___/|_|
+            |___/
+***********************************************/
+describe("RewardRegulatorFundable.sol", function () {
+  before(async function () {
+    // Get all signers
+    this.signers = await ethers.getSigners();
+    this.admin = this.signers[0];
+    this.unauthorized = this.signers[1];
+
+    // get contract factories
+    this.Png = await ethers.getContractFactory("Png");
+    this.Regulator = await ethers.getContractFactory("RewardRegulatorFundable");
+  });
+
+  beforeEach(async function () {
+    this.token = await this.Png.deploy(
+      SUPPLY,
+      SUPPLY,
+      "REWARD",
+      "Reward Token"
+    );
+    await this.token.deployed();
+
+    this.regulator = await this.Regulator.deploy(this.token.address);
+    await this.regulator.deployed();
+
+    await this.regulator.grantRole(FUNDER_ROLE, this.admin.address);
+    await this.token.transfer(this.regulator.address, SUPPLY);
+
+    //await this.regulator.setRecipients([this.sunshine.address], ["1"]);
+    //await this.regulator.setRewardsDuration(ONE_DAY.mul(100));
+    //await this.regulator.notifyRewardAmount(SUPPLY);
+
+    var blockNumber = await ethers.provider.getBlockNumber();
+    this.notifyRewardTime = (
+      await ethers.provider.getBlock(blockNumber)
+    ).timestamp;
+  });
+
+  // Test cases
+
+  //////////////////////////////
+  //     Constructor
+  //////////////////////////////
+  describe("Constructor", function () {
+    it("deploy: reward token zero address", async function () {
+      await expect(this.Regulator.deploy(ZERO_ADDRESS)).to.be.revertedWith(
+        "Construct: zero address"
+      );
+    });
+    it("arg 1: rewardToken", async function () {
+      expect(await this.regulator.rewardToken()).to.equal(this.token.address);
+    });
+    it("default: rewardsDuration", async function () {
+      expect(await this.regulator.rewardsDuration()).to.equal(ONE_DAY);
+    });
+    it("default: periodFinish", async function () {
+      expect(await this.regulator.periodFinish()).to.equal("0");
+    });
+    it("default: rewardRate", async function () {
+      expect(await this.regulator.rewardRate()).to.equal("0");
+    });
+    it("default: totalWeight", async function () {
+      expect(await this.regulator.totalWeight()).to.equal("0");
+    });
+  });
+
+  describe.only("recover", function () {
+    it("admin can recover", async function () {
+      expect(await this.token.balanceOf(this.admin.address)).to.equal("0");
+      await expect(this.regulator.recover(this.token.address, SUPPLY)).to.emit(
+        this.regulator,
+        "Recovered"
+      );
+      expect(await this.token.balanceOf(this.admin.address)).to.equal(SUPPLY);
+    });
+    it("cannot recover more than reserved", async function () {
+      await this.regulator.setRecipients([this.admin.address], ["1"]);
+      await this.regulator.notifyRewardAmount(SUPPLY);
+      await expect(
+        this.regulator.recover(this.token.address, SUPPLY)
+      ).to.be.revertedWith("recover: insufficient unlocked supply");
+      await expect(
+        this.regulator.recover(this.token.address, "1")
+      ).to.be.revertedWith("recover: insufficient unlocked supply");
+    });
+    it("unauthorized can't recover", async function () {
+      var regulator = await this.regulator.connect(this.unauthorized);
+      await expect(regulator.recover(this.token.address, SUPPLY)).to.be
+        .reverted;
     });
   });
 });
