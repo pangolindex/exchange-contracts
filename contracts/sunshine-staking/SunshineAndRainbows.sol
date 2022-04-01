@@ -365,7 +365,6 @@ contract SunshineAndRainbows is ReentrancyGuard {
      */
     function _earned(uint posId) internal view virtual returns (uint) {
         Position memory position = positions[posId];
-        if (position.lastUpdate == 0) return 0;
         /*
          * core formula in EQN(7):
          * ( ( sum I from 1 to m - sum I from 1 to n-1 ) -
