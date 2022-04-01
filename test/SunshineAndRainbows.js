@@ -3,7 +3,6 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { BigNumber } = require("ethers");
-const chance = require("chance").Chance();
 
 const DENOMINATOR = BigNumber.from("10000");
 const ONE_DAY = BigNumber.from("86400");
@@ -11,6 +10,7 @@ const SUPPLY = ethers.utils.parseUnits("10000000", 18);
 const ZERO_ADDRESS = ethers.constants.AddressZero;
 const FUNDER_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("FUNDER"));
 const PRECISION = BigNumber.from("2").pow("256");
+const UINT256_MAX = ethers.constants.MaxUint256;
 
 function getRewards(duration) {
   return SUPPLY.div(ONE_DAY.mul("100")).mul(duration);
@@ -26,7 +26,7 @@ function updateRewardVariables(rewards, stakingDuration, sinceInit) {
 }
 
 // Start test block
-describe.only("SunshineAndRainbows.sol", function () {
+describe("SunshineAndRainbows.sol", function () {
   before(async function () {
     // Get all signers
     this.signers = await ethers.getSigners();
@@ -233,7 +233,6 @@ describe.only("SunshineAndRainbows.sol", function () {
       var reward = getRewards(lastUpdate - this.notifyRewardTime);
       var distributed = await this.rewardToken.balanceOf(this.admin.address);
 
-
       var pending = await this.sunshine.pendingRewards(["0"]);
       expect(pending[0]).to.equal("0");
 
@@ -417,7 +416,10 @@ describe.only("SunshineAndRainbows.sol", function () {
         SUPPLY
       );
 
-      expect(await this.sunshine.multiClose(arr)).to.emit(this.sunshine, "Closed");
+      expect(await this.sunshine.multiClose(arr)).to.emit(
+        this.sunshine,
+        "Closed"
+      );
 
       blockNumber = await ethers.provider.getBlockNumber();
       var lastUpdate = (await ethers.provider.getBlock(blockNumber)).timestamp;
@@ -475,7 +477,10 @@ describe.only("SunshineAndRainbows.sol", function () {
       expect(await this.stakingToken.balanceOf(this.sunshine.address)).to.equal(
         SUPPLY.div("2")
       );
-      expect(distributed).to.be.within(reward.div("2").sub("2"), reward.div("2"));
+      expect(distributed).to.be.within(
+        reward.div("2").sub("2"),
+        reward.div("2")
+      );
 
       var remaining = reward.sub(distributed); // remaining dust in the contract
 
@@ -534,9 +539,7 @@ describe.only("SunshineAndRainbows.sol", function () {
       );
     });
   });
-
 });
-
 
 describe("FullMath.sol", function () {
   before(async function () {
@@ -544,7 +547,9 @@ describe("FullMath.sol", function () {
     [this.admin, this.unauthorized] = await ethers.getSigners();
 
     // get contract factories
-    this.FullMath = await ethers.getContractFactory("FullMathTest");
+    this.FullMath = await ethers.getContractFactory(
+      "contracts/sunshine-staking/FullMathTest.sol:FullMathTest"
+    );
   });
 
   beforeEach(async function () {
@@ -557,19 +562,22 @@ describe("FullMath.sol", function () {
   //
   describe("add(Uint512, Uint512)", function () {
     it("result fits 256bit", async function () {
-      await this.math.add(["4129834010293","0"], ["18989899999912838","0"]);
+      await this.math.add(["4129834010293", "0"], ["18989899999912838", "0"]);
       var value = await this.math.testValue();
       expect(value.r0).to.equal("18994029833923131");
       expect(value.r1).to.equal("0");
     });
     it("result does not fit 256bit", async function () {
-      await this.math.add(["1","0"], [UINT256_MAX,"0"]);
+      await this.math.add(["1", "0"], [UINT256_MAX, "0"]);
       var value = await this.math.testValue();
       expect(value.r0).to.equal("0");
       expect(value.r1).to.equal("1");
     });
     it("result does not fit 256bit (complex values)", async function () {
-      await this.math.add(["18020731948","987092"], [UINT256_MAX,"3810247001234987"]);
+      await this.math.add(
+        ["18020731948", "987092"],
+        [UINT256_MAX, "3810247001234987"]
+      );
       var value = await this.math.testValue();
       expect(value.r0).to.equal("18020731947");
       expect(value.r1).to.equal("3810247002222080");
@@ -578,19 +586,19 @@ describe("FullMath.sol", function () {
 
   describe("sub(Uint512, Uint512)", function () {
     it("result fits 256bit", async function () {
-      await this.math.sub(["4129834010293","0"], ["2938419","0"]);
+      await this.math.sub(["4129834010293", "0"], ["2938419", "0"]);
       var value = await this.math.testValue();
       expect(value.r0).to.equal("4129831071874");
       expect(value.r1).to.equal("0");
     });
     it("result does not fit 256bit (complex values)", async function () {
-      await this.math.sub(["23948","9328417097"], [UINT256_MAX,"239841"]);
+      await this.math.sub(["23948", "9328417097"], [UINT256_MAX, "239841"]);
       var value = await this.math.testValue();
       expect(value.r0).to.equal("23949");
       expect(value.r1).to.equal("9328177255");
     });
     it("result fits 256bit (complex values)", async function () {
-      await this.math.sub(["23948","9328417097"], [UINT256_MAX,"9328417096"]);
+      await this.math.sub(["23948", "9328417097"], [UINT256_MAX, "9328417096"]);
       var value = await this.math.testValue();
       expect(value.r0).to.equal("23949");
       expect(value.r1).to.equal("0");
@@ -599,21 +607,23 @@ describe("FullMath.sol", function () {
 
   describe("mul(uint256, uint256)", function () {
     it("result is 0", async function () {
-      await this.math.mul256("4129834010293","0");
+      await this.math.mul256("4129834010293", "0");
       var value = await this.math.testValue();
       expect(value.r0).to.equal("0");
       expect(value.r1).to.equal("0");
     });
     it("result fits 256 bits", async function () {
-      await this.math.mul256("23948","308470113412317042317027089");
+      await this.math.mul256("23948", "308470113412317042317027089");
       var value = await this.math.testValue();
       expect(value.r0).to.equal("7387242275998168529408164727372");
       expect(value.r1).to.equal("0");
     });
     it("result does not fit 256 bits", async function () {
-      await this.math.mul256(UINT256_MAX,"308470113412317042317027089");
+      await this.math.mul256(UINT256_MAX, "308470113412317042317027089");
       var value = await this.math.testValue();
-      expect(value.r0).to.equal("115792089237316195423570985008687907853269984665640255569344171690870812612847");
+      expect(value.r0).to.equal(
+        "115792089237316195423570985008687907853269984665640255569344171690870812612847"
+      );
       expect(value.r1).to.equal("308470113412317042317027088");
     });
   });
@@ -621,44 +631,53 @@ describe("FullMath.sol", function () {
   describe("mul(Uint512, uint256)", function () {
     describe("arg 1 fits 256 bits", function () {
       it("multiplication by 0", async function () {
-        await this.math.mul512(["4129834010293","0"],"0");
+        await this.math.mul512(["4129834010293", "0"], "0");
         var value = await this.math.testValue();
         expect(value.r0).to.equal("0");
         expect(value.r1).to.equal("0");
       });
       it("multiplication fits 256 bits", async function () {
-        await this.math.mul512(["23948","0"],"308470113412317042317027089");
+        await this.math.mul512(["23948", "0"], "308470113412317042317027089");
         var value = await this.math.testValue();
         expect(value.r0).to.equal("7387242275998168529408164727372");
         expect(value.r1).to.equal("0");
       });
       it("multiplication does not fit 256 bits", async function () {
-        await this.math.mul512([UINT256_MAX,"0"],"308470113412317042317027089");
+        await this.math.mul512(
+          [UINT256_MAX, "0"],
+          "308470113412317042317027089"
+        );
         var value = await this.math.testValue();
-        expect(value.r0).to.equal("115792089237316195423570985008687907853269984665640255569344171690870812612847");
+        expect(value.r0).to.equal(
+          "115792089237316195423570985008687907853269984665640255569344171690870812612847"
+        );
         expect(value.r1).to.equal("308470113412317042317027088");
       });
     });
     describe("arg 1 does not fit 256 bits", function () {
       it("multiplication by 0", async function () {
-        await this.math.mul512(["4129834010293","38"],"0");
+        await this.math.mul512(["4129834010293", "38"], "0");
         var value = await this.math.testValue();
         expect(value.r0).to.equal("0");
         expect(value.r1).to.equal("0");
       });
       it("least significant multiplication fits 256 bits", async function () {
-        await this.math.mul512(["23948","4"],"308470113412317042317027089");
+        await this.math.mul512(["23948", "4"], "308470113412317042317027089");
         var value = await this.math.testValue();
         expect(value.r0).to.equal("7387242275998168529408164727372");
         expect(value.r1).to.equal("1233880453649268169268108356");
       });
       it("least significant multiplication does not fit 256 bits", async function () {
-        await this.math.mul512([UINT256_MAX,"92837"],"308470113412317042317027089");
+        await this.math.mul512(
+          [UINT256_MAX, "92837"],
+          "308470113412317042317027089"
+        );
         var value = await this.math.testValue();
-        expect(value.r0).to.equal("115792089237316195423570985008687907853269984665640255569344171690870812612847");
+        expect(value.r0).to.equal(
+          "115792089237316195423570985008687907853269984665640255569344171690870812612847"
+        );
         expect(value.r1).to.equal("28637748388972689574628160888581");
       });
     });
   });
-
 });
