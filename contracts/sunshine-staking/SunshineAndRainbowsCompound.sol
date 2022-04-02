@@ -22,21 +22,23 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
     /// @notice A mapping of position to its reward debt
     mapping(uint => uint) private _debts;
 
-    /// @notice Emitted when rewards from a position creatas another position
+    /// @notice Emitted when rewards from a position creates another position
     event Compounded(uint parentPosId, uint childPosId, uint amount);
 
     /**
      * @dev Disables withdrawing from a position if it has an active parent
      * position which was not updated after creation of the child position
      */
-    modifier whenNotLocked(uint posId) {
+    modifier ifNotLocked(uint posId) {
         Child memory child = children[posId];
-        if (child.initTime != 0)
+        if (child.initTime != 0) {
             Position memory parent = positions[child.parent];
             require(
-                parent.balance == 0 || child.initTime < parent.lastUpdate,
+                parent.balance == 0 || child.initTime <= parent.lastUpdate,
                 "SAR::_withdraw: parent position not updated"
             );
+        }
+        _;
     }
 
     /**
@@ -96,9 +98,9 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
 
     /**
      * @dev Prepends to the over-ridden `_close` function a special rule
-     * that disables withdrawal until the parent position is closed
+     * that disables withdrawal until the parent position is closed or updated
      */
-    function _close(uint posId) internal override whenNotLocked(posId) {
+    function _close(uint posId) internal override ifNotLocked(posId) {
         super._close(posId);
     }
 
@@ -116,7 +118,7 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
     function _withdraw(uint posId, uint amount)
         internal
         override
-        whenNotLocked(posId)
+        ifNotLocked(posId)
     {
         uint balance = positions[posId].balance;
 

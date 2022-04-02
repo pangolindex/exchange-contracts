@@ -190,7 +190,7 @@ contract RewardRegulatorFundable is AccessControl {
     {
         uint length = accounts.length;
         require(length == weights.length, "setRecipients: unequal lengths");
-        require(length < 21, "setRecipients: long array");
+        require(length <= 20, "setRecipients: long array");
 
         _globalUpdate();
 
