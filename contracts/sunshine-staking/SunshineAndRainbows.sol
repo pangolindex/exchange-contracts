@@ -359,8 +359,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
     }
 
     /**
-     * @notice Gets the pending rewards of a position based on given reward
-     * variables
+     * @notice Gets the pending rewards of a position
      * @dev Refer to the derived formula at the end of section 2.3 of proof
      * @param posId The ID of the position to check the rewards
      */
