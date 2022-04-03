@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./FullMath.sol";
+import "./libraries/FullMath.sol";
 
 interface IRewardRegulator {
     function pendingRewards(address account) external view returns (uint);
