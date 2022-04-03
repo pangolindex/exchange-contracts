@@ -16,8 +16,6 @@ import "../pangolin-periphery/interfaces/IWAVAX.sol";
 contract SunshineAndRainbowsCompoundLPAVAX is SunshineAndRainbowsCompoundLP {
     using SafeERC20 for IERC20;
 
-    IWAVAX private immutable _wrappedNativeToken;
-
     /**
      * @notice Constructs a new SunshineAndRainbows staking contract with
      * locked-stake harvesting feature
@@ -25,13 +23,11 @@ contract SunshineAndRainbowsCompoundLPAVAX is SunshineAndRainbowsCompoundLP {
      * @param newRewardRegulator Contract address of the reward regulator which
      * distributes reward tokens
      * @param newRouter Address of the router that will be used to deposit
-     * @param newWrappedNativeToken Wrapping contract of the network's gas token
      */
     constructor(
         address newStakingToken,
         address newRewardRegulator,
-        address newRouter,
-        address newWrappedNativeToken
+        address newRouter
     )
         SunshineAndRainbowsCompoundLP(
             newStakingToken,
@@ -40,10 +36,9 @@ contract SunshineAndRainbowsCompoundLPAVAX is SunshineAndRainbowsCompoundLP {
         )
     {
         require(
-            newWrappedNativeToken != address(0),
-            "SAR::Constructor: zero address"
+            address(_pairToken) == IPangolinRouter(newRouter).WAVAX(),
+            "SAR::Constructor: pair token not wavax"
         );
-        _wrappedNativeToken = IWAVAX(newWrappedNativeToken);
     }
 
     /**
@@ -98,7 +93,7 @@ contract SunshineAndRainbowsCompoundLPAVAX is SunshineAndRainbowsCompoundLP {
             revert("SAR::_addLiquidityAVAX: high slippage");
         }
 
-        _wrappedNativeToken.deposit{ value: pairAmount }();
+        IWAVAX(address(_pairToken)).deposit{ value: pairAmount }();
 
         (, , uint amount) = router.addLiquidity(
             address(rewardToken), // tokenA
