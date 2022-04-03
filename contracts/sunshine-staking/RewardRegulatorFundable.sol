@@ -69,6 +69,9 @@ contract RewardRegulatorFundable is AccessControl {
     /// @notice Total rewards emitted per weight until last update
     uint private _rewardPerWeightStored;
 
+    /// @notice Precision for rewardRate
+    uint private constant PRECISION = 1_000 * 365 days;
+
     /// @notice The role for calling `notifyRewardAmount` function
     bytes32 private constant FUNDER = keccak256("FUNDER");
 
@@ -77,6 +80,13 @@ contract RewardRegulatorFundable is AccessControl {
     event RewardAdded(uint reward);
     event RewardsDurationUpdated(uint newDuration);
     event Recovered(address indexed token, uint amount);
+
+    /// @notice Updates reward stored whenever rewards are claimed or changed
+    modifier update() {
+        _rewardPerWeightStored = rewardPerWeight();
+        _lastUpdate = block.timestamp;
+        _;
+    }
 
     /**
      * @notice Construct a new RewardRegulatorFundable contract
@@ -92,10 +102,8 @@ contract RewardRegulatorFundable is AccessControl {
      * @notice Sends the rewards to message sender
      * @return The amount of reward tokens that became eligible for claiming
      */
-    function claim() external returns (uint) {
+    function claim() external update returns (uint) {
         Recipient storage recipient = recipients[msg.sender];
-
-        _globalUpdate();
 
         uint reward = pendingRewards(msg.sender);
         require(reward != 0, "claim: no rewards");
@@ -141,7 +149,7 @@ contract RewardRegulatorFundable is AccessControl {
             "setRewardsDuration: ongoing period"
         );
         require(
-            newRewardsDuration != 0,
+            newRewardsDuration != 0 && newRewardsDuration <= PRECISION,
             "setRewardsDuration: invalid duration length"
         );
         rewardsDuration = newRewardsDuration;
@@ -153,22 +161,20 @@ contract RewardRegulatorFundable is AccessControl {
      * @dev Requires that enough tokens are transferred beforehand
      * @param reward The added amount of rewards
      */
-    function notifyRewardAmount(uint reward) external onlyRole(FUNDER) {
-        require(totalWeight > 0, "notifyRewardAmount: no recipients");
+    function notifyRewardAmount(uint reward) external update onlyRole(FUNDER) {
+        require(totalWeight != 0, "notifyRewardAmount: no recipients");
         require(reward != 0, "notifyRewardAmount: zero reward");
         require(
             unreserved() >= reward,
             "notifyRewardAmount: insufficient balance for reward"
         );
 
-        _globalUpdate();
-
         // Set new reward rate after setting _rewardPerWeightStored
         if (block.timestamp >= periodFinish) {
-            rewardRate = reward / rewardsDuration;
+            rewardRate = (reward * PRECISION) / rewardsDuration;
         } else {
             uint leftover = (periodFinish - block.timestamp) * rewardRate;
-            rewardRate = (reward + leftover) / rewardsDuration;
+            rewardRate = (reward * PRECISION + leftover) / rewardsDuration;
         }
 
         // update the end of this period after setting reward rate
@@ -186,13 +192,12 @@ contract RewardRegulatorFundable is AccessControl {
      */
     function setRecipients(address[] calldata accounts, uint[] calldata weights)
         external
+        update
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         uint length = accounts.length;
         require(length == weights.length, "setRecipients: unequal lengths");
         require(length <= 20, "setRecipients: long array");
-
-        _globalUpdate();
 
         int weightChange;
         for (uint i; i < length; ++i) {
@@ -243,8 +248,9 @@ contract RewardRegulatorFundable is AccessControl {
         Recipient memory recipient = recipients[account];
         return
             recipient.stash +
-            (rewardPerWeight() - recipient.rewardPerWeightPaid) *
-            recipient.weight;
+            ((rewardPerWeight() - recipient.rewardPerWeightPaid) *
+                recipient.weight) /
+            PRECISION;
     }
 
     /// @notice The total amount of reward tokens emitted until the call
@@ -257,11 +263,5 @@ contract RewardRegulatorFundable is AccessControl {
     /// @notice The time of last emission (now or end of last emission period)
     function lastTimeRewardApplicable() public view returns (uint) {
         return Math.min(block.timestamp, periodFinish);
-    }
-
-    /// @notice Updates reward stored whenever rewards are claimed or changed
-    function _globalUpdate() private {
-        _rewardPerWeightStored = rewardPerWeight();
-        _lastUpdate = block.timestamp;
     }
 }

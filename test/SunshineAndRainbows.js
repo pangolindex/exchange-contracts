@@ -10,9 +10,13 @@ const ZERO_ADDRESS = ethers.constants.AddressZero;
 const FUNDER_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("FUNDER"));
 const PRECISION = BigNumber.from("2").pow("256");
 const UINT256_MAX = ethers.constants.MaxUint256;
+const REWARD_PRECISION = ONE_DAY.mul("365").mul("1000");
 
 function getRewards(duration) {
-  return SUPPLY.div(ONE_DAY.mul("100")).mul(duration);
+  return SUPPLY.mul(REWARD_PRECISION)
+    .div(ONE_DAY.mul("100"))
+    .mul(duration)
+    .div(REWARD_PRECISION);
 }
 
 function updateRewardVariables(rewards, stakingDuration, sinceInit) {
@@ -22,6 +26,19 @@ function updateRewardVariables(rewards, stakingDuration, sinceInit) {
   var rewardsPerStakingDuration = rewards.mul(PRECISION.div(stakingDuration));
 
   return [idealPosition, rewardsPerStakingDuration];
+}
+
+function generateRecipients(recipientsLength) {
+  let recipients = [];
+  let allocations = [];
+
+  for (let i = 0; i < recipientsLength; i++) {
+    let account = ethers.Wallet.createRandom();
+    recipients.push(account.address);
+    allocations.push(BigNumber.from("100"));
+  }
+
+  return [recipients, allocations];
 }
 
 /*********************
@@ -261,9 +278,9 @@ describe("SunshineAndRainbows.sol", function () {
 
       var remaining = reward.sub(distributed); // remaining dust in the contract
 
-      expect(await this.rewardToken.balanceOf(this.sunshine.address)).to.equal(
-        remaining
-      );
+      expect(
+        await this.rewardToken.balanceOf(this.sunshine.address)
+      ).to.be.within("0", "2");
       expect(await this.sunshine.totalSupply()).to.equal("0");
       expect(await this.sunshine.sumOfEntryTimes()).to.equal("0");
       expect(await this.sunshine.initTime()).to.equal(initTime);
@@ -356,9 +373,9 @@ describe("SunshineAndRainbows.sol", function () {
 
       var remaining = reward.sub(distributed); // remaining dust in the contract
 
-      expect(await this.rewardToken.balanceOf(this.sunshine.address)).to.equal(
-        remaining
-      );
+      expect(
+        await this.rewardToken.balanceOf(this.sunshine.address)
+      ).to.be.within("0", "2");
       expect(await this.sunshine.totalSupply()).to.equal(SUPPLY);
       expect(await this.sunshine.sumOfEntryTimes()).to.equal(
         SUPPLY.mul(lastUpdate)
@@ -474,9 +491,9 @@ describe("SunshineAndRainbows.sol", function () {
 
       var remaining = reward.sub(distributed); // remaining dust in the contract
 
-      expect(await this.rewardToken.balanceOf(this.sunshine.address)).to.equal(
-        remaining
-      );
+      expect(
+        await this.rewardToken.balanceOf(this.sunshine.address)
+      ).to.be.within("0", "80");
 
       expect(await this.sunshine.totalSupply()).to.equal("0");
       expect(await this.sunshine.sumOfEntryTimes()).to.equal("0");
@@ -543,9 +560,9 @@ describe("SunshineAndRainbows.sol", function () {
 
       var remaining = reward.sub(distributed); // remaining dust in the contract
 
-      expect(await this.rewardToken.balanceOf(this.sunshine.address)).to.equal(
-        remaining
-      );
+      expect(
+        await this.rewardToken.balanceOf(this.sunshine.address)
+      ).to.be.within(remaining.sub("2"), remaining.add("2"));
       expect(await this.sunshine.totalSupply()).to.equal(SUPPLY.div("2"));
       expect(await this.sunshine.sumOfEntryTimes()).to.equal(
         SUPPLY.div("2").mul(initTime)
@@ -721,9 +738,9 @@ describe("SunshineAndRainbows.sol", function () {
 
       var remaining = reward.sub(distributed); // remaining dust in the contract
 
-      expect(await this.rewardToken.balanceOf(this.sunshine.address)).to.equal(
-        remaining
-      );
+      expect(
+        await this.rewardToken.balanceOf(this.sunshine.address)
+      ).to.be.within("0", "10");
       expect(await this.sunshine.totalSupply()).to.equal("0");
       expect(await this.sunshine.sumOfEntryTimes()).to.equal("0");
     });
@@ -774,9 +791,9 @@ describe("SunshineAndRainbows.sol", function () {
 
       var remaining = reward.sub(distributed); // remaining dust in the contract
 
-      expect(await this.rewardToken.balanceOf(this.sunshine.address)).to.equal(
-        remaining
-      );
+      expect(
+        await this.rewardToken.balanceOf(this.sunshine.address)
+      ).to.be.within("0", "10");
       expect(await this.sunshine.totalSupply()).to.equal("0");
       expect(await this.sunshine.sumOfEntryTimes()).to.equal("0");
     });
@@ -1056,7 +1073,7 @@ describe("RewardRegulatorFundable.sol", function () {
     });
   });
 
-  describe.only("recover", function () {
+  describe("recover", function () {
     it("admin can recover", async function () {
       expect(await this.token.balanceOf(this.admin.address)).to.equal("0");
       await expect(this.regulator.recover(this.token.address, SUPPLY)).to.emit(
@@ -1079,6 +1096,131 @@ describe("RewardRegulatorFundable.sol", function () {
       var regulator = await this.regulator.connect(this.unauthorized);
       await expect(regulator.recover(this.token.address, SUPPLY)).to.be
         .reverted;
+    });
+  });
+
+  describe("setRewardsDuration", function () {
+    it("funder can set rewards duration", async function () {
+      await expect(this.regulator.setRewardsDuration(ONE_DAY.mul(100))).to.emit(
+        this.regulator,
+        "RewardsDurationUpdated"
+      );
+      expect(await this.regulator.rewardsDuration()).to.equal(ONE_DAY.mul(100));
+    });
+    it("non-funder cannot set rewards duration", async function () {
+      const regulator = await this.regulator.connect(this.unauthorized);
+      await expect(regulator.setRewardsDuration(ONE_DAY.mul(100))).to.be
+        .reverted;
+      expect(await this.regulator.rewardsDuration()).to.equal(ONE_DAY);
+    });
+    it("cannot set reward duration equal to zero", async function () {
+      await expect(this.regulator.setRewardsDuration("0")).to.be.revertedWith(
+        "setRewardsDuration: invalid duration length"
+      );
+      expect(await this.regulator.rewardsDuration()).to.equal(ONE_DAY);
+    });
+    it("cannot set reward duration longer than 1000 years", async function () {
+      await expect(
+        this.regulator.setRewardsDuration(REWARD_PRECISION.add("1"))
+      ).to.be.revertedWith("setRewardsDuration: invalid duration length");
+      expect(await this.regulator.rewardsDuration()).to.equal(ONE_DAY);
+    });
+    it("cannot set reward duration during ongoing period", async function () {
+      await this.regulator.setRecipients([this.admin.address], ["1"]);
+      await this.regulator.notifyRewardAmount(SUPPLY);
+      await expect(
+        this.regulator.setRewardsDuration(ONE_DAY.mul("100"))
+      ).to.be.revertedWith("setRewardsDuration: ongoing period");
+      expect(await this.regulator.rewardsDuration()).to.equal(ONE_DAY);
+    });
+  });
+
+  describe("notifyRewardAmount", function () {
+    it("cannot notify reward when there are no recipients", async function () {
+      await expect(
+        this.regulator.notifyRewardAmount(SUPPLY)
+      ).to.be.revertedWith("notifyRewardAmount: no recipients");
+      expect(await this.regulator.rewardRate()).to.equal("0");
+    });
+    it("cannot notify reward with zero amount", async function () {
+      await this.regulator.setRecipients([this.admin.address], ["1"]);
+      await expect(this.regulator.notifyRewardAmount("0")).to.be.revertedWith(
+        "notifyRewardAmount: zero reward"
+      );
+      expect(await this.regulator.rewardRate()).to.equal("0");
+    });
+    it("cannot notify reward with more than reserves", async function () {
+      await this.regulator.setRecipients([this.admin.address], ["1"]);
+      await expect(
+        this.regulator.notifyRewardAmount(SUPPLY.add("1"))
+      ).to.be.revertedWith(
+        "notifyRewardAmount: insufficient balance for reward"
+      );
+      expect(await this.regulator.rewardRate()).to.equal("0");
+    });
+    it("funder can notify reward", async function () {
+      await this.regulator.setRecipients([this.admin.address], ["1"]);
+      await expect(this.regulator.notifyRewardAmount(SUPPLY)).to.emit(
+        this.regulator,
+        "RewardAdded"
+      );
+      expect(await this.regulator.rewardRate()).to.equal(
+        SUPPLY.mul(REWARD_PRECISION).div(ONE_DAY)
+      );
+    });
+    it("non-funder cannot notify reward", async function () {
+      await this.regulator.setRecipients([this.admin.address], ["1"]);
+      const regulator = await this.regulator.connect(this.unauthorized);
+      await expect(regulator.notifyRewardAmount(SUPPLY)).to.be.reverted;
+      expect(await this.regulator.rewardRate()).to.equal("0");
+    });
+    it("funder can notify rewards during ongoing period", async function () {
+      await this.regulator.setRecipients([this.admin.address], ["1"]);
+      await expect(this.regulator.notifyRewardAmount(SUPPLY.div("2"))).to.emit(
+        this.regulator,
+        "RewardAdded"
+      );
+      var blockNumber = await ethers.provider.getBlockNumber();
+      var initTime = (await ethers.provider.getBlock(blockNumber)).timestamp;
+
+      var rewardRate = await this.regulator.rewardRate();
+      var periodFinish = await this.regulator.periodFinish();
+
+      expect(rewardRate).to.equal(
+        SUPPLY.div("2").mul(REWARD_PRECISION).div(ONE_DAY)
+      );
+      expect(periodFinish).to.equal(ONE_DAY.add(initTime));
+
+      await ethers.provider.send("evm_increaseTime", [
+        ONE_DAY.div("2").toNumber(),
+      ]);
+      await expect(this.regulator.notifyRewardAmount(SUPPLY.div("2"))).to.emit(
+        this.regulator,
+        "RewardAdded"
+      );
+
+      blockNumber = await ethers.provider.getBlockNumber();
+      var lastUpdate = (await ethers.provider.getBlock(blockNumber)).timestamp;
+
+      var leftover = rewardRate.mul(periodFinish.sub(lastUpdate));
+
+      rewardRate = await this.regulator.rewardRate();
+      periodFinish = await this.regulator.periodFinish();
+
+      expect(rewardRate).to.equal(
+        SUPPLY.div("2").mul(REWARD_PRECISION).add(leftover).div(ONE_DAY)
+      );
+      expect(periodFinish).to.equal(ONE_DAY.add(lastUpdate));
+    });
+  });
+  //await this.regulator.setRecipients([this.admin.address], ["1"]);
+  //await this.regulator.setRewardsDuration(ONE_DAY.mul(100));
+  //await this.regulator.notifyRewardAmount(SUPPLY);
+  describe("setRecipients", function () {
+    it("owner sets one recipient", async function () {
+      await expect(
+        this.regulator.setRecipients([this.admin.address], ["1"])
+      ).to.emit(this.regulator, "RecipientSet");
     });
   });
 });
