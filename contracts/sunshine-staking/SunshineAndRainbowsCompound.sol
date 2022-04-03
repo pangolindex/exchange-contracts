@@ -1,16 +1,17 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPLv3
 // solhint-disable not-rely-on-time
 pragma solidity ^0.8.0;
 
 import "./SunshineAndRainbows.sol";
 
 /**
- * @title Sunshine and Rainbows Extension: Single Stake Compound
- * @notice An extension to `SunshineAndRainbows` that implements locked-stake
- * harvesting feature when the reward and staking tokens are the same
+ * @title Sunshine and Rainbows Compounding Extensions Framework
+ * @notice An extension framework for `SunshineAndRainbows` that implements
+ * locked-stake harvesting feature. This allows harvesting rewards without
+ * having to reset APR.
  * @author shung for Pangolin
  */
-contract SunshineAndRainbowsCompound is SunshineAndRainbows {
+abstract contract SunshineAndRainbowsCompound is SunshineAndRainbows {
     struct Child {
         uint parent; // ID of the parent position
         uint initTime; // timestamp of the creation of the child position
@@ -49,39 +50,7 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
      * distributes reward tokens
      */
     constructor(address newStakingToken, address newRewardRegulator)
-        SunshineAndRainbows(newStakingToken, newRewardRegulator)
-    {
-        require(
-            newStakingToken ==
-                address(IRewardRegulator(newRewardRegulator).rewardToken()),
-            "SAR::Constructor: staking token is different than reward token"
-        );
-    }
-
-    /**
-     * @notice Creates a new position with the rewards of the given position
-     * @dev New position is considered locked, and it cannot be withdrawn until
-     * the parent position is updated after the creation of the new position
-     * @param posId ID of the parent position whose rewards are harvested
-     */
-    function compound(uint posId) external nonReentrant {
-        // update the state variables that govern the reward distribution
-        _updateRewardVariables();
-
-        // create a new position
-        uint childPosId = positions.length;
-
-        // record parent-child relation to lock the child position
-        children[childPosId] = Child(posId, block.timestamp);
-
-        // harvest parent position
-        uint amount = _harvestWithDebt(posId);
-
-        // stake parent position rewards to child position
-        _open(amount, address(this));
-
-        emit Compounded(posId, childPosId, amount);
-    }
+        SunshineAndRainbows(newStakingToken, newRewardRegulator) {}
 
     /// @dev Subtracts debts from the over-ridden `pendingRewards` function
     function pendingRewards(uint[] memory posIds)
@@ -134,22 +103,13 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
     }
 
     /**
-     * @dev Subtracts debts from the over-ridden `_earned` function.
-     * Debts are accrued when harvesting without updating the position.
-     */
-    function _earned(uint posId) internal view override returns (uint) {
-        uint earned = super._earned(posId);
-        return earned - _debts[posId];
-    }
-
-    /**
      * @notice Harvests without update and records reward as debt
      * @dev Special harvest method that does not update the position,
      * therefore records 'earned' as debt.
      * @param posId ID of the position to harvest rewards from
      * @return The reward amount
      */
-    function _harvestWithDebt(uint posId) private returns (uint) {
+    function _harvestWithDebt(uint posId) internal returns (uint) {
         Position storage position = positions[posId];
         require(
             position.owner == msg.sender,
@@ -162,5 +122,14 @@ contract SunshineAndRainbowsCompound is SunshineAndRainbows {
         _debts[posId] += reward;
         // harvest the position and return reward amount
         return reward;
+    }
+
+    /**
+     * @dev Subtracts debts from the over-ridden `_earned` function.
+     * Debts are accrued when harvesting without updating the position.
+     */
+    function _earned(uint posId) internal view override returns (uint) {
+        uint earned = super._earned(posId);
+        return earned - _debts[posId];
     }
 }
