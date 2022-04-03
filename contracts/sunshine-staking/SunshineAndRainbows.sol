@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: GPLv3
 // solhint-disable not-rely-on-time
 pragma solidity ^0.8.0;
 
@@ -62,14 +62,14 @@ contract SunshineAndRainbows is ReentrancyGuard {
      * @notice Sum of all intervals' (`rewards`/`stakingDuration`)
      * @dev Refer to `sum of r/S` in the proof for more details.
      */
-    FullMath.Uint512 private _rewardsPerStakingDuration;
+    FullMath.Uint512 internal _rewardsPerStakingDuration;
 
     /**
      * @notice Hypothetical rewards accumulated by an ideal position whose
      * `lastUpdate` equals `initTime`, and `balance` equals one.
      * @dev Refer to `sum of I` in the proof for more details.
      */
-    FullMath.Uint512 private _idealPosition;
+    FullMath.Uint512 internal _idealPosition;
 
     /// @notice Total amount of tokens staked in the contract
     uint public totalSupply;
