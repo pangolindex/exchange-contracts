@@ -10,13 +10,11 @@ const ZERO_ADDRESS = ethers.constants.AddressZero;
 const FUNDER_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("FUNDER"));
 const PRECISION = BigNumber.from("2").pow("256");
 const UINT256_MAX = ethers.constants.MaxUint256;
-const REWARD_PRECISION = ONE_DAY.mul("365").mul("1000");
 
 function getRewards(duration) {
-  return SUPPLY.mul(REWARD_PRECISION)
+  return SUPPLY
     .div(ONE_DAY.mul("100"))
     .mul(duration)
-    .div(REWARD_PRECISION);
 }
 
 function updateRewardVariables(rewards, stakingDuration, sinceInit) {
@@ -1115,14 +1113,8 @@ describe("RewardRegulatorFundable.sol", function () {
     });
     it("cannot set reward duration equal to zero", async function () {
       await expect(this.regulator.setRewardsDuration("0")).to.be.revertedWith(
-        "setRewardsDuration: invalid duration length"
+        "setRewardsDuration: short duration"
       );
-      expect(await this.regulator.rewardsDuration()).to.equal(ONE_DAY);
-    });
-    it("cannot set reward duration longer than 1000 years", async function () {
-      await expect(
-        this.regulator.setRewardsDuration(REWARD_PRECISION.add("1"))
-      ).to.be.revertedWith("setRewardsDuration: invalid duration length");
       expect(await this.regulator.rewardsDuration()).to.equal(ONE_DAY);
     });
     it("cannot set reward duration during ongoing period", async function () {
@@ -1165,7 +1157,7 @@ describe("RewardRegulatorFundable.sol", function () {
         "RewardAdded"
       );
       expect(await this.regulator.rewardRate()).to.equal(
-        SUPPLY.mul(REWARD_PRECISION).div(ONE_DAY)
+        SUPPLY.div(ONE_DAY)
       );
     });
     it("non-funder cannot notify reward", async function () {
@@ -1187,7 +1179,7 @@ describe("RewardRegulatorFundable.sol", function () {
       var periodFinish = await this.regulator.periodFinish();
 
       expect(rewardRate).to.equal(
-        SUPPLY.div("2").mul(REWARD_PRECISION).div(ONE_DAY)
+        SUPPLY.div("2").div(ONE_DAY)
       );
       expect(periodFinish).to.equal(ONE_DAY.add(initTime));
 
@@ -1208,7 +1200,7 @@ describe("RewardRegulatorFundable.sol", function () {
       periodFinish = await this.regulator.periodFinish();
 
       expect(rewardRate).to.equal(
-        SUPPLY.div("2").mul(REWARD_PRECISION).add(leftover).div(ONE_DAY)
+        SUPPLY.div("2").add(leftover).div(ONE_DAY)
       );
       expect(periodFinish).to.equal(ONE_DAY.add(lastUpdate));
     });

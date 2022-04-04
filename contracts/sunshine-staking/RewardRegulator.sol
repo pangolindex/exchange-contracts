@@ -64,13 +64,6 @@ abstract contract RewardRegulator is AccessControl {
     event Claimed(address indexed account, uint reward);
     event Recovered(address indexed token, uint amount);
 
-    /// @notice Updates reward stored whenever rewards are claimed or changed
-    modifier update() {
-        _rewardPerWeightStored = rewardPerWeight();
-        _lastUpdate = block.timestamp;
-        _;
-    }
-
     /**
      * @notice Construct a new RewardRegulatorFundable contract
      * @param newRewardToken The reward token the contract will distribute
@@ -85,8 +78,10 @@ abstract contract RewardRegulator is AccessControl {
      * @notice Sends the rewards to message sender
      * @return The amount of reward tokens that became eligible for claiming
      */
-    function claim() external update returns (uint) {
+    function claim() external returns (uint) {
         Recipient storage recipient = recipients[msg.sender];
+
+        update();
 
         uint reward = pendingRewards(msg.sender);
         require(reward != 0, "claim: no rewards");
@@ -127,12 +122,13 @@ abstract contract RewardRegulator is AccessControl {
      */
     function setRecipients(address[] calldata accounts, uint[] calldata weights)
         external
-        update
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         uint length = accounts.length;
         require(length == weights.length, "setRecipients: unequal lengths");
         require(length <= 20, "setRecipients: long array");
+
+        update();
 
         int weightChange;
         for (uint i; i < length; ++i) {
@@ -196,4 +192,10 @@ abstract contract RewardRegulator is AccessControl {
     function rewardPerWeight() public view virtual returns (uint) {}
 
     function _send(uint reward) internal virtual {}
+
+    /// @notice Updates reward stored whenever rewards are claimed or changed
+    function update() internal virtual {
+        _rewardPerWeightStored = rewardPerWeight();
+        _lastUpdate = block.timestamp;
+    }
 }

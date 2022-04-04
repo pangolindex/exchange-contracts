@@ -57,13 +57,15 @@ contract RewardRegulatorFundable is RewardRegulator {
      * @dev Requires that enough tokens are transferred beforehand
      * @param reward The added amount of rewards
      */
-    function notifyRewardAmount(uint reward) external update onlyRole(FUNDER) {
+    function notifyRewardAmount(uint reward) external onlyRole(FUNDER) {
         require(totalWeight != 0, "notifyRewardAmount: no recipients");
         require(reward != 0, "notifyRewardAmount: zero reward");
         require(
             unreserved() >= reward,
             "notifyRewardAmount: insufficient balance for reward"
         );
+
+        update();
 
         // Set new reward rate after setting _rewardPerWeightStored
         if (block.timestamp >= periodFinish) {
