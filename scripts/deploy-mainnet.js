@@ -6,6 +6,8 @@ const {
     PNG_NAME,
     TOTAL_SUPPLY,
     MULTISIG,
+    MULTISIG_ADDRESS,
+    FOUNDATION_ADDRESS,
     USE_GNOSIS_SAFE,
     PROPOSAL_THRESHOLD,
     WRAPPED_NATIVE_TOKEN,
@@ -40,6 +42,16 @@ async function main() {
         console.log("✅ Using Gnosis Safe.");
     } else {
         console.log("⚠️  Using legacy multisig.");
+    }
+    if (MULTISIG_ADDRESS) {
+        console.log("✅ Using Multisig already deploy.");
+    } else {
+        console.log("⚠️  No Multisig is defined.");
+    }
+    if (FOUNDATION_ADDRESS) {
+        console.log("✅ Using FoundationMultisig already deploy.");
+    } else {
+        console.log("⚠️  No Foundation Multisig is defined.");
     }
     if (WRAPPED_NATIVE_TOKEN === undefined || WRAPPED_NATIVE_TOKEN == "") {
         console.log("⚠️  No wrapped gas token is defined.");
@@ -81,6 +93,14 @@ async function main() {
         return contract;
     }
 
+    async function attach(factory, address) {
+        var ContractFactory = await ethers.getContractFactory(factory);
+        var contract = await ContractFactory.attach(address);
+        contracts.push({ address: contract.address});
+        console.log(contract.address, ":", factory);
+        return contract;
+    }
+
     console.log("\n============\n DEPLOYMENT \n============");
 
     // Deploy WAVAX if not defined
@@ -104,36 +124,44 @@ async function main() {
     ]);
 
     // Deploy this chain’s multisig
-    if (USE_GNOSIS_SAFE) {
-        const ethAdapter = new EthersAdapter({
-            ethers,
-            signer: deployer,
-        });
-        var Multisig = await SafeFactory.create({ ethAdapter });
-        var multisig = await Multisig.deploySafe(MULTISIG);
-        await confirmTransactionCount();
-        multisig.address = multisig.getAddress();
-        console.log(multisig.address, ": Gnosis");
+    if (MULTISIG_ADDRESS === undefined) {
+        if (USE_GNOSIS_SAFE) {
+            const ethAdapter = new EthersAdapter({
+                ethers,
+                signer: deployer,
+            });
+            var Multisig = await SafeFactory.create({ ethAdapter });
+            var multisig = await Multisig.deploySafe(MULTISIG);
+            await confirmTransactionCount();
+            multisig.address = multisig.getAddress();
+            console.log(multisig.address, ": Gnosis");
+        } else {
+            var multisig = await deploy("MultiSigWalletWithDailyLimit", [
+                MULTISIG.owners,
+                MULTISIG.threshold,
+                0,
+            ]);
+        }
     } else {
-        var multisig = await deploy("MultiSigWalletWithDailyLimit", [
-            MULTISIG.owners,
-            MULTISIG.threshold,
-            0,
-        ]);
+        var multisig = await attach("MultiSigWalletWithDailyLimit", MULTISIG_ADDRESS);
     }
 
     // Deploy foundation multisig
-    if (USE_GNOSIS_SAFE) {
-        var foundation = await Multisig.deploySafe(FOUNDATION_MULTISIG);
-        await confirmTransactionCount();
-        foundation.address = foundation.getAddress();
-        console.log(foundation.address, ": Gnosis");
+    if (FOUNDATION_ADDRESS === undefined) {
+        if (USE_GNOSIS_SAFE) {
+            var foundation = await Multisig.deploySafe(FOUNDATION_MULTISIG);
+            await confirmTransactionCount();
+            foundation.address = foundation.getAddress();
+            console.log(foundation.address, ": Gnosis");
+        } else {
+            var foundation = await deploy("MultiSigWalletWithDailyLimit", [
+                FOUNDATION_MULTISIG.owners,
+                FOUNDATION_MULTISIG.threshold,
+                0,
+            ]);
+        }
     } else {
-        var foundation = await deploy("MultiSigWalletWithDailyLimit", [
-            FOUNDATION_MULTISIG.owners,
-            FOUNDATION_MULTISIG.threshold,
-            0,
-        ]);
+        var foundation = await attach("MultiSigWalletWithDailyLimit", FOUNDATION_ADDRESS);
     }
 
     const timelock = await deploy("Timelock", [
