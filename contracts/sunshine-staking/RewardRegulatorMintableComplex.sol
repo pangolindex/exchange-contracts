@@ -99,6 +99,11 @@ contract RewardRegulatorMintableComplex is RewardRegulator {
             .burnedSupply();
     }
 
+    function beginSchedule() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(totalWeight != 0, "beginSchedule: no recipients set");
+        _lastUpdate = block.timestamp;
+    }
+
     function setHalfSupply(uint newHalfSupply)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
@@ -148,6 +153,7 @@ contract RewardRegulatorMintableComplex is RewardRegulator {
 
     /// @dev Gets the rewards for the current interval
     function _getReward() private view returns (uint) {
+        require(_lastUpdate != 0, "_getReward: schedule not started");
         uint interval = block.timestamp - _lastUpdate;
         uint burned = IERC20MintableComplex(address(rewardToken))
             .burnedSupply() - _initialBurnedSupply;

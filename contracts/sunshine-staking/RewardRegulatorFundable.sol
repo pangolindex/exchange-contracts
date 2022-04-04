@@ -73,13 +73,13 @@ contract RewardRegulatorFundable is RewardRegulator {
     /**
      * @notice Starts or extends a period by adding rewards
      * @dev Requires that enough tokens are transferred beforehand
-     * @param reward The added amount of rewards
+     * @param amount The added amount of rewards
      */
-    function notifyRewardAmount(uint reward) external onlyRole(FUNDER) {
+    function notifyRewardAmount(uint amount) public onlyRole(FUNDER) {
         require(totalWeight != 0, "notifyRewardAmount: no recipients");
-        require(reward != 0, "notifyRewardAmount: zero reward");
+        require(amount != 0, "notifyRewardAmount: zero reward");
         require(
-            unreserved() >= reward,
+            unreserved() >= amount,
             "notifyRewardAmount: insufficient balance for reward"
         );
 
@@ -87,17 +87,26 @@ contract RewardRegulatorFundable is RewardRegulator {
 
         // Set new reward rate after setting _rewardPerWeightStored
         if (block.timestamp >= periodFinish) {
-            rewardRate = reward / rewardsDuration;
+            rewardRate = amount / rewardsDuration;
         } else {
             uint leftover = (periodFinish - block.timestamp) * rewardRate;
-            rewardRate = (reward + leftover) / rewardsDuration;
+            rewardRate = (amount + leftover) / rewardsDuration;
         }
 
         // update the end of this period after setting reward rate
         periodFinish = block.timestamp + rewardsDuration;
 
-        _reserved += reward;
-        emit RewardAdded(reward);
+        _reserved += amount;
+        emit RewardAdded(amount);
+    }
+
+    /**
+     * @notice MiniChefV2 compatible function for funding rewards
+     * @param amount The added amount of rewards
+     */
+    function fundRewards(uint amount, uint) external {
+        rewardToken.safeTransferFrom(msg.sender, address(this), amount);
+        notifyRewardAmount(amount);
     }
 
     /// @notice The total amount of reward tokens emitted until the call
