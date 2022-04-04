@@ -83,7 +83,7 @@ contract RewardRegulatorFundable is RewardRegulator {
             "notifyRewardAmount: insufficient balance for reward"
         );
 
-        update();
+        _update();
 
         // Set new reward rate after setting _rewardPerWeightStored
         if (block.timestamp >= periodFinish) {

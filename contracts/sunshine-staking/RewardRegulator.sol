@@ -99,7 +99,7 @@ abstract contract RewardRegulator is AccessControl {
     function claim() external returns (uint) {
         Recipient storage recipient = recipients[msg.sender];
 
-        update();
+        _update();
 
         uint reward = pendingRewards(msg.sender);
         require(reward != 0, "claim: no rewards");
@@ -146,7 +146,7 @@ abstract contract RewardRegulator is AccessControl {
         require(length == weights.length, "setRecipients: unequal lengths");
         require(length <= 20, "setRecipients: long array");
 
-        update();
+        _update();
 
         int weightChange;
         for (uint i; i < length; ++i) {
@@ -206,13 +206,13 @@ abstract contract RewardRegulator is AccessControl {
                 recipient.weight);
     }
 
-    /// @notice The total amount of reward tokens emitted until the call
+    /// @notice The total amount of reward tokens emitted per weight
     function rewardPerWeight() public view virtual returns (uint) {}
 
     function _send(uint reward) internal virtual {}
 
     /// @notice Updates reward stored whenever rewards are claimed or changed
-    function update() internal virtual {
+    function _update() internal virtual {
         _rewardPerWeightStored = rewardPerWeight();
         _lastUpdate = block.timestamp;
     }

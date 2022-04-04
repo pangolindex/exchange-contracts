@@ -42,11 +42,11 @@ contract RewardRegulatorMintableSimple is RewardRegulator {
     /// @notice Rewards emitted per second
     uint public rewardRate;
 
-    /// @notice The amount the reward rate can be increased at each call
-    uint public rewardRateChangeLimit;
-
     /// @notice The time when the reward rate can be changed
-    uint public rewardRateUnlockTime;
+    uint public rewardRateCooldownFinish;
+
+    /// @notice The amount the reward rate can be increased at each call
+    uint public immutable rewardRateMaxIncrease;
 
     /// @notice The minimum duration between changing reward rates
     uint public constant COOLDOWN = 2 days;
@@ -58,13 +58,13 @@ contract RewardRegulatorMintableSimple is RewardRegulator {
      * @notice Construct a new RewardRegulator Simple Mintable contract
      * @dev This contract allows priveleged users to manually set reward rate
      * @param newRewardToken The reward token the contract will distribute
-     * @param newRewardRateChangeLimit The amount the reward rate can increase
+     * @param newRewardRateMaxIncrease The amount the reward rate can increase
      * at a time. This limit exists to prevent instant rugpulls
      */
-    constructor(address newRewardToken, uint newRewardRateChangeLimit)
+    constructor(address newRewardToken, uint newRewardRateMaxIncrease)
         RewardRegulator(newRewardToken)
     {
-        rewardRateChangeLimit = newRewardRateChangeLimit;
+        rewardRateMaxIncrease = newRewardRateMaxIncrease;
     }
 
     function setPeriodFinish(uint newPeriodFinish)
@@ -86,22 +86,26 @@ contract RewardRegulatorMintableSimple is RewardRegulator {
         if (newRewardRate > rewardRate) {
             unchecked {
                 require(
-                    newRewardRate - rewardRate <= rewardRateChangeLimit,
+                    newRewardRate - rewardRate <= rewardRateMaxIncrease,
                     "setRewardRate: cannot increase reward rate by that much"
                 );
             }
         }
         require(
-            block.timestamp >= rewardRateUnlockTime,
+            rewardRate != newRewardRate,
+            "setRewardRate: reward rate is the same"
+        );
+        require(
+            block.timestamp >= rewardRateCooldownFinish,
             "setRewardRate: cannot update that often"
         );
-        update();
-        rewardRateUnlockTime = block.timestamp + COOLDOWN;
+        _update();
+        rewardRateCooldownFinish = block.timestamp + COOLDOWN;
         rewardRate = newRewardRate;
         emit RewardRateSet(newRewardRate);
     }
 
-    /// @notice The total amount of reward tokens emitted until the call
+    /// @notice The total amount of reward tokens emitted per weight
     function rewardPerWeight() public view override returns (uint) {
         if (totalWeight == 0) return _rewardPerWeightStored;
         (, uint duration) = lastTimeRewardApplicable().trySub(_lastUpdate);
