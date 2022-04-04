@@ -140,8 +140,9 @@ contract RewardRegulatorMintableComplex is RewardRegulator {
     }
 
     function _update() internal override {
-        _rewardPerWeightStored = rewardPerWeight();
-        _totalEmitted += _getReward();
+        uint reward = _getReward();
+        _totalEmitted += reward;
+        _rewardPerWeightStored += (reward / totalWeight);
         _lastUpdate = block.timestamp;
     }
 

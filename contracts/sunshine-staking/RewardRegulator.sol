@@ -101,7 +101,7 @@ abstract contract RewardRegulator is AccessControl {
 
         _update();
 
-        uint reward = pendingRewards(msg.sender);
+        uint reward = _pendingRewards(msg.sender);
         require(reward != 0, "claim: no rewards");
 
         recipient.rewardPerWeightPaid = _rewardPerWeightStored;
@@ -163,7 +163,7 @@ abstract contract RewardRegulator is AccessControl {
             if (weight == 0) _recipients.remove(account);
 
             // stash the unclaimed rewards
-            recipient.stash = pendingRewards(account);
+            recipient.stash = _pendingRewards(account);
             recipient.rewardPerWeightPaid = _rewardPerWeightStored;
             recipient.weight = weight;
 
@@ -183,18 +183,13 @@ abstract contract RewardRegulator is AccessControl {
         return _recipients.values();
     }
 
-    /// @notice Gets the tokens that can be withdrawn or added to rewards
-    function unreserved() public view returns (uint) {
-        return rewardToken.balanceOf(address(this)) - _reserved;
-    }
-
     /**
      * @notice Gets the amount of reward tokens yet to be claimed for account
      * @param account Address of the contract to check rewards
      * @return The amount of reward accumulated since the last claimed
      */
     function pendingRewards(address account)
-        public
+        external
         view
         virtual
         returns (uint)
@@ -206,6 +201,11 @@ abstract contract RewardRegulator is AccessControl {
                 recipient.weight);
     }
 
+    /// @notice Gets the tokens that can be withdrawn or added to rewards
+    function unreserved() public view returns (uint) {
+        return rewardToken.balanceOf(address(this)) - _reserved;
+    }
+
     /// @notice The total amount of reward tokens emitted per weight
     function rewardPerWeight() public view virtual returns (uint) {}
 
@@ -215,5 +215,23 @@ abstract contract RewardRegulator is AccessControl {
     function _update() internal virtual {
         _rewardPerWeightStored = rewardPerWeight();
         _lastUpdate = block.timestamp;
+    }
+
+    /**
+     * @notice Static `pendingRewards()` only called after `_update()`
+     * @param account Address of the contract to check rewards
+     * @return The amount of reward accumulated since the last claimed
+     */
+    function _pendingRewards(address account)
+        internal
+        view
+        virtual
+        returns (uint)
+    {
+        Recipient memory recipient = recipients[account];
+        return
+            recipient.stash +
+            ((_rewardPerWeightStored - recipient.rewardPerWeightPaid) *
+                recipient.weight);
     }
 }
