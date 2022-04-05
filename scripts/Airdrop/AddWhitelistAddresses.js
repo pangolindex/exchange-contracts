@@ -2,7 +2,7 @@ const { ethers } = require('hardhat');
 const { BigNumber } = require('ethers');
 const fs = require('fs');
 const csv = require('csvtojson');
-const { ADDRESSES } = require(`../../addresses/${network.name}.js`);
+//const { ADDRESSES } = require(`../../addresses/${network.name}.js`);
 
 async function main() {
 
@@ -20,11 +20,11 @@ async function main() {
     const initBalance = await deployer.getBalance();
     console.log("Account balance:", initBalance.toString());
 
-    csvFile = await csv({noheader:true}).fromFile(`scripts/Airdrop/lists/${network.name}.csv`)
+    csvFile = await csv().fromFile(`scripts/Airdrop/lists/${network.name}.csv`)
     let airdropAddresses = [], airdropAmounts = [];
     for(i = 0; i < csvFile.length; i++) {
-        airdropAddresses.push(csvFile[i].field1);
-        airdropAmounts.push(csvFile[i].field2);
+        airdropAddresses.push(csvFile[i].address);
+        airdropAmounts.push(csvFile[i].total_amount);
     }
     
     if (airdropAddresses.length != airdropAmounts.length) {
