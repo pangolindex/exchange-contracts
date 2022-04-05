@@ -12,7 +12,7 @@ import "../pangolin-core/interfaces/IPangolinPair.sol";
 import "../pangolin-periphery/interfaces/IPangolinRouter.sol";
 import "../staking-rewards/IStakingRewards.sol";
 
-contract PangolinFeeCollectorV2 is AccessControl, Pausable {
+contract FeeCollector is AccessControl, Pausable {
 
     using SafeERC20 for IERC20;
     using Address for address;
