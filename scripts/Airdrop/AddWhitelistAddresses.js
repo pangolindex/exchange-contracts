@@ -2,7 +2,7 @@ const { ethers } = require('hardhat');
 const { BigNumber } = require('ethers');
 const fs = require('fs');
 const csv = require('csvtojson');
-//const { ADDRESSES } = require(`../../addresses/${network.name}.js`);
+const { ADDRESSES } = require(`../../addresses/${network.name}.js`);
 
 async function main() {
 
