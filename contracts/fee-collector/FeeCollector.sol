@@ -191,7 +191,7 @@ contract FeeCollector is AccessControl, Pausable {
             if (pglBalance > 0) {
                 address token0 = liquidityPair.token0();
                 address token1 = liquidityPair.token1();
-                require(pairFor(token0, token1) == address(liquidityPair), "Invalid pair");
+                require(pairFor(FACTORY, token0, token1) == address(liquidityPair), "Invalid pair");
                 (uint256 token0Pulled, uint256 token1Pulled) = _pullLiquidity(address(liquidityPair), pglBalance);
                 if (token0 != outputToken) {
                     _swap(token0, outputToken, token0Pulled);
@@ -245,11 +245,11 @@ contract FeeCollector is AccessControl, Pausable {
 
     // Migrated from PangolinLibrary
     // calculates the CREATE2 address for a Pangolin pair without making any external calls
-    function pairFor(address tokenA, address tokenB) private pure returns (address pair) {
+    function pairFor(address factory, address tokenA, address tokenB) private pure returns (address pair) {
         (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         pair = address(uint160(uint256(keccak256(abi.encodePacked(
             hex'ff',
-            FACTORY,
+            factory,
             keccak256(abi.encodePacked(token0, token1)),
             hex'40231f6b438bce0797c9ada29b718a87ea0a5cea3fe9a771abdd76bd41a3e545' // Pangolin init code hash
         )))));
