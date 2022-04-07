@@ -102,7 +102,7 @@ abstract contract RewardRegulator is AccessControl {
         _update();
 
         uint reward = _pendingRewards(msg.sender);
-        require(reward != 0, "claim: no rewards");
+        if (reward == 0) return 0;
 
         recipient.rewardPerWeightPaid = _rewardPerWeightStored;
         recipient.stash = 0;
@@ -144,7 +144,6 @@ abstract contract RewardRegulator is AccessControl {
     {
         uint length = accounts.length;
         require(length == weights.length, "setRecipients: unequal lengths");
-        require(length <= 20, "setRecipients: long array");
 
         _update();
 

@@ -24,16 +24,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./libraries/FullMath.sol";
-
-interface IRewardRegulator {
-    function pendingRewards(address account) external view returns (uint);
-
-    function rewardRate() external view returns (uint);
-
-    function claim() external returns (uint);
-
-    function rewardToken() external returns (IERC20);
-}
+import "./interfaces/IRewardRegulator.sol";
 
 /**
  * @title Sunshine and Rainbows
@@ -167,7 +158,6 @@ contract SunshineAndRainbows is ReentrancyGuard {
      * @param posIds The list of IDs of the positions to exit from
      */
     function multiClose(uint[] calldata posIds) external virtual nonReentrant {
-        require(posIds.length <= 40, "SAR::multiClose: long array");
         _updateRewardVariables(); // saves gas by updating only once
         for (uint i; i < posIds.length; ++i) _close(posIds[i]);
     }
