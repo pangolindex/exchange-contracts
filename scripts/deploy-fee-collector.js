@@ -16,14 +16,14 @@ async function main() {
     // Deploy Fee Collector
     const FeeCollector = await ethers.getContractFactory("FeeCollector");
     const feeCollector = await FeeCollector.deploy(
-        STAKING_CONTRACT,
-        ROUTER,
+        WAVAX,
         FACTORY,
+        ROUTER,
+        STAKING_CONTRACT,
         MINICHEF,
         0, // chef pid for dummy PGL
-        GOVERNOR,
-        WAVAX,
         MULTISIG, // “treasury” fees
+        GOVERNOR,
         MULTISIG // admin
     );
     await feeCollector.deployed();
