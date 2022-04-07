@@ -20,10 +20,10 @@ contract FeeCollector is AccessControl, Pausable {
     address public immutable FACTORY;
     address public immutable ROUTER;
     address public immutable WRAPPED_TOKEN;
-    address public immutable GOVERNOR;
-    
-    bytes32 public constant ADMIN = 0x00;
-    bytes32 public constant HARVESTER = keccak256("HARVESTER");
+
+    bytes32 public constant HARVEST_ROLE = keccak256("HARVEST_ROLE");
+    bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
+    bytes32 public constant GOVERNOR_ROLE = keccak256("GOVERNOR_ROLE");
 
     uint256 public constant FEE_DENOMINATOR = 10_000;
     uint256 public constant MAX_HARVEST_INCENTIVE = 200; // 2%
@@ -42,35 +42,40 @@ contract FeeCollector is AccessControl, Pausable {
     mapping(address => bool) private routerApprovals;
 
     constructor(
-        address _stakingRewards,
-        address _router,
+        address _wrappedToken,
         address _factory,
+        address _router,
+        address _stakingRewards,
         address _miniChef,
         uint256 _pid,
-        address _governor,
-        address _wrappedToken,
         address _treasury,
+        address _governor,
         address _admin
     ) {
+        WRAPPED_TOKEN = _wrappedToken;
+        FACTORY = _factory;
+        ROUTER = _router;
+
         require(_stakingRewards != address(0), "Invalid address");
         address _stakingRewardsRewardToken = IStakingRewards(_stakingRewards).rewardsToken();
         require(_stakingRewardsRewardToken != address(0), "Invalid staking reward");
         stakingRewards = _stakingRewards;
         stakingRewardsRewardToken = _stakingRewardsRewardToken;
-        ROUTER = _router;
-        FACTORY = _factory;
+
         miniChef = _miniChef;
         miniChefPoolId = _pid;
-        GOVERNOR = _governor;
-        WRAPPED_TOKEN = _wrappedToken;
         treasury = _treasury;
-        _grantRole(ADMIN, _admin);
-        _grantRole(HARVESTER, _admin);
+
+        _grantRole(DEFAULT_ADMIN_ROLE, _admin);
+        _grantRole(HARVEST_ROLE, _admin);
+        _grantRole(PAUSE_ROLE, _admin);
+        _grantRole(GOVERNOR_ROLE, _governor);
+        _setRoleAdmin(GOVERNOR_ROLE, GOVERNOR_ROLE); // GOVERNOR_ROLE is self-managed
     }
 
     /// @notice Change staking rewards contract address
     /// @param _stakingRewards - New contract address
-    function setRewardsContract(address _stakingRewards) external onlyRole(ADMIN) {
+    function setRewardsContract(address _stakingRewards) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_stakingRewards != address(0), "Invalid address");
         address _stakingRewardsRewardToken = IStakingRewards(_stakingRewards).rewardsToken();
         require(_stakingRewardsRewardToken != address(0), "Invalid staking reward");
@@ -80,60 +85,58 @@ contract FeeCollector is AccessControl, Pausable {
 
     /// @notice Change the percentage of each harvest that goes to the caller
     /// @param _harvestIncentive - New incentive ratio in bips
-    function setHarvestIncentive(uint256 _harvestIncentive) external onlyRole(ADMIN) {
+    function setHarvestIncentive(uint256 _harvestIncentive) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_harvestIncentive <= MAX_HARVEST_INCENTIVE, "Incentive too large");
         require(_harvestIncentive + treasuryFee <= FEE_DENOMINATOR, "Total fees must <= 100");
         harvestIncentive = _harvestIncentive;
     }
 
-    /// @notice Disable the harvest function for non-admins
-    function pauseHarvesting() external onlyRole(ADMIN) {
+    /// @notice Disable the harvest function. Still allows HARVEST_ROLE members access
+    function pauseHarvesting() external onlyRole(PAUSE_ROLE) {
         _pause();
     }
 
-    /// @notice Re-enable the harvest function for non-admins
-    function unpauseHarvesting() external onlyRole(ADMIN) {
+    /// @notice Re-enable the harvest function
+    function unpauseHarvesting() external onlyRole(PAUSE_ROLE) {
         _unpause();
     }
 
     /// @notice Change the percentage of each harvest that goes to the treasury
     /// @param _treasuryFee - New ratio in bips
-    /// @dev Can only be called through a governance vote
-    function setTreasuryFee(uint256 _treasuryFee) external {
-        require(msg.sender == GOVERNOR, "Governor only");
+    function setTreasuryFee(uint256 _treasuryFee) external onlyRole(GOVERNOR_ROLE) {
         require(harvestIncentive + _treasuryFee <= FEE_DENOMINATOR, "Total fees must <= 100");
         treasuryFee = _treasuryFee;
     }
 
     /// @notice Updates the recipient of treasury fees
     /// @param _treasury - New treasury wallet
-    function setTreasury(address _treasury) external onlyRole(ADMIN) {
+    function setTreasury(address _treasury) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_treasury != address(0));
         treasury = _treasury;
     }
 
     /// @notice Sets the MiniChef address to collect rewards from
     /// @param _miniChef - New MiniChef address
-    function setMiniChef(address _miniChef) external onlyRole(ADMIN) {
+    function setMiniChef(address _miniChef) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_miniChef != address(0));
         miniChef = _miniChef;
     }
 
     /// @notice Sets the MiniChef pool used to accumulate rewards from emissions
     /// @param _pid - ID of the pool on MiniChef
-    function setMiniChefPool(uint256 _pid) external onlyRole(ADMIN) {
+    function setMiniChefPool(uint256 _pid) external onlyRole(DEFAULT_ADMIN_ROLE) {
         miniChefPoolId = _pid;
     }
 
     /// @notice Proxy function to set reward duration on the staking contract
     /// @param _rewardsDuration - the duration of the new period
-    function setRewardsDuration(uint256 _rewardsDuration) external onlyRole(ADMIN) {
+    function setRewardsDuration(uint256 _rewardsDuration) external onlyRole(DEFAULT_ADMIN_ROLE) {
         IStakingRewards(stakingRewards).setRewardsDuration(_rewardsDuration);
     }
 
     /// @notice Proxy function to change ownership of the staking contract
     /// @param _newOwner - address to transfer ownership to
-    function transferStakingOwnership(address _newOwner) external onlyRole(ADMIN) {
+    function transferStakingOwnership(address _newOwner) external onlyRole(DEFAULT_ADMIN_ROLE) {
         IStakingRewards(stakingRewards).transferOwnership(_newOwner);
     }
 
@@ -180,11 +183,10 @@ contract FeeCollector is AccessControl, Pausable {
         );
     }
 
-    /// @notice For a list of liquidity pairs, pulls all liquidity and swaps it
-    /// to the same previously specified output token
+    /// @notice For a list of liquidity pairs, withdraws all liquidity and swaps it to a specified token
     /// @param liquidityPairs - list of all the pairs to pull
     /// @param outputToken - the token into which all liquidity will be swapped
-    function _collectFees(IPangolinPair[] memory liquidityPairs, address outputToken) private {
+    function _convertLiquidity(IPangolinPair[] memory liquidityPairs, address outputToken) private {
         for (uint256 i; i < liquidityPairs.length; ++i) {
             IPangolinPair liquidityPair = liquidityPairs[i];
             uint256 pglBalance = liquidityPair.balanceOf(address(this));
@@ -204,12 +206,12 @@ contract FeeCollector is AccessControl, Pausable {
     }
 
     /// @notice - Converts all the LP tokens specified to the rewards token and
-    /// transfers it to the staking contract
+    /// transfers it to the staking contract, treasury, and caller
     /// @param liquidityPairs - list of all the pairs to harvest
     /// @param claimMiniChef - whether to also harvest additional rewards accrued via MiniChef
     function harvest(IPangolinPair[] memory liquidityPairs, bool claimMiniChef) external {
-        if (!hasRole(HARVESTER, msg.sender)) {
-            // Enforce these conditions for callers without the HARVESTER role:
+        if (!hasRole(HARVEST_ROLE, msg.sender)) {
+            // Enforce these conditions for callers without HARVEST_ROLE:
             require(!paused(), "Harvest disabled");
             require(!address(msg.sender).isContract() && msg.sender == tx.origin, "No contracts");
         }
@@ -217,7 +219,7 @@ contract FeeCollector is AccessControl, Pausable {
         address _stakingRewardsRewardToken = stakingRewardsRewardToken; // Gas savings
 
         if (liquidityPairs.length > 0) {
-            _collectFees(liquidityPairs, _stakingRewardsRewardToken);
+            _convertLiquidity(liquidityPairs, _stakingRewardsRewardToken);
         }
 
         if (claimMiniChef) {
