@@ -208,14 +208,14 @@ async function main() {
 
     // Deploy Fee Collector
     const feeCollector = await deploy("FeeCollector", [
-        staking.address,
-        router.address,
+        nativeToken,
         factory.address,
+        router.address,
+        staking.address,
         chef.address,
         0, // chef pid for dummy PGL
-        timelock.address,
-        nativeToken,
         revenueDistributor.address,
+        timelock.address,
         multisig.address
     ]);
 
