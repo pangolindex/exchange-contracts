@@ -210,10 +210,10 @@ contract FeeCollector is AccessControl, Pausable {
     /// @param liquidityPairs - list of all the pairs to harvest
     /// @param claimMiniChef - whether to also harvest additional rewards accrued via MiniChef
     function harvest(IPangolinPair[] memory liquidityPairs, bool claimMiniChef) external {
-        if (!hasRole(HARVEST_ROLE, msg.sender)) {
-            // Enforce these conditions for callers without HARVEST_ROLE:
-            require(!paused(), "Harvest disabled");
+        if (!hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) {
             require(!address(msg.sender).isContract() && msg.sender == tx.origin, "No contracts");
+            // Callers with HARVEST_ROLE can bypass the pause
+            require(hasRole(HARVEST_ROLE, msg.sender) || !paused(), "Harvest disabled");
         }
 
         address _stakingRewardsRewardToken = stakingRewardsRewardToken; // Gas savings
