@@ -25,6 +25,8 @@ async function main() {
     console.log("whitelister : " + info);
     info = await Airdrop.remainderDestination();
     console.log("remainderDestination : " + info);
+    info = await Airdrop.totalAllocated();
+    console.log("totalAllocated : " + info);
     info = await Airdrop.withdrawAmount(deployer.address);
     console.log("Your withdrawAmount : " + info);
     info = await Airdrop.airdropSupply();
