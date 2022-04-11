@@ -20,7 +20,6 @@
  */
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./libraries/FullMath.sol";
@@ -34,7 +33,7 @@ import "./interfaces/IRewardRegulator.sol";
  * algorithm refer to the proof linked in `README.md`.
  * @author shung for Pangolin & cryptofrens.xyz
  */
-contract SunshineAndRainbows is ReentrancyGuard {
+contract SunshineAndRainbows {
     using EnumerableSet for EnumerableSet.UintSet;
     using SafeERC20 for IERC20;
     using FullMath for FullMath.Uint512;
@@ -115,7 +114,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
      * @dev The reward rate of the new position starts from zero
      * @param amount Amount of tokens to stake
      */
-    function open(uint amount) external virtual nonReentrant {
+    function open(uint amount) external virtual {
         if (totalSupply != 0) {
             _updateRewardVariables();
         } else if (initTime == 0) {
@@ -128,7 +127,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
      * @notice Exits from a position by withdrawing & harvesting all
      * @param posId The ID of the position to exit from
      */
-    function close(uint posId) external virtual nonReentrant {
+    function close(uint posId) external virtual {
         _updateRewardVariables();
         _close(posId);
     }
@@ -137,7 +136,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
      * @notice Harvests all rewards of a position, resetting its reward rate
      * @param posId The ID of the position to harvest from
      */
-    function harvest(uint posId) external virtual nonReentrant {
+    function harvest(uint posId) external virtual {
         _updateRewardVariables();
         _harvest(posId);
     }
@@ -147,7 +146,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
      * @param posId The ID of the position to partially close
      * @param amount The amount of tokens to withdraw from the position
      */
-    function withdraw(uint posId, uint amount) external virtual nonReentrant {
+    function withdraw(uint posId, uint amount) external virtual {
         _updateRewardVariables();
         _withdraw(posId, amount);
     }
@@ -157,7 +156,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
      * and harvesting all the rewards
      * @param posIds The list of IDs of the positions to exit from
      */
-    function multiClose(uint[] calldata posIds) external virtual nonReentrant {
+    function multiClose(uint[] calldata posIds) external virtual {
         _updateRewardVariables(); // saves gas by updating only once
         for (uint i; i < posIds.length; ++i) _close(posIds[i]);
     }
@@ -172,7 +171,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
         uint[] calldata posIds,
         uint posId,
         uint amount
-    ) external virtual nonReentrant {
+    ) external virtual {
         _updateRewardVariables();
         for (uint i; i < posIds.length; ++i) _close(posIds[i]);
         _withdraw(posId, amount);
@@ -182,11 +181,7 @@ contract SunshineAndRainbows is ReentrancyGuard {
      * @notice Harvests all rewards from multiple positions
      * @param posIds The list of IDs of the positions to harvest from
      */
-    function multiHarvest(uint[] calldata posIds)
-        external
-        virtual
-        nonReentrant
-    {
+    function multiHarvest(uint[] calldata posIds) external virtual {
         _updateRewardVariables();
         for (uint i; i < posIds.length; ++i) _harvest(posIds[i]);
     }

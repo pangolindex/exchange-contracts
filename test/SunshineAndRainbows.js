@@ -272,20 +272,12 @@ describe("SunshineAndRainbows.sol", function () {
       );
       expect(distributed).to.be.within(reward.sub("2"), reward);
 
-      var remaining = reward.sub(distributed); // remaining dust in the contract
-
       expect(
         await this.rewardToken.balanceOf(this.sunshine.address)
       ).to.be.within("0", "2");
       expect(await this.sunshine.totalSupply()).to.equal("0");
       expect(await this.sunshine.sumOfEntryTimes()).to.equal("0");
       expect(await this.sunshine.initTime()).to.equal(initTime);
-
-      var [idealPosition, rewardsPerStakingDuration] = updateRewardVariables(
-        reward,
-        SUPPLY.mul(interval),
-        interval
-      );
 
       var position = await this.sunshine.positions("0");
 
@@ -318,14 +310,8 @@ describe("SunshineAndRainbows.sol", function () {
 
     it("cannot close others’ position", async function () {
       await expect(this.sunshine.open(SUPPLY)).to.emit(this.sunshine, "Opened");
-
-      var blockNumber = await ethers.provider.getBlockNumber();
-      var initTime = (await ethers.provider.getBlock(blockNumber)).timestamp;
-
       await ethers.provider.send("evm_increaseTime", [ONE_DAY.toNumber()]);
-
-      sunshine = await this.sunshine.connect(this.unauthorized);
-
+      var sunshine = await this.sunshine.connect(this.unauthorized);
       await expect(sunshine.close("0")).to.be.revertedWith(
         "SAR::_close: unauthorized"
       );
@@ -366,8 +352,6 @@ describe("SunshineAndRainbows.sol", function () {
 
       var pending = await this.sunshine.pendingRewards(["0"]);
       expect(pending[0]).to.equal("0");
-
-      var remaining = reward.sub(distributed); // remaining dust in the contract
 
       expect(
         await this.rewardToken.balanceOf(this.sunshine.address)
@@ -473,7 +457,6 @@ describe("SunshineAndRainbows.sol", function () {
       blockNumber = await ethers.provider.getBlockNumber();
       var lastUpdate = (await ethers.provider.getBlock(blockNumber)).timestamp;
 
-      var interval = lastUpdate - initTime; // also the stakingDuration
       var reward = getRewards(lastUpdate - this.notifyRewardTime);
       var distributed = await this.rewardToken.balanceOf(this.admin.address);
 
@@ -484,8 +467,6 @@ describe("SunshineAndRainbows.sol", function () {
         "0"
       );
       expect(distributed).to.be.within(reward.sub("80"), reward);
-
-      var remaining = reward.sub(distributed); // remaining dust in the contract
 
       expect(
         await this.rewardToken.balanceOf(this.sunshine.address)
@@ -515,8 +496,6 @@ describe("SunshineAndRainbows.sol", function () {
 
       blockNumber = await ethers.provider.getBlockNumber();
       var lastUpdate = (await ethers.provider.getBlock(blockNumber)).timestamp;
-
-      var interval = lastUpdate - initTime; // also the stakingDuration
       var reward = getRewards(lastUpdate - this.notifyRewardTime);
       var distributed = await this.rewardToken.balanceOf(this.admin.address);
 
@@ -647,8 +626,6 @@ describe("SunshineAndRainbows.sol", function () {
 
       blockNumber = await ethers.provider.getBlockNumber();
       var lastUpdate = (await ethers.provider.getBlock(blockNumber)).timestamp;
-
-      var interval = lastUpdate - initTime; // also the stakingDuration
       var reward = getRewards(lastUpdate - this.notifyRewardTime);
       var distributed = await this.rewardToken.balanceOf(this.admin.address);
 
@@ -659,8 +636,6 @@ describe("SunshineAndRainbows.sol", function () {
         SUPPLY
       );
       expect(distributed).to.be.within(reward.sub("20"), reward);
-
-      var remaining = reward.sub(distributed); // remaining dust in the contract
 
       expect(
         await this.rewardToken.balanceOf(this.sunshine.address)
@@ -732,8 +707,6 @@ describe("SunshineAndRainbows.sol", function () {
 
       blockNumber = await ethers.provider.getBlockNumber();
       var lastUpdate = (await ethers.provider.getBlock(blockNumber)).timestamp;
-
-      var interval = lastUpdate - initTime; // also the stakingDuration
       var reward = getRewards(lastUpdate - this.notifyRewardTime);
       var distributed = await this.rewardToken.balanceOf(this.admin.address);
       var pending = (await this.sunshine.pendingRewards(["0"]))[0];
@@ -809,8 +782,6 @@ describe("SunshineAndRainbows.sol", function () {
 
       blockNumber = await ethers.provider.getBlockNumber();
       var lastUpdate = (await ethers.provider.getBlock(blockNumber)).timestamp;
-
-      var interval = lastUpdate - initTime; // also the stakingDuration
       var reward = getRewards(lastUpdate - this.notifyRewardTime);
       var distributed = await this.rewardToken.balanceOf(this.admin.address);
 
@@ -864,8 +835,6 @@ describe("SunshineAndRainbows.sol", function () {
 
       blockNumber = await ethers.provider.getBlockNumber();
       var lastUpdate = (await ethers.provider.getBlock(blockNumber)).timestamp;
-
-      var interval = lastUpdate - initTime; // also the stakingDuration
       var reward = getRewards(lastUpdate - this.notifyRewardTime);
       var distributed = await this.rewardToken.balanceOf(this.admin.address);
 
@@ -876,8 +845,6 @@ describe("SunshineAndRainbows.sol", function () {
         "0"
       );
       expect(distributed).to.be.within(reward.sub("10"), reward);
-
-      var remaining = reward.sub(distributed); // remaining dust in the contract
 
       expect(
         await this.rewardToken.balanceOf(this.sunshine.address)
@@ -917,8 +884,6 @@ describe("SunshineAndRainbows.sol", function () {
 
       blockNumber = await ethers.provider.getBlockNumber();
       var lastUpdate = (await ethers.provider.getBlock(blockNumber)).timestamp;
-
-      var interval = lastUpdate - initTime; // also the stakingDuration
       var reward = getRewards(lastUpdate - this.notifyRewardTime);
       var distributed = await this.rewardToken.balanceOf(this.admin.address);
 
@@ -929,8 +894,6 @@ describe("SunshineAndRainbows.sol", function () {
         "0"
       );
       expect(distributed).to.be.within(reward.sub("10"), reward);
-
-      var remaining = reward.sub(distributed); // remaining dust in the contract
 
       expect(
         await this.rewardToken.balanceOf(this.sunshine.address)
@@ -1498,7 +1461,7 @@ describe("RewardRegulatorFundable.sol", function () {
       expect(allRecipients.length).to.equal(0);
     });
     it("unprivileged cannot change recipient", async function () {
-      regulator = await this.regulator.connect(this.unauthorized);
+      var regulator = await this.regulator.connect(this.unauthorized);
       await expect(regulator.setRecipients([this.admin.address], ["1"])).to.be
         .reverted;
     });

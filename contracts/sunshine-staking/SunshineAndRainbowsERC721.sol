@@ -44,7 +44,7 @@ contract SunshineAndRainbowsERC721 is SunshineAndRainbows {
      * @dev The reward rate of the new position starts from zero
      * @param tokens The list of token IDs to stake
      */
-    function openERC721(uint[] calldata tokens) external nonReentrant {
+    function openERC721(uint[] calldata tokens) external {
         if (totalSupply != 0) {
             _updateRewardVariables();
         } else if (initTime == 0) {
@@ -58,10 +58,7 @@ contract SunshineAndRainbowsERC721 is SunshineAndRainbows {
      * @param posId The ID of the position to partially close
      * @param tokens The list of tokens to withdraw from the position
      */
-    function withdrawERC721(uint posId, uint[] calldata tokens)
-        external
-        nonReentrant
-    {
+    function withdrawERC721(uint posId, uint[] calldata tokens) external {
         _updateRewardVariables();
         _withdrawERC721(posId, tokens);
     }
@@ -76,7 +73,7 @@ contract SunshineAndRainbowsERC721 is SunshineAndRainbows {
         uint[] calldata posIds,
         uint posId,
         uint[] calldata tokens
-    ) external nonReentrant {
+    ) external {
         _updateRewardVariables();
         for (uint i; i < posIds.length; ++i) _close(posIds[i]);
         _withdrawERC721(posId, tokens);

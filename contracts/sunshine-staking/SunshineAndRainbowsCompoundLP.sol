@@ -84,7 +84,7 @@ contract SunshineAndRainbowsCompoundLP is SunshineAndRainbowsCompound {
      * @param maxPairAmount The max amount of pair token that can be paired
      * with rewards
      */
-    function compound(uint posId, uint maxPairAmount) external nonReentrant {
+    function compound(uint posId, uint maxPairAmount) external {
         // update the state variables that govern the reward distribution
         _updateRewardVariables();
 

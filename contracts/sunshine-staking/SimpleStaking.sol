@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IRewardRegulator.sol";
 
@@ -11,7 +10,7 @@ import "./interfaces/IRewardRegulator.sol";
  * that works by being coupled with  Reward Regulator.
  * @author shung for Pangolin
  */
-contract SimpleStaking is ReentrancyGuard {
+contract SimpleStaking {
     using SafeERC20 for IERC20;
 
     struct User {
@@ -68,7 +67,7 @@ contract SimpleStaking is ReentrancyGuard {
     }
 
     /// @notice Stakes `amount` tokens to user
-    function stake(uint amount) external nonReentrant update {
+    function stake(uint amount) external update {
         User storage user = users[msg.sender];
         require(amount != 0, "stake: zero amount");
 
@@ -83,7 +82,7 @@ contract SimpleStaking is ReentrancyGuard {
     }
 
     /// @notice Withdraws `amount` tokens of users and harvests pending rewards
-    function withdraw(uint amount) external nonReentrant update {
+    function withdraw(uint amount) external update {
         User storage user = users[msg.sender];
         require(user.balance >= amount, "withdraw: insufficient balance");
         require(amount != 0, "withdraw: zero amount");
@@ -105,7 +104,7 @@ contract SimpleStaking is ReentrancyGuard {
     }
 
     /// @notice Harvests all rewards of a user
-    function harvest() external nonReentrant update {
+    function harvest() external update {
         User storage user = users[msg.sender];
 
         uint reward = user.stash +

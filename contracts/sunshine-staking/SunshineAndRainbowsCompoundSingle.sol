@@ -53,7 +53,7 @@ contract SunshineAndRainbowsCompoundSingle is SunshineAndRainbowsCompound {
      * the parent position is updated after the creation of the new position
      * @param posId ID of the parent position whose rewards are harvested
      */
-    function compound(uint posId) external nonReentrant {
+    function compound(uint posId) external {
         // update the state variables that govern the reward distribution
         _updateRewardVariables();
 

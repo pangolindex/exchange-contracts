@@ -67,7 +67,7 @@ contract SunshineAndRainbowsCompoundLPAVAX is SunshineAndRainbowsCompoundLP {
      * amount
      * @param posId ID of the parent position whose rewards are harvested
      */
-    function compoundAVAX(uint posId) external payable nonReentrant {
+    function compoundAVAX(uint posId) external payable {
         // update the state variables that govern the reward distribution
         _updateRewardVariables();
 
