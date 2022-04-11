@@ -66,6 +66,22 @@ contract SunshineAndRainbowsERC721 is SunshineAndRainbows {
         _withdrawERC721(posId, tokens);
     }
 
+    /**
+     * @notice Closes some positions and partially withdraws from one position
+     * @param posIds The list of IDs of the positions to fully close
+     * @param posId The ID of the position to partially close
+     * @param tokens The list of tokens to withdraw from the position
+     */
+    function multiWithdrawERC721(
+        uint[] calldata posIds,
+        uint posId,
+        uint[] calldata tokens
+    ) external nonReentrant {
+        _updateRewardVariables();
+        for (uint i; i < posIds.length; ++i) _close(posIds[i]);
+        _withdrawERC721(posId, tokens);
+    }
+
     /// @notice Returns tokens of a position
     function tokensOf(uint posId) external view returns (uint[] memory) {
         return _tokensOf[posId].values();
@@ -79,6 +95,14 @@ contract SunshineAndRainbowsERC721 is SunshineAndRainbows {
     /// @dev Disable ERC20 `withdraw()` function
     function withdraw(uint, uint) external pure override {
         revert("SAR::withdraw: use `withdrawERC721`");
+    }
+
+    function multiWithdraw(
+        uint[] calldata,
+        uint,
+        uint
+    ) external pure override {
+        revert("SAR::closeSomeWithdrawOne: use `closeSomeWithdrawOneERC721`");
     }
 
     /**

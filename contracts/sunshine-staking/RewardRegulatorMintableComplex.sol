@@ -48,7 +48,6 @@ interface IERC20MintableComplex {
  * @author shung for Pangolin
  */
 contract RewardRegulatorMintableComplex is RewardRegulator {
-
     /// @notice The core variable that determines the reward rate
     uint public halfSupply = 200 days;
 
@@ -134,6 +133,17 @@ contract RewardRegulatorMintableComplex is RewardRegulator {
         emit HalfSupplySet(newHalfSupply);
     }
 
+    /// @notice Gets the current reward rate
+    function rewardRate() external view returns (uint) {
+        if (_lastUpdate == 0) return 0;
+        uint interval = block.timestamp - _lastUpdate;
+        uint burned = _burned();
+        uint totalEmitted = _totalEmitted +
+            (interval * (_cap + burned - _totalEmitted)) /
+            (halfSupply + interval);
+        return (_cap + burned - totalEmitted) / halfSupply;
+    }
+
     /// @notice The total amount of reward tokens emitted per weight
     function rewardPerWeight() public view override returns (uint) {
         if (totalWeight == 0) return _rewardPerWeightStored;
@@ -155,10 +165,15 @@ contract RewardRegulatorMintableComplex is RewardRegulator {
     function _getReward() private view returns (uint) {
         require(_lastUpdate != 0, "_getReward: schedule not started");
         uint interval = block.timestamp - _lastUpdate;
-        uint burned = IERC20MintableComplex(address(rewardToken))
-            .burnedSupply() - _initialBurnedSupply;
-        uint reward = (interval * (_cap + burned - _totalEmitted)) /
+        uint reward = (interval * (_cap + _burned() - _totalEmitted)) /
             (halfSupply + interval);
         return reward;
+    }
+
+    /// @dev Gets tokens burned since the contract is created
+    function _burned() private view returns (uint) {
+        return
+            IERC20MintableComplex(address(rewardToken)).burnedSupply() -
+            _initialBurnedSupply;
     }
 }

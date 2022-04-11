@@ -163,6 +163,35 @@ contract SunshineAndRainbows is ReentrancyGuard {
     }
 
     /**
+     * @notice Closes some positions and partially withdraws from one position
+     * @param posIds The list of IDs of the positions to fully close
+     * @param posId The ID of the position to partially close
+     * @param amount The amount of tokens to withdraw from the position
+     */
+    function multiWithdraw(
+        uint[] calldata posIds,
+        uint posId,
+        uint amount
+    ) external virtual nonReentrant {
+        _updateRewardVariables();
+        for (uint i; i < posIds.length; ++i) _close(posIds[i]);
+        _withdraw(posId, amount);
+    }
+
+    /**
+     * @notice Harvests all rewards from multiple positions
+     * @param posIds The list of IDs of the positions to harvest from
+     */
+    function multiHarvest(uint[] calldata posIds)
+        external
+        virtual
+        nonReentrant
+    {
+        _updateRewardVariables();
+        for (uint i; i < posIds.length; ++i) _harvest(posIds[i]);
+    }
+
+    /**
      * @notice Simple interfacing function to list all positions of a user
      * @return The list of user's positions
      */

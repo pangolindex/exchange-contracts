@@ -158,11 +158,14 @@ abstract contract RewardRegulator is AccessControl {
             weightChange += weight.toInt256() - oldWeight.toInt256();
 
             // add or remove the recipient to/from the set
-            if (oldWeight == 0) _recipients.add(account);
+            if (oldWeight == 0) {
+                _recipients.add(account);
+            } else {
+                // stash the unclaimed rewards (oldWeight = 0 => pending = 0)
+                recipient.stash = _pendingRewards(account);
+            }
             if (weight == 0) _recipients.remove(account);
 
-            // stash the unclaimed rewards
-            recipient.stash = _pendingRewards(account);
             recipient.rewardPerWeightPaid = _rewardPerWeightStored;
             recipient.weight = weight;
 
@@ -205,10 +208,18 @@ abstract contract RewardRegulator is AccessControl {
         return rewardToken.balanceOf(address(this)) - _reserved;
     }
 
-    /// @notice The total amount of reward tokens emitted per weight
-    function rewardPerWeight() public view virtual returns (uint) {}
+    /**
+     * @notice The total amount of reward tokens emitted per weight
+     * @dev Inheriting contract must override this function
+     */
+    function rewardPerWeight() public view virtual returns (uint);
 
-    function _send(uint reward) internal virtual {}
+    /**
+     * @notice Send reward (arg1) to msg.sender
+     * @dev Inheriting contract must override this function and use the
+     * appropriate method (e.g. mint, transfer, transferFrom, etc.)
+     */
+    function _send(uint) internal virtual;
 
     /// @notice Updates reward stored whenever rewards are claimed or changed
     function _update() internal virtual {

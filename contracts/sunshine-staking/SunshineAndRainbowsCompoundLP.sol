@@ -70,8 +70,8 @@ contract SunshineAndRainbowsCompoundLP is SunshineAndRainbowsCompound {
             revert("SAR::Constructor: Reward token not part of LP token");
         }
 
-        newRewardToken.approve(address(router), type(uint).max);
-        _pairToken.approve(address(router), type(uint).max);
+        newRewardToken.approve(newRouter, type(uint).max);
+        _pairToken.approve(newRouter, type(uint).max);
     }
 
     /**
