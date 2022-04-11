@@ -20,31 +20,53 @@ async function main() {
     const initBalance = await deployer.getBalance();
     console.log("Account balance:", initBalance.toString());
 
-    csvFile = await csv({noheader:true}).fromFile(`scripts/Airdrop/lists/${network.name}.csv`)
-    let airdropAddresses = [], airdropAmounts = [];
-    for(i = 0; i < csvFile.length; i++) {
-        airdropAddresses.push(csvFile[i].field1);
-        airdropAmounts.push(csvFile[i].field2);
-    }
-    
-    if (airdropAddresses.length != airdropAmounts.length) {
-        console.log("Airdrop address length need to be equal with airdrop amounts length");
-        process.exit(1);
-    }
-
-    const Airdrop = await attach("Airdrop", ADDRESSES[10].address);
-
     let info, tx;
-    
+
+    const Airdrop = await attach("Airdrop", ADDRESSES[10 - (16 - ADDRESSES.length) ].address);
+            
     if (await Airdrop.whitelister() != deployer.address) {
         console.error("You are not the whitelister of Airdrop");
         process.exit(1);
     }
 
-    tx = await Airdrop.whitelistAddresses(airdropAddresses, airdropAmounts);
-    await tx.wait();    
-    console.log("Whitelist has been added");
+    csvFile = await csv().fromFile(`scripts/Airdrop/lists/${network.name}.csv`)
+    let airdropAddresses = [], airdropAmounts = [];
+    let amount;
+    test = BigNumber.from(Math.floor(csvFile[0].total_amount)).mul(BigNumber.from(10).pow(18));
+    for(i = 0; i < csvFile.length; i++) {
+        amount = BigNumber.from(Math.floor(csvFile[i].total_amount)).mul(BigNumber.from(10).pow(18));
+        if (amount.gt(0)) {
+            airdropAddresses.push(csvFile[i].address);
+            airdropAmounts.push(amount);
+            
+            if (airdropAddresses.length == 250) {
 
+                if (airdropAddresses.length != airdropAmounts.length) {
+                    console.log("Airdrop address length need to be equal with airdrop amounts length");
+                    process.exit(1);
+                }
+                tx = await Airdrop.whitelistAddresses(airdropAddresses, airdropAmounts);
+                await tx.wait();
+                console.log("Whitelist has been added");
+
+                airdropAddresses = [];
+                airdropAmounts = [];
+            }
+        }
+    }
+    if (airdropAddresses.length > 0) {
+
+        if (airdropAddresses.length != airdropAmounts.length) {
+            console.log("Airdrop address length need to be equal with airdrop amounts length");
+            process.exit(1);
+        }
+    
+        tx = await Airdrop.whitelistAddresses(airdropAddresses, airdropAmounts);
+        await tx.wait();
+        console.log("Whitelist has been added");
+
+    }
+    
     const endBalance = await deployer.getBalance();
     console.log("Deploy cost: ", initBalance.sub(endBalance).toString())
 }

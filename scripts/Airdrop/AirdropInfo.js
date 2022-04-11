@@ -13,9 +13,9 @@ async function main() {
     }
 
     const [deployer] = await ethers.getSigners();
-
-    const Airdrop = await attach("Airdrop", ADDRESSES[10].address);
-    const multisig = await attach("MultiSigWalletWithDailyLimit", ADDRESSES[2].address);
+    
+    const Airdrop = await attach("Airdrop", ADDRESSES[10 - (16 - ADDRESSES.length) ].address);
+    const multisig = await attach("MultiSigWalletWithDailyLimit", ADDRESSES[2 - (16 - ADDRESSES.length) ].address);
 
     let info, tx;
     
@@ -25,6 +25,8 @@ async function main() {
     console.log("whitelister : " + info);
     info = await Airdrop.remainderDestination();
     console.log("remainderDestination : " + info);
+    info = await Airdrop.totalAllocated();
+    console.log("totalAllocated : " + info);
     info = await Airdrop.withdrawAmount(deployer.address);
     console.log("Your withdrawAmount : " + info);
     info = await Airdrop.airdropSupply();

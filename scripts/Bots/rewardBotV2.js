@@ -17,8 +17,8 @@ async function main() {
     const initBalance = await deployer.getBalance();
     console.log("Account balance:", initBalance.toString());
 
-    const TreasuryVester = await attach("TreasuryVester", ADDRESSES[11].address);
-    const multisig = await attach("MultiSigWalletWithDailyLimit", ADDRESSES[2].address);
+    const TreasuryVester = await attach("TreasuryVester", ADDRESSES[11 - (16 - ADDRESSES.length)].address);
+    const multisig = await attach("MultiSigWalletWithDailyLimit", ADDRESSES[2 - (16 - ADDRESSES.length)].address);
 
     let tx;
 

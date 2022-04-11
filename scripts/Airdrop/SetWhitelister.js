@@ -28,8 +28,8 @@ async function main() {
     const initBalance = await deployer.getBalance();
     console.log("Account balance:", initBalance.toString());
 
-    const Airdrop = await attach("Airdrop", ADDRESSES[10].address);
-    const multisig = await attach("MultiSigWalletWithDailyLimit", ADDRESSES[2].address);
+    const Airdrop = await attach("Airdrop", ADDRESSES[10 - (16 - ADDRESSES.length) ].address);
+    const multisig = await attach("MultiSigWalletWithDailyLimit", ADDRESSES[2 - (16 - ADDRESSES.length) ].address);
 
     let info, tx;
     const multisigRequired = await multisig.required();
