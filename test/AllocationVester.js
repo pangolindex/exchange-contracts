@@ -371,28 +371,6 @@ describe("AllocationVester.sol", function () {
       expect(member.rate).to.equal(allocations[0].mul(PRECISION).div(durations[0]));
 
     });
-
-    it.skip("expect: updates after harvest", async function () {
-      var [members, allocations, durations] = generateRecipients(1);
-
-      expect(await this.png.transfer(this.vester.address, allocations[0])).to.emit(
-        this.png,
-        "Transfer"
-      );
-      expect(
-        await this.vester.setAllocations(members, allocations, durations)
-      ).to.emit(this.vester, "AllocationSet");
-
-      var blockNumber = await ethers.provider.getBlockNumber();
-      var blockTime = (await ethers.provider.getBlock(blockNumber)).timestamp;
-
-      const member = await this.vester.members(members[0]);
-
-      expect(member.lastUpdate).to.equal(blockTime);
-      expect(member.reserve).to.equal(allocations[0]);
-      expect(member.rate).to.equal(allocations[0].div(durations[0]));
-
-    });
   });
 
   //////////////////////////////
