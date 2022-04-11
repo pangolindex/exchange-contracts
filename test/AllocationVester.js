@@ -32,8 +32,8 @@ function generateRecipients(recipientsLength) {
 
 function arraySum(arr) {
   let sum = BigNumber.from("0");
-  for (let i = 0; i < arr.length; i++) {
-    sum = sum.add(arr[i]);
+  for (const value of arr) {
+    sum = sum.add(value);
   }
   return sum;
 }
@@ -132,7 +132,7 @@ describe("AllocationVester.sol", function () {
         this.png,
         "Transfer"
       );
-      vester = await this.vester.connect(this.unauthorized);
+      var vester = await this.vester.connect(this.unauthorized);
       await expect(
         vester.setAllocations(members, allocations, durations)
       ).to.be.revertedWith("Ownable: caller is not the owner");
@@ -364,7 +364,7 @@ describe("AllocationVester.sol", function () {
       var blockNumber = await ethers.provider.getBlockNumber();
       var blockTime = (await ethers.provider.getBlock(blockNumber)).timestamp;
 
-      member = await this.vester.members(members[0]);
+      var member = await this.vester.members(members[0]);
 
       expect(member.lastUpdate).to.equal(blockTime);
       expect(member.reserve).to.equal(allocations[0]);
@@ -478,7 +478,7 @@ describe("AllocationVester.sol", function () {
         this.png,
         "Transfer"
       );
-      actualMembers = await this.vester.getMembers();
+      var actualMembers = await this.vester.getMembers();
       expect(actualMembers.length).to.equal(0);
     });
 
@@ -498,6 +498,7 @@ describe("AllocationVester.sol", function () {
       expect(actualMembers.length).to.equal(members.length);
       for (let i; i < 10; i++) expect(actualMembers[i]).to.equal(members[i]);
 
+      var newMembers;
       [newMembers, allocations, durations] = generateRecipients(10);
       members = members.concat(newMembers);
       totalAlloc = arraySum(allocations);
@@ -510,7 +511,7 @@ describe("AllocationVester.sol", function () {
         await this.vester.setAllocations(newMembers, allocations, durations)
       ).to.emit(this.vester, "AllocationSet");
 
-      var actualMembers = await this.vester.getMembers();
+      actualMembers = await this.vester.getMembers();
       expect(actualMembers.length).to.equal(members.length);
       for (let i; i < 10; i++) expect(actualMembers[i]).to.equal(members[i]);
     });
