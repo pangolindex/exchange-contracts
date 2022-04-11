@@ -132,7 +132,7 @@ describe("AllocationVester.sol", function () {
         this.png,
         "Transfer"
       );
-      var vester = await this.vester.connect(this.unauthorized);
+      const vester = await this.vester.connect(this.unauthorized);
       await expect(
         vester.setAllocations(members, allocations, durations)
       ).to.be.revertedWith("Ownable: caller is not the owner");
@@ -288,7 +288,7 @@ describe("AllocationVester.sol", function () {
         this.png,
         "Transfer"
       );
-      vester = await this.vester.connect(this.unauthorized);
+      const vester = await this.vester.connect(this.unauthorized);
       await expect(vester.withdraw(TOTAL_SUPPLY)).to.be.revertedWith(
         "Ownable: caller is not the owner"
       );
@@ -386,7 +386,7 @@ describe("AllocationVester.sol", function () {
       var blockNumber = await ethers.provider.getBlockNumber();
       var blockTime = (await ethers.provider.getBlock(blockNumber)).timestamp;
 
-      member = await this.vester.members(members[0]);
+      const member = await this.vester.members(members[0]);
 
       expect(member.lastUpdate).to.equal(blockTime);
       expect(member.reserve).to.equal(allocations[0]);
