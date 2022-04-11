@@ -259,8 +259,6 @@ describe("SunshineAndRainbows.sol", function () {
 
       blockNumber = await ethers.provider.getBlockNumber();
       var lastUpdate = (await ethers.provider.getBlock(blockNumber)).timestamp;
-
-      var interval = lastUpdate - initTime; // also the stakingDuration
       var reward = getRewards(lastUpdate - this.notifyRewardTime);
       var distributed = await this.rewardToken.balanceOf(this.admin.address);
 
@@ -386,7 +384,7 @@ describe("SunshineAndRainbows.sol", function () {
 
       await ethers.provider.send("evm_increaseTime", [ONE_DAY.toNumber()]);
 
-      sunshine = await this.sunshine.connect(this.unauthorized);
+      var sunshine = await this.sunshine.connect(this.unauthorized);
 
       await expect(sunshine.harvest("0")).to.be.revertedWith(
         "SAR::_harvest: unauthorized"
@@ -411,8 +409,6 @@ describe("SunshineAndRainbows.sol", function () {
   describe("multiClose", function () {
     it("exits 40 positions", async function () {
       var arr = [];
-      var blockNumber;
-      var initTime;
       var len = 40;
 
       for (let i = 0; i < len; i++) {
@@ -420,10 +416,6 @@ describe("SunshineAndRainbows.sol", function () {
           this.sunshine,
           "Opened"
         );
-        if (i == 0) {
-          blockNumber = await ethers.provider.getBlockNumber();
-          initTime = (await ethers.provider.getBlock(blockNumber)).timestamp;
-        }
         await ethers.provider.send("evm_increaseTime", [ONE_DAY.toNumber()]);
         arr.push(i);
       }
@@ -454,7 +446,7 @@ describe("SunshineAndRainbows.sol", function () {
         "Closed"
       );
 
-      blockNumber = await ethers.provider.getBlockNumber();
+      var blockNumber = await ethers.provider.getBlockNumber();
       var lastUpdate = (await ethers.provider.getBlock(blockNumber)).timestamp;
 
       var reward = getRewards(lastUpdate - this.notifyRewardTime);
@@ -755,9 +747,6 @@ describe("SunshineAndRainbows.sol", function () {
       );
       await ethers.provider.send("evm_increaseTime", [ONE_DAY.toNumber()]);
 
-      var blockNumber = await ethers.provider.getBlockNumber();
-      var initTime = (await ethers.provider.getBlock(blockNumber)).timestamp;
-
       await expect(this.sunshine.withdraw("0", SUPPLY.div("4"))).to.emit(
         this.sunshine,
         "Withdrawn"
@@ -780,7 +769,7 @@ describe("SunshineAndRainbows.sol", function () {
         "Closed"
       );
 
-      blockNumber = await ethers.provider.getBlockNumber();
+      var blockNumber = await ethers.provider.getBlockNumber();
       var lastUpdate = (await ethers.provider.getBlock(blockNumber)).timestamp;
       var reward = getRewards(lastUpdate - this.notifyRewardTime);
       var distributed = await this.rewardToken.balanceOf(this.admin.address);
@@ -803,18 +792,11 @@ describe("SunshineAndRainbows.sol", function () {
     });
 
     it("stake x 4 + harvest x 2 + close + multiClose", async function () {
-      var blockNumber;
-      var initTime;
       for (let i = 0; i < 4; i++) {
         await expect(this.sunshine.open(SUPPLY.div("4"))).to.emit(
           this.sunshine,
           "Opened"
         );
-        await ethers.provider.send("evm_increaseTime", [ONE_DAY.toNumber()]);
-        if (i == 0) {
-          blockNumber = await ethers.provider.getBlockNumber();
-          initTime = (await ethers.provider.getBlock(blockNumber)).timestamp;
-        }
       }
 
       for (let i = 0; i < 2; i++) {
@@ -833,7 +815,7 @@ describe("SunshineAndRainbows.sol", function () {
         "Closed"
       );
 
-      blockNumber = await ethers.provider.getBlockNumber();
+      var blockNumber = await ethers.provider.getBlockNumber();
       var lastUpdate = (await ethers.provider.getBlock(blockNumber)).timestamp;
       var reward = getRewards(lastUpdate - this.notifyRewardTime);
       var distributed = await this.rewardToken.balanceOf(this.admin.address);
@@ -854,18 +836,12 @@ describe("SunshineAndRainbows.sol", function () {
     });
 
     it("stake x 4 + multiClose + stake + close", async function () {
-      var blockNumber;
-      var initTime;
       for (let i = 0; i < 4; i++) {
         await expect(this.sunshine.open(SUPPLY.div("4"))).to.emit(
           this.sunshine,
           "Opened"
         );
         await ethers.provider.send("evm_increaseTime", [ONE_DAY.toNumber()]);
-        if (i == 0) {
-          blockNumber = await ethers.provider.getBlockNumber();
-          initTime = (await ethers.provider.getBlock(blockNumber)).timestamp;
-        }
       }
 
       await expect(this.sunshine.multiClose(["0", "1", "2", "3"])).to.emit(
@@ -882,7 +858,7 @@ describe("SunshineAndRainbows.sol", function () {
 
       await expect(this.sunshine.close("4")).to.emit(this.sunshine, "Closed");
 
-      blockNumber = await ethers.provider.getBlockNumber();
+      var blockNumber = await ethers.provider.getBlockNumber();
       var lastUpdate = (await ethers.provider.getBlock(blockNumber)).timestamp;
       var reward = getRewards(lastUpdate - this.notifyRewardTime);
       var distributed = await this.rewardToken.balanceOf(this.admin.address);
