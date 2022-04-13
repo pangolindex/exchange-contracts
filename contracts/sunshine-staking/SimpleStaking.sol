@@ -46,8 +46,9 @@ contract SimpleStaking {
     event Exited(address indexed user, uint amount);
 
     modifier update() {
-        _rewardPerTokenStored += ((rewardRegulator.claim() * PRECISION) /
-            totalSupply);
+        if (totalSupply != 0)
+            _rewardPerTokenStored += ((rewardRegulator.claim() * PRECISION) /
+                totalSupply);
         _;
     }
 
