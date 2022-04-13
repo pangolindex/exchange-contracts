@@ -29,7 +29,6 @@ import "./SunshineAndRainbowsCompound.sol";
  * @author shung for Pangolin
  */
 contract SunshineAndRainbowsCompoundSingle is SunshineAndRainbowsCompound {
-
     /**
      * @notice Constructs a new SunshineAndRainbows staking contract with
      * locked-stake harvesting feature
@@ -38,12 +37,12 @@ contract SunshineAndRainbowsCompoundSingle is SunshineAndRainbowsCompound {
      * distributes reward tokens
      */
     constructor(address newStakingToken, address newRewardRegulator)
-        SunshineAndRainbowsCompound(newStakingToken, newRewardRegulator)
+        SunshineAndRainbows(newStakingToken, newRewardRegulator)
     {
         require(
             newStakingToken ==
                 address(IRewardRegulator(newRewardRegulator).rewardToken()),
-            "SAR::Constructor: staking token is different than reward token"
+            "SAR::Constructor: invalid staking token"
         );
     }
 
@@ -72,4 +71,3 @@ contract SunshineAndRainbowsCompoundSingle is SunshineAndRainbowsCompound {
         emit Compounded(posId, childPosId, amount);
     }
 }
-

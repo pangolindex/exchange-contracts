@@ -53,7 +53,7 @@ contract SunshineAndRainbowsCompoundLP is SunshineAndRainbowsCompound {
         address newStakingToken,
         address newRewardRegulator,
         address newRouter
-    ) SunshineAndRainbowsCompound(newStakingToken, newRewardRegulator) {
+    ) SunshineAndRainbows(newStakingToken, newRewardRegulator) {
         require(newRouter != address(0), "SAR::Constructor: zero address");
         router = IPangolinRouter(newRouter);
 

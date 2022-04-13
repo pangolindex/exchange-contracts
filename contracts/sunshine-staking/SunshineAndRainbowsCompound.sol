@@ -20,6 +20,7 @@
  */
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./SunshineAndRainbows.sol";
 
 /**
@@ -30,6 +31,8 @@ import "./SunshineAndRainbows.sol";
  * @author shung for Pangolin
  */
 abstract contract SunshineAndRainbowsCompound is SunshineAndRainbows {
+    using SafeMath for uint;
+
     struct Child {
         uint parent; // ID of the parent position
         uint initTime; // timestamp of the creation of the child position
@@ -60,16 +63,6 @@ abstract contract SunshineAndRainbowsCompound is SunshineAndRainbows {
         _;
     }
 
-    /**
-     * @notice Constructs a new SunshineAndRainbows staking contract with
-     * locked-stake harvesting feature
-     * @param newStakingToken Contract address of the staking token
-     * @param newRewardRegulator Contract address of the reward regulator which
-     * distributes reward tokens
-     */
-    constructor(address newStakingToken, address newRewardRegulator)
-        SunshineAndRainbows(newStakingToken, newRewardRegulator) {}
-
     /// @dev Subtracts debts from the over-ridden `pendingRewards` function
     function pendingRewards(uint[] memory posIds)
         public
@@ -79,7 +72,11 @@ abstract contract SunshineAndRainbowsCompound is SunshineAndRainbows {
     {
         uint[] memory rewards = new uint[](posIds.length);
         rewards = super.pendingRewards(posIds);
-        for (uint i; i < posIds.length; ++i) rewards[i] -= _debts[posIds[i]];
+        for (uint i; i < posIds.length; ++i) {
+            // we have to use trySub, because to save gas
+            // we had not deleted debt after position closure
+            (, rewards[i]) = rewards[i].trySub(_debts[posIds[i]]);
+        }
         return rewards;
     }
 
@@ -89,6 +86,7 @@ abstract contract SunshineAndRainbowsCompound is SunshineAndRainbows {
      */
     function _close(uint posId) internal override ifNotLocked(posId) {
         super._close(posId);
+        // no need to waste gas with debt=0, as closed positions are unusable
     }
 
     /**
@@ -109,15 +107,28 @@ abstract contract SunshineAndRainbowsCompound is SunshineAndRainbows {
     {
         uint balance = positions[posId].balance;
 
-        // update debt before & after withdrawal:
-        // The debt calculated in `harvestWithDebt()` considers the whole
-        // balance. In `_withdraw()`, we're only harvesting rewards for a
-        // portion of the position's balance. So we do this little hack to make
-        // `_earned()` subtract only the debt of the harvested portion.
+        /*
+         * update debt before & after withdrawal:
+         * The debt calculated in `harvestWithDebt()` considers the whole
+         * balance. In `_withdraw()`, we're only harvesting rewards for a
+         * portion of the position's balance. So we do this little hack to make
+         * `_earned()` subtract only the debt of the harvested portion.
+         */
         uint remainingDebt = (_debts[posId] * (balance - amount)) / balance;
         _debts[posId] -= remainingDebt;
         super._withdraw(posId, amount);
         _debts[posId] = remainingDebt;
+        /*
+         * There is a risk of a reentrancy attack here, resulting from the
+         * debts being updated after the transfer of the staking token. It
+         * requires staking token is also the owner of the position. Since it
+         * is an unlikely situation, and the risk only effects the rewards of
+         * the stakers of the malicious staking token, it does not warrant
+         * wrapping all external functions with reentrancy guards.
+         *
+         * (When doing the reentrancy analyses in SAR, we always assume reward
+         * token and RewardRegulator are not malicious)
+         */
     }
 
     /**

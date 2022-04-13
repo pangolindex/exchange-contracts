@@ -367,11 +367,13 @@ contract SunshineAndRainbows {
         sumOfEntryTimes -= (position.lastUpdate * amount);
         totalSupply -= amount;
 
-        // get earned rewards:
-        // we only want the withdrawn amount's rewards to be harvested, so
-        // we will do a little hack by temporarily changing position.balance
-        // to withdrawn amount, which will be the balance used by _earned(),
-        // then changing it back to actual remaining balance.
+        /*
+         * get earned rewards:
+         * we only want the withdrawn amount's rewards to be harvested, so
+         * we will do a little hack by temporarily changing position.balance
+         * to withdrawn amount, which will be the balance used by _earned(),
+         * then changing it back to actual remaining balance.
+         */
         uint remainingBalance = position.balance - amount;
         position.balance = amount;
         uint reward = _earned(posId);
