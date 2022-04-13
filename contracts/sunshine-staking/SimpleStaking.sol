@@ -71,11 +71,13 @@ contract SimpleStaking {
         User storage user = users[msg.sender];
         require(amount != 0, "stake: zero amount");
 
-        totalSupply += amount;
-        user.stash += ((user.balance *
-            (_rewardPerTokenStored - user.rewardPerTokenPaid)) / PRECISION);
+        if (user.balance != 0) {
+            user.stash += ((user.balance *
+                (_rewardPerTokenStored - user.rewardPerTokenPaid)) / PRECISION);
+        }
         user.balance += amount;
         user.rewardPerTokenPaid = _rewardPerTokenStored;
+        totalSupply += amount;
 
         stakingToken.safeTransferFrom(msg.sender, address(this), amount);
         emit Staked(msg.sender, amount);
@@ -87,18 +89,21 @@ contract SimpleStaking {
         require(user.balance >= amount, "withdraw: insufficient balance");
         require(amount != 0, "withdraw: zero amount");
 
-        uint reward = user.stash +
-            (user.balance * (_rewardPerTokenStored - user.rewardPerTokenPaid)) /
-            PRECISION;
-
-        totalSupply -= amount;
-        user.stash = 0;
+        uint reward = (user.balance *
+            (_rewardPerTokenStored - user.rewardPerTokenPaid)) / PRECISION;
         user.rewardPerTokenPaid = _rewardPerTokenStored;
+        totalSupply -= amount;
         unchecked {
             user.balance -= amount;
         }
+        if (user.stash != 0) {
+            reward += user.stash;
+            user.stash = 0;
+            rewardToken.safeTransfer(msg.sender, reward);
+        } else if (reward != 0) {
+            rewardToken.safeTransfer(msg.sender, reward);
+        }
 
-        if (reward != 0) rewardToken.safeTransfer(msg.sender, reward);
         stakingToken.safeTransfer(msg.sender, amount);
         emit Withdrawn(msg.sender, amount, reward);
     }
@@ -107,13 +112,15 @@ contract SimpleStaking {
     function harvest() external update {
         User storage user = users[msg.sender];
 
-        uint reward = user.stash +
-            (user.balance * (_rewardPerTokenStored - user.rewardPerTokenPaid)) /
-            PRECISION;
-        require(reward != 0, "harvest: nothing to harvest");
-
+        uint reward = (user.balance *
+            (_rewardPerTokenStored - user.rewardPerTokenPaid)) / PRECISION;
         user.rewardPerTokenPaid = _rewardPerTokenStored;
-        user.stash = 0;
+        if (user.stash != 0) {
+            reward += user.stash;
+            user.stash = 0;
+        } else if (reward == 0) {
+            revert("harvest: nothing to harvest");
+        }
 
         rewardToken.safeTransfer(msg.sender, reward);
         emit Harvested(msg.sender, reward);
@@ -130,7 +137,7 @@ contract SimpleStaking {
     }
 
     /// @notice Gets the pending rewards of a user
-    function earned() external view returns (uint) {
+    function pendingRewards() external view returns (uint) {
         User memory user = users[msg.sender];
         return
             user.stash +
@@ -138,7 +145,7 @@ contract SimpleStaking {
             PRECISION;
     }
 
-    /// @notice Gets the pending rewards of a user
+    /// @notice Projected `_rewardPerTokenStored` at the call time
     function rewardPerToken() public view returns (uint) {
         return
             _rewardPerTokenStored +
