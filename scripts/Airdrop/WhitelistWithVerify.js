@@ -54,18 +54,20 @@ async function main() {
     let amount;
     for(i = 0; i < csvFile.length; i++) {
         amount = BigNumber.from(csvFile[i].total_amount);
-        airdropAddresses.push(csvFile[i].address);
-        airdropAmounts.push(amount);
-        if (airdropAddresses.length == 250) {
-            if (airdropAddresses.length != airdropAmounts.length) {
-                console.log("Airdrop address length need to be equal with airdrop amounts length");
-                process.exit(1);
+        if (!((await Airdrop.withdrawAmount(csvFile[i].address)).eq(amount))) {
+            airdropAddresses.push(csvFile[i].address);
+            airdropAmounts.push(amount);
+            if (airdropAddresses.length == 250) {
+                if (airdropAddresses.length != airdropAmounts.length) {
+                    console.log("Airdrop address length need to be equal with airdrop amounts length");
+                    process.exit(1);
+                }
+                tx = await Airdrop.whitelistAddresses(airdropAddresses, airdropAmounts);
+                await confirmTransactionCount();
+                console.log("Whitelist has been added");
+                airdropAddresses = [];
+                airdropAmounts = [];
             }
-            tx = await Airdrop.whitelistAddresses(airdropAddresses, airdropAmounts);
-            await confirmTransactionCount();
-            console.log("Whitelist has been added");
-            airdropAddresses = [];
-            airdropAmounts = [];
         }
     }
     if (airdropAddresses.length > 0) {

@@ -38,6 +38,7 @@
     "@pangolindex/sdk": "^1.4.0",
     "chance": "^1.1.8",
     "csvtojson": "^2.0.10",
-    "dotenv": "^14.2.0"
+    "dotenv": "^14.2.0",
+    "web3": "^1.7.3"
   }
 }
