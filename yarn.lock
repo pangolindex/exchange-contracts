@@ -749,10 +749,10 @@
   dependencies:
     hardhat-tracer "^1.0.0-alpha.5"
 
-"@pangolindex/sdk@^1.4.0":
-  version "1.4.0"
-  resolved "https://registry.yarnpkg.com/@pangolindex/sdk/-/sdk-1.4.0.tgz#2edcc0cc673796568c0a58b9255555ce847c809e"
-  integrity sha512-LqYW7w/1ZZMTuh6F2cUDm78d6RATQt2jLqbsmsjxtzIRjCxlzFCIx5/+3o7ach6EiFc7Sa76RGW//iO/4SXKaw==
+"@pangolindex/sdk@2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@pangolindex/sdk/-/sdk-2.0.0.tgz#401d1eecef8db16d4dbd2bc02a6ba065b5874b6e"
+  integrity sha512-KB0dvx80wtZPn7KEdTf0J/s8t82tIL1kKUJJBL6N1oZYH6zcqs0CZz//Knj0Ocm5ZNrlhSR+eDJ+RoY/wk1TIw==
   dependencies:
     "@pangolindex/exchange-contracts" "^1.0.1"
     big.js "^5.2.2"
