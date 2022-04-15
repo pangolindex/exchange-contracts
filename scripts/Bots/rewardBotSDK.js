@@ -24,11 +24,7 @@ async function main() {
     console.log("Account:", deployer.address);
     const initBalance = await deployer.getBalance();
     console.log("Account balance:", initBalance.toString());
-    if (getTreasuryVester() == undefined) {
-        console.log(`TreasuryVester on ${network.name} is not in SDK`)
-        process.exit(1);
-    } 
-    
+
     const TreasuryVester = await attach("TreasuryVester", getTreasuryVester());
 
     let tx;
