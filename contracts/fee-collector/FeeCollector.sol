@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 
 import "../mini-chef/IMiniChef.sol";
 import "../pangolin-core/interfaces/IPangolinPair.sol";
@@ -24,6 +25,7 @@ contract FeeCollector is AccessControl, Pausable {
     bytes32 public constant HARVEST_ROLE = keccak256("HARVEST_ROLE");
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 public constant GOVERNOR_ROLE = keccak256("GOVERNOR_ROLE");
+    bytes32 public constant REFLEXIVE_ROLE = keccak256("REFLEXIVE_ROLE");
 
     uint256 public constant FEE_DENOMINATOR = 10_000;
     uint256 public constant MAX_HARVEST_INCENTIVE = 200; // 2%
@@ -40,6 +42,7 @@ contract FeeCollector is AccessControl, Pausable {
 
     /// @dev Cached record of tokens with max approval to PangolinRouter
     mapping(address => bool) private routerApprovals;
+    mapping(address => bool) private isReflexive;
 
     constructor(
         address _wrappedToken,
@@ -69,6 +72,7 @@ contract FeeCollector is AccessControl, Pausable {
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(HARVEST_ROLE, _admin);
         _grantRole(PAUSE_ROLE, _admin);
+        _grantRole(REFLEXIVE_ROLE, _admin);
         _grantRole(GOVERNOR_ROLE, _governor);
         _setRoleAdmin(GOVERNOR_ROLE, GOVERNOR_ROLE); // GOVERNOR_ROLE is self-managed
     }
@@ -99,6 +103,11 @@ contract FeeCollector is AccessControl, Pausable {
     /// @notice Re-enable the harvest function
     function unpauseHarvesting() external onlyRole(PAUSE_ROLE) {
         _unpause();
+    }
+
+    /// @notice Marks a token as reflexive or not for use in calculating burned balances
+    function setReflexiveToken(address token, bool _isReflexive) external onlyRole(REFLEXIVE_ROLE) {
+        isReflexive[token] = _isReflexive;
     }
 
     /// @notice Change the percentage of each harvest that goes to the treasury
@@ -143,11 +152,35 @@ contract FeeCollector is AccessControl, Pausable {
     /// @notice Remove liquidity associated with a pair
     /// @param pair - The pair from which to retrieve liquidity
     /// @param balance - The amount to pull
+    /// @return token0 - token0 address of the pair
     /// @return amount0 - Amount of token0 received via burn
+    /// @return token1 - token1 address of the pair
     /// @return amount1 - Amount of token1 received via burn
-    function _pullLiquidity(address pair, uint256 balance) private returns (uint256 amount0, uint256 amount1) {
+    function _pullLiquidity(
+        address pair,
+        uint256 balance
+    ) private returns (
+        address token0,
+        uint256 amount0,
+        address token1,
+        uint256 amount1
+    ) {
+        token0 = IPangolinPair(pair).token0();
+        token1 = IPangolinPair(pair).token1();
+
+        require(pairFor(FACTORY, token0, token1) == pair, "Invalid pair");
+
         IERC20(pair).safeTransfer(pair, balance);
         (amount0, amount1) = IPangolinPair(pair).burn(address(this));
+
+        if (isReflexive[token0]) {
+            // Clamp max value to amount sent from burn()
+            amount0 = Math.min(amount0, IERC20(token0).balanceOf(address(this)));
+        }
+        if (isReflexive[token1]) {
+            // Clamp max value to amount sent from burn()
+            amount1 = Math.min(amount1, IERC20(token1).balanceOf(address(this)));
+        }
     }
 
     /// @notice Swap a token for the specified output token
@@ -191,10 +224,12 @@ contract FeeCollector is AccessControl, Pausable {
             IPangolinPair liquidityPair = liquidityPairs[i];
             uint256 pglBalance = liquidityPair.balanceOf(address(this));
             if (pglBalance > 0) {
-                address token0 = liquidityPair.token0();
-                address token1 = liquidityPair.token1();
-                require(pairFor(FACTORY, token0, token1) == address(liquidityPair), "Invalid pair");
-                (uint256 token0Pulled, uint256 token1Pulled) = _pullLiquidity(address(liquidityPair), pglBalance);
+                (
+                    address token0,
+                    uint256 token0Pulled,
+                    address token1,
+                    uint256 token1Pulled
+                ) = _pullLiquidity(address(liquidityPair), pglBalance);
                 if (token0 != outputToken) {
                     _swap(token0, outputToken, token0Pulled);
                 }
@@ -248,13 +283,13 @@ contract FeeCollector is AccessControl, Pausable {
     // Migrated from PangolinLibrary
     // calculates the CREATE2 address for a Pangolin pair without making any external calls
     function pairFor(address factory, address tokenA, address tokenB) private pure returns (address pair) {
-        (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-        pair = address(uint160(uint256(keccak256(abi.encodePacked(
-            hex'ff',
-            factory,
-            keccak256(abi.encodePacked(token0, token1)),
-            hex'40231f6b438bce0797c9ada29b718a87ea0a5cea3fe9a771abdd76bd41a3e545' // Pangolin init code hash
-        )))));
+(address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+pair = address(uint160(uint256(keccak256(abi.encodePacked(
+    hex'ff',
+    factory,
+    keccak256(abi.encodePacked(token0, token1)),
+    hex'40231f6b438bce0797c9ada29b718a87ea0a5cea3fe9a771abdd76bd41a3e545' // Pangolin init code hash
+)))));
     }
 
 }
