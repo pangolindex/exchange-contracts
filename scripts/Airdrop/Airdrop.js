@@ -47,7 +47,7 @@ async function main() {
     await tx.wait();
     console.log("Whitelister has been set");
     for(i = 0; i < csvFile.length; i++) {
-        amount = BigNumber.from(csvFile[i].total_amount);
+        amount = BigNumber.from(csvFile[i].allocated_amount);
         airdropAddresses.push(csvFile[i].address);
         airdropAmounts.push(amount);
         if (airdropAddresses.length == 250) {

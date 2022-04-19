@@ -53,7 +53,7 @@ async function main() {
     let airdropAddresses = [], airdropAmounts = [];
     let amount;
     for(i = 0; i < csvFile.length; i++) {
-        amount = BigNumber.from(csvFile[i].total_amount);
+        amount = BigNumber.from(csvFile[i].allocated_amount);
         if (!((await Airdrop.withdrawAmount(csvFile[i].address)).eq(amount))) {
             airdropAddresses.push(csvFile[i].address);
             airdropAmounts.push(amount);
