@@ -1,31 +1,52 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.9;
+pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
-import "../mini-chef/IMiniChef.sol";
-import "../pangolin-core/interfaces/IPangolinPair.sol";
-import "../pangolin-periphery/interfaces/IPangolinRouter.sol";
-import "../staking-rewards/IStakingRewards.sol";
+interface IPangolinRouter {
+    function swapExactTokensForTokens(
+        uint amountIn,
+        uint amountOutMin,
+        address[] calldata path,
+        address to,
+        uint deadline
+    ) external returns (uint[] memory amounts);
+}
+
+interface IPangolinPair {
+    function token0() external view returns (address);
+    function token1() external view returns (address);
+    function burn(address to) external returns (uint amount0, uint amount1);
+    function balanceOf(address owner) external view returns (uint);
+}
+
+interface IMiniChef {
+    function harvest(uint256 pid, address to) external;
+}
+
+interface IStakingRewards {
+    function rewardsToken() external view returns (address);
+    function notifyRewardAmount(uint256 reward) external;
+    function setRewardsDuration(uint256 _rewardsDuration) external;
+    function transferOwnership(address newOwner) external;
+}
 
 contract FeeCollector is AccessControl, Pausable {
 
     using SafeERC20 for IERC20;
-    using Address for address;
 
     address public immutable FACTORY;
     address public immutable ROUTER;
+    bytes32 public immutable PAIR_INIT_HASH; // Specified as hex
     address public immutable WRAPPED_TOKEN;
 
     bytes32 public constant HARVEST_ROLE = keccak256("HARVEST_ROLE");
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 public constant GOVERNOR_ROLE = keccak256("GOVERNOR_ROLE");
-    bytes32 public constant REFLEXIVE_ROLE = keccak256("REFLEXIVE_ROLE");
 
     uint256 public constant FEE_DENOMINATOR = 10_000;
     uint256 public constant MAX_HARVEST_INCENTIVE = 200; // 2%
@@ -48,6 +69,7 @@ contract FeeCollector is AccessControl, Pausable {
         address _wrappedToken,
         address _factory,
         address _router,
+        bytes32 _initHash,
         address _stakingRewards,
         address _miniChef,
         uint256 _pid,
@@ -58,6 +80,7 @@ contract FeeCollector is AccessControl, Pausable {
         WRAPPED_TOKEN = _wrappedToken;
         FACTORY = _factory;
         ROUTER = _router;
+        PAIR_INIT_HASH = _initHash;
 
         require(_stakingRewards != address(0), "Invalid address");
         address _stakingRewardsRewardToken = IStakingRewards(_stakingRewards).rewardsToken();
@@ -72,7 +95,6 @@ contract FeeCollector is AccessControl, Pausable {
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(HARVEST_ROLE, _admin);
         _grantRole(PAUSE_ROLE, _admin);
-        _grantRole(REFLEXIVE_ROLE, _admin);
         _grantRole(GOVERNOR_ROLE, _governor);
         _setRoleAdmin(GOVERNOR_ROLE, GOVERNOR_ROLE); // GOVERNOR_ROLE is self-managed
     }
@@ -95,7 +117,7 @@ contract FeeCollector is AccessControl, Pausable {
         harvestIncentive = _harvestIncentive;
     }
 
-    /// @notice Disable the harvest function. Still allows HARVEST_ROLE members access
+    /// @notice Disable the harvest function
     function pauseHarvesting() external onlyRole(PAUSE_ROLE) {
         _pause();
     }
@@ -106,7 +128,7 @@ contract FeeCollector is AccessControl, Pausable {
     }
 
     /// @notice Marks a token as reflexive or not for use in calculating burned balances
-    function setReflexiveToken(address token, bool _isReflexive) external onlyRole(REFLEXIVE_ROLE) {
+    function setReflexiveToken(address token, bool _isReflexive) external onlyRole(DEFAULT_ADMIN_ROLE) {
         isReflexive[token] = _isReflexive;
     }
 
@@ -168,7 +190,7 @@ contract FeeCollector is AccessControl, Pausable {
         token0 = IPangolinPair(pair).token0();
         token1 = IPangolinPair(pair).token1();
 
-        require(pairFor(FACTORY, token0, token1) == pair, "Invalid pair");
+        require(pairFor(token0, token1) == pair, "Invalid pair");
 
         IERC20(pair).safeTransfer(pair, balance);
         (amount0, amount1) = IPangolinPair(pair).burn(address(this));
@@ -246,12 +268,10 @@ contract FeeCollector is AccessControl, Pausable {
     /// @param claimMiniChef - whether to also harvest additional rewards accrued via MiniChef
     /// @param minFinalBalance - required min png balance after the buybacks (slippage control)
     function harvest(
-        IPangolinPair[] memory liquidityPairs,
+        IPangolinPair[] calldata liquidityPairs,
         bool claimMiniChef,
         uint256 minFinalBalance
-    ) external onlyRole(HARVEST_ROLE) {
-        require(!paused() || hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Harvest disabled");
-
+    ) external whenNotPaused onlyRole(HARVEST_ROLE) {
         address _stakingRewardsRewardToken = stakingRewardsRewardToken; // Gas savings
 
         if (liquidityPairs.length > 0) {
@@ -284,13 +304,13 @@ contract FeeCollector is AccessControl, Pausable {
 
     // Migrated from PangolinLibrary
     // calculates the CREATE2 address for a Pangolin pair without making any external calls
-    function pairFor(address factory, address tokenA, address tokenB) private pure returns (address pair) {
-(address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-pair = address(uint160(uint256(keccak256(abi.encodePacked(
-    hex'ff',
-    factory,
-    keccak256(abi.encodePacked(token0, token1)),
-    hex'40231f6b438bce0797c9ada29b718a87ea0a5cea3fe9a771abdd76bd41a3e545' // Pangolin init code hash
-)))));
+    function pairFor(address tokenA, address tokenB) private view returns (address pair) {
+        (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+        pair = address(uint160(uint256(keccak256(abi.encodePacked(
+            hex'ff',
+            FACTORY,
+            keccak256(abi.encodePacked(token0, token1)),
+            PAIR_INIT_HASH
+        )))));
     }
 }

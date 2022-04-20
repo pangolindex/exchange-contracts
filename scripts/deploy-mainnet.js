@@ -211,6 +211,7 @@ async function main() {
         nativeToken,
         factory.address,
         router.address,
+        '0x40231f6b438bce0797c9ada29b718a87ea0a5cea3fe9a771abdd76bd41a3e545',
         staking.address,
         chef.address,
         0, // chef pid for dummy PGL
