@@ -244,12 +244,13 @@ contract FeeCollector is AccessControl, Pausable {
     /// transfers it to the staking contract, treasury, and caller
     /// @param liquidityPairs - list of all the pairs to harvest
     /// @param claimMiniChef - whether to also harvest additional rewards accrued via MiniChef
-    function harvest(IPangolinPair[] memory liquidityPairs, bool claimMiniChef) external {
-        if (!hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) {
-            require(!address(msg.sender).isContract() && msg.sender == tx.origin, "No contracts");
-            // Callers with HARVEST_ROLE can bypass the pause
-            require(hasRole(HARVEST_ROLE, msg.sender) || !paused(), "Harvest disabled");
-        }
+    /// @param minFinalBalance - required min png balance after the buybacks (slippage control)
+    function harvest(
+        IPangolinPair[] memory liquidityPairs,
+        bool claimMiniChef,
+        uint256 minFinalBalance
+    ) external onlyRole(HARVEST_ROLE) {
+        require(!paused() || hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Harvest disabled");
 
         address _stakingRewardsRewardToken = stakingRewardsRewardToken; // Gas savings
 
@@ -262,6 +263,7 @@ contract FeeCollector is AccessControl, Pausable {
         }
 
         uint256 finalBalance = IERC20(_stakingRewardsRewardToken).balanceOf(address(this));
+        require(finalBalance >= minFinalBalance, "High Slippage");
 
         uint256 _callIncentive = finalBalance * harvestIncentive / FEE_DENOMINATOR;
         uint256 _treasuryFee = finalBalance * treasuryFee / FEE_DENOMINATOR;
@@ -291,5 +293,4 @@ pair = address(uint160(uint256(keccak256(abi.encodePacked(
     hex'40231f6b438bce0797c9ada29b718a87ea0a5cea3fe9a771abdd76bd41a3e545' // Pangolin init code hash
 )))));
     }
-
 }
