@@ -36,7 +36,7 @@ staking duration.
 * `harvest()`: The staking duration for all the staked tokens of the user
 will reset to zero. This is because `harvest` call will claim all the accrued
 rewards of a user. It is not possible to claim only the rewards of a portion
-one's staked balance. One can either claim it all or none.
+of one's staked balance. One can either claim it all or none.
 * `withdraw(amount)`: The staking duration for all the staked balance of the
 user will reset to zero. This is because when withdrawing, all the accrued
 rewards are harvested. So, even if not the whole balance is withdrawn, all
@@ -51,12 +51,12 @@ user-facing complexitiy of this model, we opt out from using it.
 
 ## Compounding
 
-Compounding is provided as series of extensions to the core SAR contract.
+Compounding is provided as an extension to the core SAR contract.
 Compounding allows harvesting without resetting the staking duration, which
 technically violates the second rule of the staking duration. However, this
-is not an issue because when compounding, harvested rewards do not leave
+is not an issue, because when compounding, harvested rewards do not leave
 the contract. The only way to remove those tokens from the contract after
-compounding would be to withdraw. Since withdrawing would reset the staking
+compounding would be to withdraw. Since withdrawing resets the staking
 duration of all the staked balance, there is no need to reset the staking
 duration when compounding.
 
@@ -78,7 +78,7 @@ or MasterChef.
 
 ## SAR Token
 
-SAR contract can be wrapped by a non-transferrable token contract. The stakers
+SAR contract can be inherited by a non-transferrable token contract. The stakers
 would own this non-transferrable token as a factor of their staked balance and
 staking duration. This opens the gates of a governance scheme similar to “ve”
 model.
