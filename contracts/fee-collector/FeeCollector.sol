@@ -7,20 +7,12 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
-interface IPangolinRouter {
-    function swapExactTokensForTokens(
-        uint amountIn,
-        uint amountOutMin,
-        address[] calldata path,
-        address to,
-        uint deadline
-    ) external returns (uint[] memory amounts);
-}
-
 interface IPangolinPair {
     function token0() external view returns (address);
     function token1() external view returns (address);
     function burn(address to) external returns (uint amount0, uint amount1);
+    function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data) external;
+    function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
     function balanceOf(address owner) external view returns (uint);
 }
 
@@ -40,7 +32,6 @@ contract FeeCollector is AccessControl, Pausable {
     using SafeERC20 for IERC20;
 
     address public immutable FACTORY;
-    address public immutable ROUTER;
     bytes32 public immutable PAIR_INIT_HASH; // Specified as hex
     address public immutable WRAPPED_TOKEN;
 
@@ -61,14 +52,11 @@ contract FeeCollector is AccessControl, Pausable {
     address public miniChef;
     uint256 public miniChefPoolId;
 
-    /// @dev Cached record of tokens with max approval to PangolinRouter
-    mapping(address => bool) private routerApprovals;
     mapping(address => bool) private isReflexive;
 
     constructor(
         address _wrappedToken,
         address _factory,
-        address _router,
         bytes32 _initHash,
         address _stakingRewards,
         address _miniChef,
@@ -79,7 +67,6 @@ contract FeeCollector is AccessControl, Pausable {
     ) {
         WRAPPED_TOKEN = _wrappedToken;
         FACTORY = _factory;
-        ROUTER = _router;
         PAIR_INIT_HASH = _initHash;
 
         require(_stakingRewards != address(0), "Invalid address");
@@ -208,34 +195,13 @@ contract FeeCollector is AccessControl, Pausable {
     /// @notice Swap a token for the specified output token
     /// @param token - address of the token to swap
     /// @param amount - amount of the token to swap
-    /// @dev Swaps are executed via router with infinite slippage tolerance
+    /// @dev Swaps are executed directly against pairs with infinite slippage tolerance
     function _swap(address token, address outputToken, uint256 amount) private {
-        address[] memory path;
-
         if (token == WRAPPED_TOKEN || outputToken == WRAPPED_TOKEN) {
-            path = new address[](2);
-            path[0] = token;
-            path[1] = outputToken;
+            direct2Swap(amount, token, outputToken);
         } else {
-            path = new address[](3);
-            path[0] = token;
-            path[1] = WRAPPED_TOKEN;
-            path[2] = outputToken;
+            direct3Swap(amount, token, WRAPPED_TOKEN, outputToken);
         }
-
-        // "Cache" router approval to avoid external calls
-        if (!routerApprovals[token]) {
-            IERC20(token).safeApprove(ROUTER, type(uint256).max);
-            routerApprovals[token] = true;
-        }
-
-        IPangolinRouter(ROUTER).swapExactTokensForTokens(
-            amount,
-            0,
-            path,
-            address(this),
-            block.timestamp
-        );
     }
 
     /// @notice For a list of liquidity pairs, withdraws all liquidity and swaps it to a specified token
@@ -300,6 +266,60 @@ contract FeeCollector is AccessControl, Pausable {
         if (_callIncentive > 0) {
             IERC20(_stakingRewardsRewardToken).safeTransfer(msg.sender, _callIncentive);
         }
+    }
+
+
+    function direct2Swap(uint256 amountIn, address tokenA, address tokenB) internal {
+        address pairAB = pairFor(tokenA, tokenB);
+
+        uint256 amountOutAB = getAmountOut(amountIn, pairAB, tokenA, tokenB);
+
+        IERC20(tokenA).safeTransfer(pairAB, amountIn);
+
+        if (tokenA < tokenB) {
+            IPangolinPair(pairAB).swap(0, amountOutAB, address(this), new bytes(0));
+        } else {
+            IPangolinPair(pairAB).swap(amountOutAB, 0, address(this), new bytes(0));
+        }
+    }
+
+    function direct3Swap(uint256 amountIn, address tokenA, address tokenB, address tokenC) internal {
+        address pairAB = pairFor(tokenA, tokenB);
+        address pairBC = pairFor(tokenB, tokenC);
+
+        uint256 amountOutAB = getAmountOut(amountIn, pairAB, tokenA, tokenB);
+        uint256 amountOutBC = getAmountOut(amountOutAB, pairBC, tokenB, tokenC);
+
+        IERC20(tokenA).safeTransfer(pairAB, amountIn);
+
+        if (tokenA < tokenB) {
+            IPangolinPair(pairAB).swap(0, amountOutAB, pairBC, new bytes(0));
+        } else {
+            IPangolinPair(pairAB).swap(amountOutAB, 0, pairBC, new bytes(0));
+        }
+
+        if (tokenB < tokenC) {
+            IPangolinPair(pairBC).swap(0, amountOutBC, address(this), new bytes(0));
+        } else {
+            IPangolinPair(pairBC).swap(amountOutBC, 0, address(this), new bytes(0));
+        }
+    }
+
+    // Simplified from PangolinLibrary
+    // Combines PangolinLibrary.getAmountOut and PangolinLibrary.getReserves
+    function getAmountOut(
+        uint256 amountIn,
+        address pair,
+        address tokenA,
+        address tokenB
+    ) internal view returns (uint256 amountOut) {
+        (uint256 reserve0, uint256 reserve1,) = IPangolinPair(pair).getReserves();
+        (uint256 reserveIn, uint256 reserveOut) = tokenA < tokenB ? (reserve0, reserve1) : (reserve1, reserve0);
+
+        uint256 amountInWithFee = amountIn * 997;
+        uint256 numerator = amountInWithFee * reserveOut;
+        uint256 denominator = (reserveIn * 1000) + amountInWithFee;
+        amountOut = numerator / denominator;
     }
 
     // Migrated from PangolinLibrary
