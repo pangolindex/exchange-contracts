@@ -18,9 +18,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-pragma solidity ^0.8.0;
+pragma solidity 0.8.13;
 
-import "./SunshineAndRainbowsCompound.sol";
+import "./SunshineAndRainbows.sol";
 
 /**
  * @title Sunshine and Rainbows Extension: Single Stake Compound
@@ -28,7 +28,9 @@ import "./SunshineAndRainbowsCompound.sol";
  * harvesting feature when the reward and staking tokens are the same
  * @author shung for Pangolin
  */
-contract SunshineAndRainbowsCompoundSingle is SunshineAndRainbowsCompound {
+contract SunshineAndRainbowsCompoundSingle is SunshineAndRainbows {
+    using SafeCast for int;
+
     /**
      * @notice Constructs a new SunshineAndRainbows staking contract with
      * locked-stake harvesting feature
@@ -46,28 +48,18 @@ contract SunshineAndRainbowsCompoundSingle is SunshineAndRainbowsCompound {
         );
     }
 
-    /**
-     * @notice Creates a new position with the rewards of the given position
-     * @dev New position is considered locked, and it cannot be withdrawn until
-     * the parent position is updated after the creation of the new position
-     * @param posId ID of the parent position whose rewards are harvested
-     */
-    function compound(uint posId) external {
-        // update the state variables that govern the reward distribution
+    /// @notice Stakes the rewards of the user without resetting APR
+    function compound() external {
         _updateRewardVariables();
 
-        // create a new position
-        uint childPosId = positions.length;
+        // Harvest pending rewards, and record it as debt (negative value). We
+        // record it as debt because we're not updating user variabless that
+        // govern the reward rate for the user.
+        int amount = _earned();
+        users[msg.sender].stash -= amount;
+        emit Harvested(msg.sender, amount.toUint256());
 
-        // record parent-child relation to lock the child position
-        children[childPosId] = Child(posId, block.timestamp);
-
-        // harvest parent position
-        uint amount = _harvestWithDebt(posId);
-
-        // stake parent position rewards to child position
-        _open(amount, address(this));
-
-        emit Compounded(posId, childPosId, amount);
+        // stake the rewards using the balance of this contract
+        _stake(amount.toUint256(), address(this));
     }
 }

@@ -18,9 +18,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-pragma solidity ^0.8.0;
+pragma solidity 0.8.13;
 
-import "./SunshineAndRainbowsCompound.sol";
+import "./SunshineAndRainbows.sol";
 
 import "../pangolin-core/interfaces/IPangolinPair.sol";
 import "../pangolin-periphery/interfaces/IPangolinRouter.sol";
@@ -32,7 +32,8 @@ import "../pangolin-periphery/interfaces/IPangolinRouter.sol";
  * token is one of the tokens in the LP pair
  * @author shung for Pangolin
  */
-contract SunshineAndRainbowsCompoundLP is SunshineAndRainbowsCompound {
+contract SunshineAndRainbowsCompoundLP is SunshineAndRainbows {
+    using SafeCast for int;
     using SafeERC20 for IERC20;
 
     IPangolinRouter public immutable router;
@@ -75,32 +76,30 @@ contract SunshineAndRainbowsCompoundLP is SunshineAndRainbowsCompound {
     }
 
     /**
-     * @notice Creates a new position with the rewards of the given position
-     * @dev New position is considered locked, and it cannot be withdrawn until
-     * the parent position is updated after the creation of the new position.
-     * The new position also requires equal amount of pair token to the reward
-     * amount
-     * @param posId ID of the parent position whose rewards are harvested
+     * @notice Reinvests rewards by pairing it with fresh LP tokens
+     * @dev This method does not reset reward rate as the rewards never leave
+     * the contract. However, pair of the reward token must be provided in the
+     * equivalent amount to the reward token. The newly staked tokens then
+     * start with a zero reward rate, without resetting the reward rate of the
+     * existing balance.
      * @param maxPairAmount The max amount of pair token that can be paired
      * with rewards
      */
-    function compound(uint posId, uint maxPairAmount) external {
-        // update the state variables that govern the reward distribution
+    function compound(uint maxPairAmount) external {
         _updateRewardVariables();
 
-        // create a new position
-        uint childPosId = positions.length;
+        // Harvest pending rewards, and record it as debt (negative value). We
+        // record it as debt because we're not updating user variabless that
+        // govern the reward rate for the user.
+        int reward = _earned();
+        users[msg.sender].stash -= reward;
+        emit Harvested(msg.sender, reward.toUint256());
 
-        // record parent-child relation to lock the child position
-        children[childPosId] = Child(posId, block.timestamp);
+        // provide liquidity and get LP amount
+        uint amount = _addLiquidity(reward.toUint256(), maxPairAmount);
 
-        // harvest parent position and add liquidity with that
-        uint amount = _addLiquidity(_harvestWithDebt(posId), maxPairAmount);
-
-        // stake parent position rewards to child position
-        _open(amount, address(this));
-
-        emit Compounded(posId, childPosId, amount);
+        // stake LP amount back into the user's deposit
+        _stake(amount, address(this));
     }
 
     /**

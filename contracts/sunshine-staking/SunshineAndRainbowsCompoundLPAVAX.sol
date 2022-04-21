@@ -18,7 +18,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-pragma solidity ^0.8.0;
+pragma solidity 0.8.13;
 
 import "./SunshineAndRainbowsCompoundLP.sol";
 
@@ -32,6 +32,7 @@ import "../pangolin-periphery/interfaces/IWAVAX.sol";
  * @author shung for Pangolin
  */
 contract SunshineAndRainbowsCompoundLPAVAX is SunshineAndRainbowsCompoundLP {
+    using SafeCast for int;
     using SafeERC20 for IERC20;
 
     /**
@@ -60,30 +61,28 @@ contract SunshineAndRainbowsCompoundLPAVAX is SunshineAndRainbowsCompoundLP {
     }
 
     /**
-     * @notice Creates a new position with the rewards of the given position
-     * @dev New position is considered locked, and it cannot be withdrawn until
-     * the parent position is updated after the creation of the new position.
-     * The new position also requires equal amount of pair token to the reward
-     * amount
-     * @param posId ID of the parent position whose rewards are harvested
+     * @notice Reinvests rewards by pairing it with AVAX (or ETH)
+     * @dev This method does not reset reward rate as the rewards never leave
+     * the contract. However, equivalent AVAX to the reward amount must be
+     * provided for adding liquidity & staking that. The newly staked tokens
+     * then start with a zero reward rate, without resetting the reward rate of
+     * the existing balance.
      */
-    function compoundAVAX(uint posId) external payable {
-        // update the state variables that govern the reward distribution
+    function compoundAVAX() external payable {
         _updateRewardVariables();
 
-        // create a new position
-        uint childPosId = positions.length;
+        // Harvest pending rewards, and record it as debt (negative value). We
+        // record it as debt because we're not updating user variabless that
+        // govern the reward rate for the user.
+        int reward = _earned();
+        users[msg.sender].stash -= reward;
+        emit Harvested(msg.sender, reward.toUint256());
 
-        // record parent-child relation to lock the child position
-        children[childPosId] = Child(posId, block.timestamp);
+        // provide liquidity and get LP amount
+        uint amount = _addLiquidityAVAX(reward.toUint256());
 
-        // harvest parent position and add liquidity with that
-        uint amount = _addLiquidityAVAX(_harvestWithDebt(posId));
-
-        // stake parent position rewards to child position
-        _open(amount, address(this));
-
-        emit Compounded(posId, childPosId, amount);
+        // stake LP amount back into the user's deposit
+        _stake(amount, address(this));
     }
 
     /**
@@ -105,7 +104,7 @@ contract SunshineAndRainbowsCompoundLPAVAX is SunshineAndRainbowsCompoundLP {
 
         if (msg.value > pairAmount) {
             unchecked {
-                require(payable(msg.sender).send(msg.value - pairAmount));
+                payable(msg.sender).transfer(msg.value - pairAmount);
             }
         } else if (msg.value < pairAmount) {
             revert("SAR::_addLiquidityAVAX: high slippage");

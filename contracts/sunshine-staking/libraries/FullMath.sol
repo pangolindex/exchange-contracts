@@ -4,9 +4,9 @@ pragma solidity ^0.8.0;
 /**
  * @notice A barebones 512-bits math library for Sunshine and Rainbows (SAR)
  * @dev This library only includes functions used by SAR. Therefore it is missing essential
- * operations like division. Arbitrary denominator division function is not necessary, because
- * SAR uses 2^256 as the fixed denominator for achieving high precision. Divisions (a/2^256) and
- * (2^256/a) are trivial as opposed to arbitrary 512-bit division operations.
+ * operations like division. Arbitrary denominator division function is not necessary in SAR,
+ * because we use 2^256 as the fixed denominator for achieving high precision. Divisions (a/2^256)
+ * and (2^256/a) are trivial as opposed to arbitrary 512-bit division operations.
  * Credit: Most algorithms are taken from Mathemagic series of Remco Bloemen <https://2π.com/>.
  * @author shung for Pangolin
  */
@@ -57,7 +57,7 @@ library FullMath {
         return Uint512(i0.r0, i0.r1 + a.r1 * b);
     }
 
-    /// @dev ⌊2^256/a⌋_2^256 when (a > 1)
+    /// @dev ⌊2^256/a⌋
     function div256(uint256 a) internal pure returns (Uint512 memory) {
         require(a != 0, "FullMath: division by zero");
         uint256 r0;
@@ -66,6 +66,7 @@ library FullMath {
             r0 := add(div(sub(0, a), a), 1)
             r1 := eq(a, 1)
         }
+        // returns Uint512 to not have overflow when `a == 1`
         return Uint512(r0, r1);
     }
 
