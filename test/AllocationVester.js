@@ -8,7 +8,7 @@ const chance = require("chance").Chance();
 const ZERO_ADDRESS = ethers.constants.AddressZero;
 
 const ONE_DAY = BigNumber.from("86400");
-const PRECISION = ONE_DAY.mul("365").mul("10000");
+//const PRECISION = ONE_DAY.mul("365").mul("10000");
 const EIGHT_WEEKS = 4838400;
 const TWO_YEARS = 63115200;
 
@@ -368,7 +368,7 @@ describe("AllocationVester.sol", function () {
 
       expect(member.lastUpdate).to.equal(blockTime);
       expect(member.reserve).to.equal(allocations[0]);
-      expect(member.rate).to.equal(allocations[0].mul(PRECISION).div(durations[0]));
+      expect(member.rate).to.equal(allocations[0].div(durations[0]));
 
     });
   });
