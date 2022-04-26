@@ -121,11 +121,14 @@ contract AllocationVester is Claimable {
             // check the member's remaining harvest
             if (member.reserve != 0) {
                 // stash pending rewards of the member so it remains claimable
-                member.stash = uint96(pendingHarvest(account));
+                uint96 tmpMemberStash = uint96(pendingHarvest(account));
+                member.stash = tmpMemberStash;
                 // free non-stashed reserves of the member from the reserves
-                tmpReserve -= (member.reserve - member.stash);
+                tmpReserve -= (member.reserve - tmpMemberStash);
                 // free non-stashed tokens from member's reserves
-                member.reserve = member.stash;
+                member.reserve = tmpMemberStash;
+                // remove member from set if has no reserves remaining
+                if (tmpMemberStash == 0) _membersAddresses.remove(account);
             }
 
             // check the member's new allocation
@@ -141,7 +144,7 @@ contract AllocationVester is Claimable {
                 member.rate = allocation / duration;
                 member.lastUpdate = uint64(block.timestamp);
 
-                // add the member to the set
+                // add the member to the set if not already inside the set
                 _membersAddresses.add(account);
             }
 
