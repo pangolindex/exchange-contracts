@@ -13,7 +13,7 @@ import "../Claimable.sol";
  * it for arbitrary durations for each recipient
  * @dev Assumptions:
  *      1) Distribution token supply fits 96 bits, and
- *      2) Members receive more than 1e18 (=1 token if decimal is 18) allocation each.
+ *      2) `allocation` is sufficiently greater than `duration` such that `rate` will be precise
  * @author shung for Pangolin
  */
 contract AllocationVester is Claimable {
@@ -40,9 +40,8 @@ contract AllocationVester is Claimable {
     /// @notice The total amount of tokens set to be streamed to all members
     uint256 public reserve;
 
-    /// @notice The minimum & maximum durations a vesting can last
+    /// @notice The minimum duration a vesting can last
     uint256 private constant MIN_DURATION = 8 weeks;
-    uint256 private constant MAX_DURATION = 1_000 * 365 days;
 
     event AllocationSet(address indexed member, uint256 allocation, uint256 duration);
     event Harvested(address indexed member, uint256 amount);
@@ -134,7 +133,6 @@ contract AllocationVester is Claimable {
             // check the member's new allocation
             if (allocation != 0) {
                 require(duration >= MIN_DURATION, "short vesting duration");
-                require(duration <= MAX_DURATION, "long vesting duration");
 
                 // lock tokens as reserve
                 tmpReserve += allocation;
