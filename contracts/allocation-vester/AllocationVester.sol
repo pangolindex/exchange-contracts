@@ -11,9 +11,6 @@ import "../Claimable.sol";
  * @title Allocation Vester
  * @notice Allows allocating and distributing tokens to recipients by vesting
  * it for arbitrary durations for each recipient
- * @dev Assumptions:
- *      1) Distribution token supply fits 96 bits, and
- *      2) `allocation` is sufficiently greater than `duration` such that `rate` will be precise
  * @author shung for Pangolin
  */
 contract AllocationVester is Claimable {
@@ -50,6 +47,7 @@ contract AllocationVester is Claimable {
     /**
      * @notice Constructs a new AllocationVester contract
      * @param distributionToken The address of the token to be distributed
+     * @dev Distribution token supply must fit 96bits
      */
     constructor(address distributionToken) {
         require(distributionToken != address(0), "zero address");
@@ -95,6 +93,8 @@ contract AllocationVester is Claimable {
      * @param allocations The amount of tokens to allocate to the corresponding
      * member, overriding the previous allocation
      * @param durations The duration the corresponding allocation will last for
+     * @dev `allocation` for a member must be sufficiently greater than its `duration` such that
+     * the `rate` will be precise
      */
     function setAllocations(
         address[] calldata accounts,
