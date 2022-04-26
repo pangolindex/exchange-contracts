@@ -117,17 +117,17 @@ contract AllocationVester is Claimable {
 
             require(account != address(0), "bad recipient");
 
+            uint96 tmpMemberReserve = member.reserve; // gas saving
+
             // check the member's remaining harvest
-            if (member.reserve != 0) {
+            if (tmpMemberReserve != 0) {
                 // stash pending rewards of the member so it remains claimable
                 uint96 tmpMemberStash = uint96(pendingHarvest(account));
                 member.stash = tmpMemberStash;
                 // free non-stashed reserves of the member from the reserves
-                tmpReserve -= (member.reserve - tmpMemberStash);
+                tmpReserve -= (tmpMemberReserve - tmpMemberStash);
                 // free non-stashed tokens from member's reserves
-                member.reserve = tmpMemberStash;
-                // remove member from set if has no reserves remaining
-                if (tmpMemberStash == 0) _membersAddresses.remove(account);
+                tmpMemberReserve = tmpMemberStash;
             }
 
             // check the member's new allocation
@@ -138,14 +138,18 @@ contract AllocationVester is Claimable {
                 tmpReserve += allocation;
 
                 // add vesting info for the member
-                member.reserve += allocation.toUint96();
+                tmpMemberReserve += allocation.toUint96();
                 member.rate = allocation / duration;
                 member.lastUpdate = uint64(block.timestamp);
 
                 // add the member to the set if not already inside the set
                 _membersAddresses.add(account);
+            } else if (tmpMemberReserve == 0) {
+                // remove member from set if has no reserves remaining
+                _membersAddresses.remove(account);
             }
 
+            member.reserve = tmpMemberReserve; // assign tmp value back to the storage
             emit AllocationSet(account, allocation, duration);
         }
 
