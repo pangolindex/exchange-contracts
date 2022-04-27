@@ -5,7 +5,6 @@ pragma solidity 0.8.13;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
 
 interface IPangolinPair {
     function token0() external view returns (address);
@@ -271,7 +270,7 @@ contract FeeCollector is AccessControl, Pausable {
         uint256 len = liquidityPairs.length;
         for (uint256 i; i < len; ++i) {
             require(isRecoverable[liquidityPairs[i]], "Cannot recover");
-            IERC20 liquidityPair = address(liquidityPairs[i]);
+            IERC20 liquidityPair = IERC20(liquidityPairs[i]);
             liquidityPair.safeTransfer(_treasury, liquidityPair.balanceOf(address(this)));
         }
     }
