@@ -37,6 +37,7 @@ contract FeeCollector is AccessControl, Pausable {
 
     bytes32 public constant HARVEST_ROLE = keccak256("HARVEST_ROLE");
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
+    bytes32 public constant RECOVERY_ROLE = keccak256("RECOVERY_ROLE");
     bytes32 public constant GOVERNOR_ROLE = keccak256("GOVERNOR_ROLE");
 
     uint256 public constant FEE_DENOMINATOR = 10_000;
@@ -52,7 +53,7 @@ contract FeeCollector is AccessControl, Pausable {
     address public miniChef;
     uint256 public miniChefPoolId;
 
-    mapping(address => bool) private isReflexive;
+    mapping(address => bool) public isRecoverable;
 
     constructor(
         address _wrappedToken,
@@ -82,6 +83,8 @@ contract FeeCollector is AccessControl, Pausable {
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(HARVEST_ROLE, _admin);
         _grantRole(PAUSE_ROLE, _admin);
+        _grantRole(RECOVERY_ROLE, _admin);
+        _setRoleAdmin(RECOVERY_ROLE, RECOVERY_ROLE); // RECOVERY_ROLE is self-managed
         _grantRole(GOVERNOR_ROLE, _governor);
         _setRoleAdmin(GOVERNOR_ROLE, GOVERNOR_ROLE); // GOVERNOR_ROLE is self-managed
     }
@@ -104,19 +107,20 @@ contract FeeCollector is AccessControl, Pausable {
         harvestIncentive = _harvestIncentive;
     }
 
-    /// @notice Disable the harvest function
+    /// @notice Disable the harvest and recover functions
     function pauseHarvesting() external onlyRole(PAUSE_ROLE) {
         _pause();
     }
 
-    /// @notice Re-enable the harvest function
+    /// @notice Re-enable the harvest and recover functions
     function unpauseHarvesting() external onlyRole(PAUSE_ROLE) {
         _unpause();
     }
 
-    /// @notice Marks a token as reflexive or not for use in calculating burned balances
-    function setReflexiveToken(address token, bool _isReflexive) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        isReflexive[token] = _isReflexive;
+    /// @notice Allows a liquidity token to be withdrawn fully without a buyback
+    /// @dev Intended for recovering LP involving a token with fees on transfer
+    function setRecoverable(address token, bool allowed) external onlyRole(RECOVERY_ROLE) {
+        isRecoverable[token] = allowed;
     }
 
     /// @notice Change the percentage of each harvest that goes to the treasury
@@ -181,15 +185,6 @@ contract FeeCollector is AccessControl, Pausable {
 
         IERC20(pair).safeTransfer(pair, balance);
         (amount0, amount1) = IPangolinPair(pair).burn(address(this));
-
-        if (isReflexive[token0]) {
-            // Clamp max value to amount sent from burn()
-            amount0 = Math.min(amount0, IERC20(token0).balanceOf(address(this)));
-        }
-        if (isReflexive[token1]) {
-            // Clamp max value to amount sent from burn()
-            amount1 = Math.min(amount1, IERC20(token1).balanceOf(address(this)));
-        }
     }
 
     /// @notice Swap a token for the specified output token
@@ -268,6 +263,18 @@ contract FeeCollector is AccessControl, Pausable {
         }
     }
 
+    /// @notice Recovers LP tokens to the treasury. Requires LP is whitelisted by the RECOVERY_ROLE
+    /// @param liquidityPairs - list of all the pairs to recover
+    /// @dev Intended to recover LP involving a token with fees on transfer
+    function recoverLP(address[] calldata liquidityPairs) external whenNotPaused onlyRole(DEFAULT_ADMIN_ROLE) {
+        address _treasury = treasury;
+        uint256 len = liquidityPairs.length;
+        for (uint256 i; i < len; ++i) {
+            require(isRecoverable[liquidityPairs[i]], "Cannot recover");
+            IERC20 liquidityPair = address(liquidityPairs[i]);
+            liquidityPair.safeTransfer(_treasury, liquidityPair.balanceOf(address(this)));
+        }
+    }
 
     function direct2Swap(uint256 amountIn, address tokenA, address tokenB) internal {
         address pairAB = pairFor(tokenA, tokenB);
