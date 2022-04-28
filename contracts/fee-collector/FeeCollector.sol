@@ -107,12 +107,12 @@ contract FeeCollector is AccessControl, Pausable {
     }
 
     /// @notice Disable the harvest and recover functions
-    function pauseHarvesting() external onlyRole(PAUSE_ROLE) {
+    function pause() external onlyRole(PAUSE_ROLE) {
         _pause();
     }
 
     /// @notice Re-enable the harvest and recover functions
-    function unpauseHarvesting() external onlyRole(PAUSE_ROLE) {
+    function unpause() external onlyRole(PAUSE_ROLE) {
         _unpause();
     }
 
