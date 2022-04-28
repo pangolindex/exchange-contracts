@@ -2,6 +2,7 @@
   "name": "@pangolindex/exchange-contracts",
   "devDependencies": {
     "@boringcrypto/boring-solidity": "boringcrypto/BoringSolidity#e06e943",
+    "@defi-wonderland/smock": "^2.0.7",
     "@nomiclabs/hardhat-ethers": "^2.0.1",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@openzeppelin/contracts": "^4.3.2",
@@ -10,7 +11,9 @@
     "ethereumjs-tx": "^2.1.2",
     "ethers": "^5.0.24",
     "hardhat": "^2.0.6",
-    "openzeppelin-contracts-legacy": "yarn:@openzeppelin/contracts@3.3.0"
+    "openzeppelin-contracts-legacy": "yarn:@openzeppelin/contracts@3.3.0",
+    "ts-node": "^10.7.0",
+    "typescript": "^4.6.3"
   },
   "version": "2.1.0",
   "description": "Contracts for the Pangolin Dex.",
