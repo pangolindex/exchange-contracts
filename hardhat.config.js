@@ -6,17 +6,17 @@ require('dotenv').config();
 
 // Create hardhat networks from @pangolindex/sdk
 let networksFromSdk = {};
-for(let i = 0; i < CHAINS.length; i++) {
-  networksFromSdk[CHAINS[i].id] = {
-    url: CHAINS[i].rpc_uri,
-    chainId: CHAINS[i].chain_id,
-    accounts: [process.env.PRIVATE_KEY]
+for (const chain of CHAINS) {
+  networksFromSdk[chain.id] = {
+    url: chain.rpc_uri,
+    chainId: chain.chain_id,
+    accounts: [process.env.PRIVATE_KEY],
   };
-};
+}
 networksFromSdk["hardhat"] = {
   chainId: 43112,
   initialDate: "2021-10-10",
-}
+};
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -89,7 +89,17 @@ module.exports = {
     overrides: {
       "contracts/mini-chef-zapper/MiniChefV2Zapper.sol": {
         version: "0.8.11"
-      }
+      },
+      "contracts/pangolin-token/PNG.sol": {
+        version: "0.5.16",
+        settings: { // For mocking
+          outputSelection: {
+            "*": {
+              "*": ["storageLayout"],
+            },
+          },
+        },
+      },
     }
   },
   networks: networksFromSdk,
