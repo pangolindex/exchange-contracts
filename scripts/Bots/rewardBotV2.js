@@ -40,7 +40,7 @@ async function main() {
     }
     const ONE_SECOND = BigNumber.from(1000);
     const ONE_DAY = BigNumber.from(86400).mul(ONE_SECOND);
-    while (true) {
+    while (await TreasuryVester.vestingEnabled() == true) {
         let lastUpdate = (await TreasuryVester.lastUpdate()).mul(ONE_SECOND);
         console.log("lastUpdate: ", lastUpdate.toNumber());
         let time = getTime();

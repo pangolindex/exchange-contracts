@@ -46,26 +46,20 @@ async function main() {
     tx = await multisig.submitTransaction(Airdrop.address, 0, "0xf98f5b92000000000000000000000000" + deployer.address.substr(2), {gasLimit: estimatedGas}); 
     await tx.wait();
     console.log("Whitelister has been set");
-    let test;
     for(i = 0; i < csvFile.length; i++) {
-        amount = BigNumber.from(Math.floor(csvFile[i].total_amount)).mul(BigNumber.from(10).pow(18));
-        if (amount.gt(0)) {
-            airdropAddresses.push(csvFile[i].address);
-            airdropAmounts.push(amount);
-            
-            if (airdropAddresses.length == 250) {
-
-                if (airdropAddresses.length != airdropAmounts.length) {
-                    console.log("Airdrop address length need to be equal with airdrop amounts length");
-                    process.exit(1);
-                }
-                tx = await Airdrop.whitelistAddresses(airdropAddresses, airdropAmounts);
-                await tx.wait();
-                console.log("Whitelist has been added");
-
-                airdropAddresses = [];
-                airdropAmounts = [];
+        amount = BigNumber.from(csvFile[i].allocated_amount);
+        airdropAddresses.push(csvFile[i].address);
+        airdropAmounts.push(amount);
+        if (airdropAddresses.length == 250) {
+            if (airdropAddresses.length != airdropAmounts.length) {
+                console.log("Airdrop address length need to be equal with airdrop amounts length");
+                process.exit(1);
             }
+            tx = await Airdrop.whitelistAddresses(airdropAddresses, airdropAmounts);
+            await confirmTransactionCount();
+            console.log("Whitelist has been added");
+            airdropAddresses = [];
+            airdropAmounts = [];
         }
     }
     if (airdropAddresses.length > 0) {

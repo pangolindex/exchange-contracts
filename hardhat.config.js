@@ -1,15 +1,15 @@
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-etherscan");
-const { CHAINS } = require("@pangolindex/sdk");
+const { ALL_CHAINS } = require("@pangolindex/sdk");
 require('dotenv').config();
 
 // Create hardhat networks from @pangolindex/sdk
 let networksFromSdk = {};
-for(let i = 0; i < CHAINS.length; i++) {
-  networksFromSdk[CHAINS[i].id] = {
-    url: CHAINS[i].rpc_uri,
-    chainId: CHAINS[i].chain_id,
+for(let i = 0; i < ALL_CHAINS.length; i++) {
+  networksFromSdk[ALL_CHAINS[i].id] = {
+    url: ALL_CHAINS[i].rpc_uri,
+    chainId: ALL_CHAINS[i].chain_id,
     accounts: [process.env.PRIVATE_KEY]
   };
 };

@@ -6,6 +6,29 @@ const { ADDRESSES } = require(`../../addresses/${network.name}.js`);
 
 async function main() {
 
+    const [deployer] = await ethers.getSigners();
+    console.log("Using script with the account:", deployer.address);
+
+    var txCount = await ethers.provider.getTransactionCount(deployer.address);
+    async function confirmTransactionCount() {
+        let newTxCount;
+        while (true) {
+            try {
+                newTxCount = await ethers.provider.getTransactionCount(
+                    deployer.address
+                );
+                if (newTxCount != txCount + 1) {
+                    continue;
+                }
+                txCount++;
+            } catch (err) {
+                console.log(err);
+                process.exit(0);
+            }
+            break;
+        }
+    }
+
     async function attach(factory, address) {
         var ContractFactory = await ethers.getContractFactory(factory);
         var contract = await ContractFactory.attach(address);
@@ -14,16 +37,13 @@ async function main() {
     }
 
 
-    const [deployer] = await ethers.getSigners();
-    console.log("Using script with the account:", deployer.address);
-
     const initBalance = await deployer.getBalance();
     console.log("Account balance:", initBalance.toString());
 
     let info, tx;
 
     const Airdrop = await attach("Airdrop", ADDRESSES[10 - (16 - ADDRESSES.length) ].address);
-            
+
     if (await Airdrop.whitelister() != deployer.address) {
         console.error("You are not the whitelister of Airdrop");
         process.exit(1);
@@ -32,26 +52,20 @@ async function main() {
     csvFile = await csv().fromFile(`scripts/Airdrop/lists/${network.name}.csv`)
     let airdropAddresses = [], airdropAmounts = [];
     let amount;
-    test = BigNumber.from(Math.floor(csvFile[0].total_amount)).mul(BigNumber.from(10).pow(18));
     for(i = 0; i < csvFile.length; i++) {
-        amount = BigNumber.from(Math.floor(csvFile[i].total_amount)).mul(BigNumber.from(10).pow(18));
-        if (amount.gt(0)) {
-            airdropAddresses.push(csvFile[i].address);
-            airdropAmounts.push(amount);
-            
-            if (airdropAddresses.length == 250) {
-
-                if (airdropAddresses.length != airdropAmounts.length) {
-                    console.log("Airdrop address length need to be equal with airdrop amounts length");
-                    process.exit(1);
-                }
-                tx = await Airdrop.whitelistAddresses(airdropAddresses, airdropAmounts);
-                await tx.wait();
-                console.log("Whitelist has been added");
-
-                airdropAddresses = [];
-                airdropAmounts = [];
+        amount = BigNumber.from(csvFile[i].allocated_amount);
+        airdropAddresses.push(csvFile[i].address);
+        airdropAmounts.push(amount);
+        if (airdropAddresses.length == 250) {
+            if (airdropAddresses.length != airdropAmounts.length) {
+                console.log("Airdrop address length need to be equal with airdrop amounts length");
+                process.exit(1);
             }
+            tx = await Airdrop.whitelistAddresses(airdropAddresses, airdropAmounts);
+            await confirmTransactionCount();
+            console.log("Whitelist has been added");
+            airdropAddresses = [];
+            airdropAmounts = [];
         }
     }
     if (airdropAddresses.length > 0) {
@@ -62,7 +76,7 @@ async function main() {
         }
     
         tx = await Airdrop.whitelistAddresses(airdropAddresses, airdropAmounts);
-        await tx.wait();
+        await confirmTransactionCount();
         console.log("Whitelist has been added");
 
     }
