@@ -38,11 +38,5 @@ described below.
   whole balance is withdrawn, all the rewards are be harvested, which will restarts the staking
   duration of any remaining balance.
 * `compound`:
-  * Harvests and restakes the accrued rewards without restarting the staking duration,
+	* Harvests and restakes the accrued rewards without restarting the staking duration,
 	* The staking duration of the newly staked tokens starts from zero.
-
-To enable partial harvesting, which would in turn enable partial withdrawing without restarting
-the staking duration of the whole staked balance, one can track staking duration of positions
-instead of users. This model would allow users to have unlimited positions with varying staking
-duration. Due to user-facing complexitiy of this model, we opt out from using it. We instead use
-the "Combined Positions" extension of SAR, which prohibits partial harvesting.
