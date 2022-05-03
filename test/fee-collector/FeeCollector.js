@@ -117,25 +117,7 @@ describe('FeeCollector', function() {
                 userWithoutRole = addr2;
                 await feeCollector.connect(OWNER).revokeRole(HARVEST_ROLE, userWithoutRole.address);
             });
-            it('Is granted by default to admin', async function() {
-                expect(await feeCollector.hasRole(HARVEST_ROLE, OWNER.address)).to.be.true;
-            });
-            it('Admin can grant rule', async function() {
-                const userGrantee = userWithoutRole;
-                await expect(feeCollector.connect(OWNER).grantRole(
-                    HARVEST_ROLE,
-                    userGrantee.address,
-                )).not.to.be.reverted;
-                expect(await feeCollector.hasRole(HARVEST_ROLE, userGrantee.address)).to.be.true;
-            });
-            it('User with role cannot grant role', async function() {
-                const userGrantee = userWithoutRole;
-                await expect(feeCollector.connect(userWithRole).grantRole(
-                    HARVEST_ROLE,
-                    userGrantee.address,
-                )).to.be.reverted;
-                expect(await feeCollector.hasRole(HARVEST_ROLE, userGrantee.address)).to.be.false;
-            });
+            itPassesBasicRoleTests(HARVEST_ROLE);
         });
         describe('PAUSE_ROLE', async function() {
             beforeEach(async function() {
@@ -144,25 +126,7 @@ describe('FeeCollector', function() {
                 userWithoutRole = addr2;
                 await feeCollector.connect(OWNER).revokeRole(PAUSE_ROLE, userWithoutRole.address);
             });
-            it('Is granted by default to admin', async function() {
-                expect(await feeCollector.hasRole(PAUSE_ROLE, OWNER.address)).to.be.true;
-            });
-            it('Admin can grant rule', async function() {
-                const userGrantee = userWithoutRole;
-                await expect(feeCollector.connect(OWNER).grantRole(
-                    PAUSE_ROLE,
-                    userGrantee.address,
-                )).not.to.be.reverted;
-                expect(await feeCollector.hasRole(PAUSE_ROLE, userGrantee.address)).to.be.true;
-            });
-            it('User with role cannot grant role', async function() {
-                const userGrantee = userWithoutRole;
-                await expect(feeCollector.connect(userWithRole).grantRole(
-                    PAUSE_ROLE,
-                    userGrantee.address,
-                )).to.be.reverted;
-                expect(await feeCollector.hasRole(PAUSE_ROLE, userGrantee.address)).to.be.false;
-            });
+            itPassesBasicRoleTests(PAUSE_ROLE);
         });
         describe('RECOVERY_ROLE', async function() {
             const randomAddress = '0x1000000000000000000000000000000000000001';
@@ -176,7 +140,7 @@ describe('FeeCollector', function() {
                 expect(await feeCollector.hasRole(RECOVERY_ROLE, OWNER.address)).to.be.true;
             });
             it('Admin (without role) cannot grant rule', async function() {
-                await feeCollector.connect(OWNER).revokeRole(RECOVERY_ROLE, OWNER.address);
+                await feeCollector.connect(userWithRole).revokeRole(RECOVERY_ROLE, OWNER.address);
                 await expect(feeCollector.connect(OWNER).grantRole(
                     RECOVERY_ROLE,
                     userWithoutRole.address,
@@ -220,6 +184,7 @@ describe('FeeCollector', function() {
                 expect(await feeCollector.hasRole(GOVERNOR_ROLE, OWNER.address)).to.be.false;
             });
             it('Admin (without role) cannot grant rule', async function() {
+                await feeCollector.connect(userWithRole).revokeRole(GOVERNOR_ROLE, OWNER.address);
                 await expect(feeCollector.connect(OWNER).grantRole(
                     GOVERNOR_ROLE,
                     userWithoutRole.address,
@@ -245,128 +210,87 @@ describe('FeeCollector', function() {
                 )).to.be.reverted;
                 expect(await feeCollector.treasuryFee()).not.to.equal('20');
             });
+        });
+
+        function itPassesBasicRoleTests(role) {
+            it('Is granted by default to admin', async function() {
+                expect(await feeCollector.hasRole(role, OWNER.address)).to.be.true;
+            });
+            it('Admin can grant rule', async function() {
+                const userGrantee = userWithoutRole;
+                await expect(feeCollector.connect(OWNER).grantRole(
+                    role,
+                    userGrantee.address,
+                )).not.to.be.reverted;
+                expect(await feeCollector.hasRole(role, userGrantee.address)).to.be.true;
+            });
+            it('User with role cannot grant role', async function() {
+                const userGrantee = userWithoutRole;
+                await expect(feeCollector.connect(userWithRole).grantRole(
+                    role,
+                    userGrantee.address,
+                )).to.be.reverted;
+                expect(await feeCollector.hasRole(role, userGrantee.address)).to.be.false;
+            });
+        }
+    });
+
+    describe('Treasury Fee', async function() {
+        let userWithGovernorRole, userWithoutGovernorRole;
+        const FEE_DENOMINATOR = 10000;
+        const TREASURY_INCENTIVE = 1500;
+
+        beforeEach(async function() {
+            userWithGovernorRole = addr1;
+            await feeCollector.connect(governorSigner).grantRole(GOVERNOR_ROLE, userWithGovernorRole.address);
+            userWithoutGovernorRole = addr2;
+            await feeCollector.connect(governorSigner).revokeRole(GOVERNOR_ROLE, userWithoutGovernorRole.address);
+        });
+        it('User with role can set treasury fee', async function() {
+            const newTreasuryFee = TREASURY_INCENTIVE + 1;
+            await expect(feeCollector.connect(userWithGovernorRole).setTreasuryFee(
+                newTreasuryFee,
+            )).not.to.be.reverted;
+            expect(await feeCollector.treasuryFee()).to.equal(newTreasuryFee);
+        });
+        it('User without role cannot set treasury fee', async function() {
+            const newTreasuryFee = TREASURY_INCENTIVE + 1;
+            await expect(feeCollector.connect(userWithoutGovernorRole).setTreasuryFee(
+                newTreasuryFee,
+            )).to.be.reverted;
+            expect(await feeCollector.treasuryFee()).to.equal(TREASURY_INCENTIVE);
+        });
+        it('Treasury fee cannot exceed total allocation', async function() {
+            await expect(feeCollector.connect(userWithGovernorRole).setTreasuryFee(
+                FEE_DENOMINATOR,
+            )).to.be.revertedWith('Total fees must <= 100');
+            expect(await feeCollector.treasuryFee()).to.equal(TREASURY_INCENTIVE);
         });
     });
 
-    describe('Utilities', async function() {
-        let userWithRole, userWithoutRole;
+    describe('Harvest Incentive', async function() {
+        const MAX_HARVEST_INCENTIVE = 200;
+        const HARVEST_INCENTIVE = 10;
 
-        describe('HARVEST_ROLE', async function() {
-            beforeEach(async function() {
-                userWithRole = addr1;
-                await feeCollector.connect(OWNER).grantRole(HARVEST_ROLE, userWithRole.address);
-                userWithoutRole = addr2;
-                await feeCollector.connect(OWNER).revokeRole(HARVEST_ROLE, userWithoutRole.address);
-            });
-            it('Is granted by default to admin', async function() {
-                expect(await feeCollector.hasRole(HARVEST_ROLE, OWNER.address)).to.be.true;
-            });
-            it('Admin can grant rule', async function() {
-                const userGrantee = userWithoutRole;
-                await expect(feeCollector.connect(OWNER).grantRole(
-                    HARVEST_ROLE,
-                    userGrantee.address,
-                )).not.to.be.reverted;
-                expect(await feeCollector.hasRole(HARVEST_ROLE, userGrantee.address)).to.be.true;
-            });
-            it('User with role cannot grant role', async function() {
-                const userGrantee = userWithoutRole;
-                await expect(feeCollector.connect(userWithRole).grantRole(
-                    HARVEST_ROLE,
-                    userGrantee.address,
-                )).to.be.reverted;
-                expect(await feeCollector.hasRole(HARVEST_ROLE, userGrantee.address)).to.be.false;
-            });
+        it('Admin can set harvest incentive', async function() {
+            const newHarvestIncentive = HARVEST_INCENTIVE + 1;
+            await expect(feeCollector.connect(OWNER).setHarvestIncentive(
+                newHarvestIncentive,
+            )).not.to.be.reverted;
+            expect(await feeCollector.harvestIncentive()).to.equal(newHarvestIncentive);
         });
-        describe('PAUSE_ROLE', async function() {
-            beforeEach(async function() {
-                userWithRole = addr1;
-                await feeCollector.connect(OWNER).grantRole(PAUSE_ROLE, userWithRole.address);
-                userWithoutRole = addr2;
-                await feeCollector.connect(OWNER).revokeRole(PAUSE_ROLE, userWithoutRole.address);
-            });
-            it('Is granted by default to admin', async function() {
-                expect(await feeCollector.hasRole(PAUSE_ROLE, OWNER.address)).to.be.true;
-            });
-            it('Admin can grant rule', async function() {
-                const userGrantee = userWithoutRole;
-                await expect(feeCollector.connect(OWNER).grantRole(
-                    PAUSE_ROLE,
-                    userGrantee.address,
-                )).not.to.be.reverted;
-                expect(await feeCollector.hasRole(PAUSE_ROLE, userGrantee.address)).to.be.true;
-            });
-            it('User with role cannot grant role', async function() {
-                const userGrantee = userWithoutRole;
-                await expect(feeCollector.connect(userWithRole).grantRole(
-                    PAUSE_ROLE,
-                    userGrantee.address,
-                )).to.be.reverted;
-                expect(await feeCollector.hasRole(PAUSE_ROLE, userGrantee.address)).to.be.false;
-            });
+        it('Non-admin cannot set harvest incentive', async function() {
+            const newTreasuryFee = HARVEST_INCENTIVE + 1;
+            await expect(feeCollector.connect(addr1).setHarvestIncentive(
+                newTreasuryFee,
+            )).to.be.reverted;
+            expect(await feeCollector.harvestIncentive()).to.equal(HARVEST_INCENTIVE);
         });
-        describe('RECOVERY_ROLE', async function() {
-            beforeEach(async function() {
-                userWithRole = addr1;
-                await feeCollector.connect(OWNER).grantRole(RECOVERY_ROLE, userWithRole.address);
-                userWithoutRole = addr2;
-                await feeCollector.connect(OWNER).revokeRole(RECOVERY_ROLE, userWithoutRole.address);
-            });
-            it('Is granted by default to admin', async function() {
-                expect(await feeCollector.hasRole(RECOVERY_ROLE, OWNER.address)).to.be.true;
-            });
-            it('Admin (without role) cannot grant rule', async function() {
-                await feeCollector.connect(OWNER).revokeRole(RECOVERY_ROLE, OWNER.address);
-                await expect(feeCollector.connect(OWNER).grantRole(
-                    RECOVERY_ROLE,
-                    userWithoutRole.address,
-                )).to.be.reverted;
-                expect(await feeCollector.hasRole(RECOVERY_ROLE, userWithoutRole.address)).to.be.false;
-            });
-            it('User with role can grant role', async function() {
-                await expect(feeCollector.connect(userWithRole).grantRole(
-                    RECOVERY_ROLE,
-                    userWithoutRole.address,
-                )).not.to.be.reverted;
-                expect(await feeCollector.hasRole(RECOVERY_ROLE, userWithoutRole.address)).to.be.true;
-            });
-        });
-        describe('GOVERNOR_ROLE', async function() {
-            beforeEach(async function() {
-                userWithRole = addr1;
-                await feeCollector.connect(governorSigner).grantRole(GOVERNOR_ROLE, userWithRole.address);
-                userWithoutRole = addr2;
-                await feeCollector.connect(governorSigner).revokeRole(GOVERNOR_ROLE, userWithoutRole.address);
-            });
-            it('Is not granted by default to admin', async function() {
-                expect(await feeCollector.hasRole(GOVERNOR_ROLE, OWNER.address)).to.be.false;
-            });
-            it('Admin (without role) cannot grant rule', async function() {
-                await expect(feeCollector.connect(OWNER).grantRole(
-                    GOVERNOR_ROLE,
-                    userWithoutRole.address,
-                )).to.be.reverted;
-                expect(await feeCollector.hasRole(GOVERNOR_ROLE, userWithoutRole.address)).to.be.false;
-            });
-            it('User with role can grant role', async function() {
-                await expect(feeCollector.connect(userWithRole).grantRole(
-                    GOVERNOR_ROLE,
-                    userWithoutRole.address,
-                )).not.to.be.reverted;
-                expect(await feeCollector.hasRole(GOVERNOR_ROLE, userWithoutRole.address)).to.be.true;
-            });
-            it('User with role can set treasury fee', async function() {
-                await expect(feeCollector.connect(userWithRole).setTreasuryFee(
-                    '20', // 0.2% in bips
-                )).not.to.be.reverted;
-                expect(await feeCollector.treasuryFee()).to.equal('20');
-            });
-            it('User without role cannot set treasury fee', async function() {
-                await expect(feeCollector.connect(userWithoutRole).setTreasuryFee(
-                    '20', // 0.2% in bips
-                )).to.be.reverted;
-                expect(await feeCollector.treasuryFee()).not.to.equal('20');
-            });
+        it('Harvest incentive cannot exceed max', async function() {
+            await expect(feeCollector.connect(OWNER).setHarvestIncentive(
+                MAX_HARVEST_INCENTIVE + 1,
+            )).to.be.revertedWith('Incentive too large');
+            expect(await feeCollector.harvestIncentive()).to.equal(HARVEST_INCENTIVE);
         });
     });
 
