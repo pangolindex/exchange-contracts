@@ -207,14 +207,16 @@ async function main() {
     ]);
 
     // Deploy Fee Collector
-    const feeCollector = await deploy("PangolinFeeCollector", [
+    const feeCollector = await deploy("FeeCollector", [
+        nativeToken,
+        factory.address,
+        '0x40231f6b438bce0797c9ada29b718a87ea0a5cea3fe9a771abdd76bd41a3e545',
         staking.address,
-        router.address,
         chef.address,
         0, // chef pid for dummy PGL
-        timelock.address,
-        nativeToken,
         revenueDistributor.address,
+        timelock.address,
+        multisig.address
     ]);
 
     // Deploy DummyERC20 for diverting some PNG emissions to PNG staking
@@ -258,10 +260,6 @@ async function main() {
     await revenueDistributor.transferOwnership(jointMultisig.address);
     await confirmTransactionCount();
     console.log("Transferred RevenueDistributor ownership to Joint Multisig.");
-
-    await feeCollector.transferOwnership(multisig.address);
-    await confirmTransactionCount();
-    console.log("Transferred FeeCollector ownership to Multisig.");
 
     await dummyERC20.renounceOwnership();
     await confirmTransactionCount();
