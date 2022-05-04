@@ -4,7 +4,6 @@ pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "../Claimable.sol";
 
 /**
@@ -14,7 +13,6 @@ import "../Claimable.sol";
  * @author shung for Pangolin
  */
 contract AllocationVester is Claimable {
-    using SafeCast for uint256;
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -66,7 +64,7 @@ contract AllocationVester is Claimable {
         // update the member's properties
         member.lastUpdate = uint64(block.timestamp);
         member.stash = 0;
-        member.reserve -= amount.toUint96();
+        member.reserve -= uint96(amount);
 
         // free up to-be-transferred tokens from the reserves
         reserve -= amount;
@@ -134,12 +132,13 @@ contract AllocationVester is Claimable {
             // check the member's new allocation
             if (allocation != 0) {
                 require(duration >= minDuration, "short vesting duration");
+                require(allocation <= type(uint96).max, "invalid allocation");
 
                 // lock tokens as reserve
                 tmpReserve += allocation;
 
                 // add vesting info for the member
-                tmpMemberReserve += allocation.toUint96();
+                tmpMemberReserve += uint96(allocation);
                 uint256 rate = allocation / duration;
                 require(rate != 0, "rate truncated to zero");
                 member.rate = rate;
@@ -181,7 +180,7 @@ contract AllocationVester is Claimable {
         Member memory member = members[account];
 
         uint256 amount = member.stash + ((block.timestamp - member.lastUpdate) * member.rate);
-        return amount > member.reserve ? member.reserve : amount;
+        return amount > member.reserve ? member.reserve : amount; // always fits 96 bits
     }
 
     /// @notice Returns the amount of unallocated tokens in the contract
