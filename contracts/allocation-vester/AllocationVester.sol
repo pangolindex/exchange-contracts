@@ -139,7 +139,9 @@ contract AllocationVester is Claimable {
 
                 // add vesting info for the member
                 tmpMemberReserve += allocation.toUint96();
-                member.rate = allocation / duration;
+                uint256 rate = allocation / duration;
+                require(rate != 0, "rate truncated to zero");
+                member.rate = rate;
                 member.lastUpdate = uint64(block.timestamp);
 
                 // add the member to the set if not already inside the set

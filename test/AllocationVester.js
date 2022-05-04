@@ -119,6 +119,18 @@ describe("AllocationVester.sol", function () {
       ).to.be.revertedWith("short vesting duration");
     });
 
+    it("revert: rate is zero", async function () {
+      expect(
+        await this.png.transfer(this.vester.address, TOTAL_SUPPLY)
+      ).to.emit(this.png, "Transfer");
+      const member = this.admin.address;
+      const allocation = "4999999";
+      const duration = "5000000";
+      await expect(
+        this.vester.setAllocations([member], [allocation], [duration])
+      ).to.be.revertedWith("rate truncated to zero");
+    });
+
     it("revert: zero recipients", async function () {
       await expect(this.vester.setAllocations([], [], [])).to.be.revertedWith(
         "empty array"
