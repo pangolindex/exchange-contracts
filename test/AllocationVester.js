@@ -105,10 +105,11 @@ describe("AllocationVester.sol", function () {
       ).to.be.revertedWith("bad recipient");
     });
 
-    it("revert: vesting duration is less than eight weeks", async function () {
+    it("revert: vesting duration is less than the minimum", async function () {
       var [members, allocations, durations] = generateRecipients(1);
 
-      durations[0] = 4838399;
+      const TWO_WEEKS = 1209600;
+      durations[0] = TWO_WEEKS - 1;
 
       expect(await this.png.transfer(this.vester.address, TOTAL_SUPPLY)).to.emit(
         this.png,

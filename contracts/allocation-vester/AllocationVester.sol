@@ -38,9 +38,10 @@ contract AllocationVester is Claimable {
     uint256 public reserve;
 
     /// @notice The minimum duration a vesting can last
-    uint256 private constant MIN_DURATION = 8 weeks;
+    uint256 public minDuration = 2 weeks;
 
     event AllocationSet(address indexed member, uint256 allocation, uint256 duration);
+    event MinDurationSet(uint256 newMinDuration);
     event Harvested(address indexed member, uint256 amount);
     event Withdrawn(uint256 amount);
 
@@ -132,7 +133,7 @@ contract AllocationVester is Claimable {
 
             // check the member's new allocation
             if (allocation != 0) {
-                require(duration >= MIN_DURATION, "short vesting duration");
+                require(duration >= minDuration, "short vesting duration");
 
                 // lock tokens as reserve
                 tmpReserve += allocation;
@@ -158,6 +159,16 @@ contract AllocationVester is Claimable {
         // ensure sufficient balance is present for the allocations
         require(token.balanceOf(address(this)) >= tmpReserve, "low balance");
         reserve = tmpReserve; // assign back the tmp value
+    }
+
+    /**
+     * @notice Changes the minimum duration a vesting can last for
+     * @param newMinDuration The new minimum duration
+     */
+    function setMinDuration(uint256 newMinDuration) external onlyOwner {
+        require(newMinDuration != 0, "zero duration");
+        minDuration = newMinDuration;
+        emit MinDurationSet(newMinDuration);
     }
 
     /// @notice Returns the list of members for easy access
