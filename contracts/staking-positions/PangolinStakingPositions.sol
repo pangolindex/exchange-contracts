@@ -101,12 +101,16 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
     /// @notice The duration when the NFT approvals are ignored after an update that devalues it.
     uint256 public approvalPauseDuration = 2 hours;
 
+    /// @notice The maximum approvalPauseDuration that can be set by the admin
+    uint256 private constant MAX_APPROVAL_PAUSE_DURATION = 2 days;
+
     event Opened(uint256 position, uint256 amount);
     event Closed(uint256 position, uint256 amount, uint256 reward);
     event Staked(uint256 position, uint256 amount, uint256 reward);
     event Withdrawn(uint256 position, uint256 amount, uint256 reward);
     event Harvested(uint256 position, uint256 reward);
     event Compounded(uint256 position, uint256 reward);
+    event ApprovalPauseDurationSet(uint256 approvalPauseDuration);
 
     modifier onlyOwner(uint256 posId) {
         require(ownerOf(posId) == msg.sender, "not owner"); // only owner. ignore approvals.
@@ -199,7 +203,9 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
+        require(newApprovalPauseDuration <= MAX_APPROVAL_PAUSE_DURATION, "pause too long");
         approvalPauseDuration = newApprovalPauseDuration;
+        emit ApprovalPauseDurationSet(newApprovalPauseDuration);
     }
 
     /**
