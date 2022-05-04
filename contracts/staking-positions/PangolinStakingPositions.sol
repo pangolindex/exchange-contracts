@@ -243,6 +243,11 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         return block.timestamp * position.balance - position.entryTimes;
     }
 
+    /// @notice NFT metadata
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
+        /*************** TBD ***************/
+    }
+
     function supportsInterface(bytes4 interfaceId)
         public
         view
