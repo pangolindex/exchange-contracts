@@ -153,7 +153,7 @@ contract AllocationVester is Claimable {
             emit AllocationSet(account, allocation, duration);
         }
 
-        // ensure sufficient balance is present for the allocationns
+        // ensure sufficient balance is present for the allocations
         require(token.balanceOf(address(this)) >= tmpReserve, "low balance");
         reserve = tmpReserve; // assign back the tmp value
     }
