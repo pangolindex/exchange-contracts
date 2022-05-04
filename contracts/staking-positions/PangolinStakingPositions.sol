@@ -189,13 +189,15 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
     /// @notice Closes multiple positions, saving gas than calling `close` multiple times.
     function multiClose(uint256[] calldata posIds) external {
         _updateRewardVariables();
-        for (uint256 i; i < posIds.length; ++i) _close(posIds[i]);
+        uint256 length = posIds.length;
+        for (uint256 i; i < length; ++i) _close(posIds[i]);
     }
 
     /// @notice Compounds multiple positions, saving gas than calling `compound` multiple times.
     function multiCompound(uint256[] calldata posIds) external {
         _updateRewardVariables();
-        for (uint256 i; i < posIds.length; ++i) _compound(posIds[i]);
+        uint256 length = posIds.length;
+        for (uint256 i; i < length; ++i) _compound(posIds[i]);
     }
 
     /// @notice Sets how long the token approvals should be ignored after a destructive action.
