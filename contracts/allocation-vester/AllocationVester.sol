@@ -102,6 +102,7 @@ contract AllocationVester is Claimable {
     ) external onlyOwner {
         uint256 length = accounts.length;
         uint256 tmpReserve = reserve; // gas saving in the for loop
+        uint256 tmpMinDuration = minDuration; // gas saving
         require(length != 0, "empty array");
         require(
             length == allocations.length && length == durations.length,
@@ -131,7 +132,7 @@ contract AllocationVester is Claimable {
 
             // check the member's new allocation
             if (allocation != 0) {
-                require(duration >= minDuration, "short vesting duration");
+                require(duration >= tmpMinDuration, "short vesting duration");
                 require(allocation <= type(uint96).max, "invalid allocation");
 
                 // lock tokens as reserve
