@@ -35,8 +35,6 @@ import "./RewardFunding.sol";
  * @author shung for Pangolin
  */
 contract PangolinStakingPositions is ERC721, RewardFunding {
-    using SafeCast for uint256;
-
     struct Position {
         // The amount of tokens staked in the position.
         uint96 balance;
@@ -64,6 +62,21 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
     /// @notice The mapping of IDs of positions to their properties.
     mapping(uint256 => Position) public positions;
 
+    /// @notice The sum of `balance` of all positions (PNG total supply fits 96 bits).
+    uint96 public totalStaked;
+
+    /// @notice The sum of `entryTimes` of all positions.
+    uint160 public sumOfEntryTimes;
+
+    /**
+     * @notice The time stamp of the first deposit made to the contract, which is the start time of
+     * the staking duration of the ideal position.
+     */
+    uint256 public initTime;
+
+    /// @notice The duration when the NFT approvals are ignored after an update that devalues it.
+    uint256 public approvalPauseDuration = 2 hours;
+
     /// @notice The total number of positions ever opened.
     uint256 private _positionsLength;
 
@@ -85,21 +98,6 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
 
     /// @notice The fixed denominator used for storing reward variables.
     uint256 private constant PRECISION = 2**128;
-
-    /// @notice The sum of `balance` of all positions (PNG total supply fits 96 bits).
-    uint96 public totalStaked;
-
-    /// @notice The sum of `entryTimes` of all positions.
-    uint160 public sumOfEntryTimes;
-
-    /**
-     * @notice The time stamp of the first deposit made to the contract, which is the start time of
-     * the staking duration of the ideal position.
-     */
-    uint256 public initTime;
-
-    /// @notice The duration when the NFT approvals are ignored after an update that devalues it.
-    uint256 public approvalPauseDuration = 2 hours;
 
     /// @notice The maximum approvalPauseDuration that can be set by the admin
     uint256 private constant MAX_APPROVAL_PAUSE_DURATION = 2 days;
@@ -310,9 +308,9 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         }
 
         // update global variables
+        uint160 addedEntryTimes = uint160(block.timestamp * amount);
+        sumOfEntryTimes += addedEntryTimes;
         totalStaked = uint96(newTotalStaked);
-        uint160 entryTimes = uint160(block.timestamp * amount);
-        sumOfEntryTimes += entryTimes;
 
         // mint nft and create position
         uint256 posId = _positionsLength++;
@@ -320,11 +318,11 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         Position storage position = positions[posId];
         position.balance = uint96(amount);
         position.lastUpdate = uint48(block.timestamp);
-        position.entryTimes = entryTimes;
+        position.entryTimes = addedEntryTimes;
         position.idealPosition = _idealPosition;
         position.rewardPerValue = _rewardPerValue;
 
-        // receive rewards
+        // send tokens from user to the contract
         _receiveRewardsToken(msg.sender, amount);
         emit Opened(posId, amount);
     }
@@ -359,29 +357,29 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
      * 3) Do not make the staking duration of the existing `balance` restart,
      * 4) Claim accrued `reward` tokens of the position,
      * 5) Deposit `reward` tokens back into the position,
-     * 6) Make the staking duration of `reward` tokens restart.
+     * 6) Make the staking duration of `reward` tokens start from zero.
      */
     function _stake(uint256 posId, uint256 amount) private onlyOwner(posId) {
         Position storage position = positions[posId];
 
         uint256 reward = _earned(posId);
         uint256 totalAmount = amount + reward;
-        uint256 oldBalance = position.balance;
         uint256 newTotalStaked = totalStaked + totalAmount;
         if (amount == 0 || newTotalStaked > type(uint96).max) {
             revert PNGPos__InvalidInputAmount(amount);
         }
 
-        uint160 entryTimes = uint160(block.timestamp * totalAmount);
-        sumOfEntryTimes += entryTimes;
+        uint160 addedEntryTimes = uint160(block.timestamp * totalAmount);
+        sumOfEntryTimes += addedEntryTimes;
         totalStaked = uint96(newTotalStaked);
 
+        uint256 oldBalance = position.balance;
         position.previousValues += uint160(oldBalance * (block.timestamp - position.lastUpdate));
         unchecked {
             position.balance = uint96(oldBalance + totalAmount);
         }
         position.lastUpdate = uint48(block.timestamp);
-        position.entryTimes += entryTimes;
+        position.entryTimes += addedEntryTimes;
         position.idealPosition = _idealPosition;
         position.rewardPerValue = _rewardPerValue;
 
@@ -405,15 +403,17 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         if (reward == 0) revert PNGPos__NoReward();
         if (newTotalStaked > type(uint96).max) revert PNGPos__RewardOverflow(reward);
 
-        uint160 entryTimes = uint160(block.timestamp * reward);
-        sumOfEntryTimes += entryTimes;
+        uint160 addedEntryTimes = uint160(block.timestamp * reward);
+        sumOfEntryTimes += addedEntryTimes;
         totalStaked = uint96(newTotalStaked);
 
         uint256 oldBalance = position.balance;
         position.previousValues += uint160(oldBalance * (block.timestamp - position.lastUpdate));
-        position.balance = uint96(oldBalance + reward);
+        unchecked {
+            position.balance = uint96(oldBalance + reward);
+        }
         position.lastUpdate = uint48(block.timestamp);
-        position.entryTimes += entryTimes;
+        position.entryTimes += addedEntryTimes;
         position.idealPosition = _idealPosition;
         position.rewardPerValue = _rewardPerValue;
 
@@ -431,11 +431,11 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         Position storage position = positions[posId];
 
         uint96 balance = position.balance;
-        uint160 newEntryTimes = uint160(block.timestamp * balance);
         uint256 reward = _earned(posId); // get earned rewards
         if (reward == 0) revert PNGPos__NoReward();
 
         // update global variables (totalStaked is not changed)
+        uint160 newEntryTimes = uint160(block.timestamp * balance);
         sumOfEntryTimes += (newEntryTimes - position.entryTimes);
 
         // update position variables (must behave as if position is re-opened)
@@ -462,21 +462,21 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
     function _withdraw(uint256 posId, uint256 amount) private onlyOwner(posId) {
         Position storage position = positions[posId];
 
-        uint256 balance = position.balance;
-        if (amount > balance) revert PNGPos__InsufficientBalance(balance, amount);
+        uint256 oldBalance = position.balance;
+        if (amount > oldBalance) revert PNGPos__InsufficientBalance(oldBalance, amount);
         uint256 remaining;
         unchecked {
-            remaining = balance - amount;
+            remaining = oldBalance - amount;
         }
-        uint256 newEntryTimes = block.timestamp * remaining;
         uint256 reward = _earned(posId); // get earned rewards
 
         // update global variables
+        uint256 newEntryTimes = block.timestamp * remaining;
         totalStaked -= uint96(amount);
         sumOfEntryTimes = uint160(sumOfEntryTimes + newEntryTimes - position.entryTimes);
 
         // update position variables (must behave as if position is re-opened)
-        position.balance = remaining.toUint96();
+        position.balance = uint96(remaining);
         position.lastUpdate = uint48(block.timestamp);
         position.lastDevaluation = uint48(block.timestamp);
         position.previousValues = 0;

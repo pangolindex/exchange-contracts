@@ -3,7 +3,6 @@
 pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
@@ -19,17 +18,15 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
  * might cause the balance check in `notifyRewardAmount()` to incorrectly pass.
  */
 abstract contract RewardFunding is AccessControl {
-    using SafeCast for uint256;
     using SafeERC20 for IERC20;
 
-    uint80 public rewardRate;
-    uint40 public lastUpdate;
-    uint40 public periodFinish;
-    uint96 public reserved;
+    uint128 public rewardRate;
+    uint64 public lastUpdate;
+    uint64 public periodFinish;
 
+    uint256 public reserved;
     uint256 public periodDuration = 1 days;
     uint256 private constant MAX_DURATION = type(uint32).max;
-    uint256 private constant MIN_DURATION = type(uint16).max + 1;
 
     bytes32 private constant FUNDER_ROLE = keccak256("FUNDER_ROLE");
     bytes32 private constant DURATION_ROLE = keccak256("DURATION_ROLE");
@@ -54,7 +51,7 @@ abstract contract RewardFunding is AccessControl {
 
     function setPeriodDuration(uint256 newDuration) external onlyRole(DURATION_ROLE) {
         if (periodFinish > block.timestamp) revert RewardFunding__OngoingPeriod();
-        if (newDuration < MIN_DURATION || newDuration > MAX_DURATION) {
+        if (newDuration == 0 || newDuration > MAX_DURATION) {
             revert RewardFunding__InvalidInputDuration(newDuration);
         }
         periodDuration = newDuration;
@@ -62,20 +59,19 @@ abstract contract RewardFunding is AccessControl {
     }
 
     function notifyRewardAmount(uint256 amount) external onlyRole(FUNDER_ROLE) {
-        if (amount == 0 || amount > unreserved()) revert RewardFunding__InvalidInputAmount(amount);
-        reserved += amount.toUint96(); // ensures amount fits 96 bits
+        if (amount == 0 || amount > unreserved() || amount > type(uint96).max) {
+            revert RewardFunding__InvalidInputAmount(amount);
+        }
+        reserved += amount;
         uint256 tmpPeriodDuration = periodDuration;
         if (lastUpdate >= periodFinish) {
-            rewardRate = uint80(amount / tmpPeriodDuration);
+            rewardRate = uint128(amount / tmpPeriodDuration);
         } else {
-            uint256 leftover;
-            unchecked {
-                leftover = (periodFinish - lastUpdate) * rewardRate;
-            }
-            rewardRate = uint80((amount + leftover) / tmpPeriodDuration);
+            uint256 leftover = (periodFinish - lastUpdate) * rewardRate;
+            rewardRate = uint128((amount + leftover) / tmpPeriodDuration);
         }
-        lastUpdate = uint40(block.timestamp);
-        periodFinish = uint40(block.timestamp + tmpPeriodDuration);
+        lastUpdate = uint64(block.timestamp);
+        periodFinish = uint64(block.timestamp + tmpPeriodDuration);
         emit RewardAdded(amount);
     }
 
@@ -85,17 +81,17 @@ abstract contract RewardFunding is AccessControl {
 
     function _claim() internal returns (uint256) {
         uint256 reward = _pendingRewards();
-        lastUpdate = uint40(block.timestamp);
+        lastUpdate = uint64(block.timestamp);
         return reward;
     }
 
     function _sendRewardsToken(address to, uint256 amount) internal {
-        reserved -= amount.toUint96();
+        reserved -= amount;
         rewardsToken.safeTransfer(to, amount);
     }
 
     function _receiveRewardsToken(address from, uint256 amount) internal {
-        reserved += amount.toUint96();
+        reserved += amount;
         rewardsToken.safeTransferFrom(from, address(this), amount);
     }
 
