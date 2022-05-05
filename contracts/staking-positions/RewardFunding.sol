@@ -29,7 +29,7 @@ abstract contract RewardFunding is AccessControl {
 
     uint256 public periodDuration = 1 days;
     uint256 private constant MAX_DURATION = type(uint32).max;
-    uint256 private constant MIN_DURATION = type(uint16).max;
+    uint256 private constant MIN_DURATION = type(uint16).max + 1;
 
     bytes32 private constant FUNDER_ROLE = keccak256("FUNDER_ROLE");
     bytes32 private constant DURATION_ROLE = keccak256("DURATION_ROLE");
@@ -39,8 +39,13 @@ abstract contract RewardFunding is AccessControl {
     event RewardAdded(uint256 reward);
     event PeriodDurationUpdated(uint256 newDuration);
 
+    error RewardFunding__ZeroAddress();
+    error RewardFunding__OngoingPeriod();
+    error RewardFunding__InvalidInputAmount(uint256 inputAmount);
+    error RewardFunding__InvalidInputDuration(uint256 inputDuration);
+
     constructor(address newRewardsToken, address newAdmin) {
-        require(newRewardsToken != address(0), "zero address");
+        if (newRewardsToken == address(0)) revert RewardFunding__ZeroAddress();
         rewardsToken = IERC20(newRewardsToken);
         _grantRole(DEFAULT_ADMIN_ROLE, newAdmin);
         _grantRole(FUNDER_ROLE, newAdmin);
@@ -48,14 +53,16 @@ abstract contract RewardFunding is AccessControl {
     }
 
     function setPeriodDuration(uint256 newDuration) external onlyRole(DURATION_ROLE) {
-        require(block.timestamp > periodFinish, "ongoing period");
-        require(newDuration > MIN_DURATION && newDuration <= MAX_DURATION, "invalid duration");
+        if (periodFinish > block.timestamp) revert RewardFunding__OngoingPeriod();
+        if (newDuration < MIN_DURATION || newDuration > MAX_DURATION) {
+            revert RewardFunding__InvalidInputDuration(newDuration);
+        }
         periodDuration = newDuration;
         emit PeriodDurationUpdated(newDuration);
     }
 
     function notifyRewardAmount(uint256 amount) external onlyRole(FUNDER_ROLE) {
-        require(amount != 0 && unreserved() >= amount, "invalid amount");
+        if (amount == 0 || amount > unreserved()) revert RewardFunding__InvalidInputAmount(amount);
         reserved += amount.toUint96(); // ensures amount fits 96 bits
         uint256 tmpPeriodDuration = periodDuration;
         if (lastUpdate >= periodFinish) {
