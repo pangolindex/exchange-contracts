@@ -121,7 +121,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
     error ERC721__InvalidToken(uint256 tokenId);
 
     modifier onlyOwner(uint256 posId) {
-        if(ownerOf(posId) != msg.sender) revert PNGPos__NotOwnerOfPosition(posId);
+        if (ownerOf(posId) != msg.sender) revert PNGPos__NotOwnerOfPosition(posId);
         _;
     }
 
@@ -256,7 +256,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
      * https://ethereum-magicians.org/t/erc721-extension-valueof-as-a-slippage-control/9071
      */
     function valueOf(uint256 tokenId) external view returns (uint256) {
-        if(!_exists(tokenId)) revert ERC721__InvalidToken(tokenId);
+        if (!_exists(tokenId)) revert ERC721__InvalidToken(tokenId);
         Position memory position = positions[tokenId];
         return block.timestamp * position.balance - position.entryTimes;
     }
@@ -282,7 +282,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         override(ERC721)
         returns (bool)
     {
-        if(!_exists(tokenId)) revert ERC721__InvalidToken(tokenId);
+        if (!_exists(tokenId)) revert ERC721__InvalidToken(tokenId);
         address owner = ERC721.ownerOf(tokenId);
         if (spender == owner) return true;
         // The following if statement is added to prevent frontrunning due to MEV or due to NFT
