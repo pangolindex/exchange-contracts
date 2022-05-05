@@ -108,6 +108,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
     event Withdrawn(uint256 position, uint256 amount, uint256 reward);
     event Harvested(uint256 position, uint256 reward);
     event Compounded(uint256 position, uint256 reward);
+    event EmergencyExited(uint256 position, uint256 amount);
     event ApprovalPauseDurationSet(uint256 approvalPauseDuration);
 
     error PNGPos__InsufficientBalance(uint256 currentBalance, uint256 requiredBalance);
@@ -190,6 +191,23 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
     function close(uint256 posId) external {
         _updateRewardVariables();
         _close(posId);
+    }
+
+    /**
+     * @notice Exits from a position by forgoing rewards.
+     * @param posId The ID of the position to exit.
+     */
+    function emergencyExit(uint256 posId) external onlyOwner(posId) {
+        Position memory position = positions[posId];
+        uint96 balance = position.balance;
+        totalStaked -= balance;
+        sumOfEntryTimes -= position.entryTimes;
+        position.balance = 0;
+        position.previousValues = 0;
+        position.entryTimes = 0;
+        position.lastDevaluation = uint48(block.timestamp);
+        _sendRewardsToken(msg.sender, balance);
+        emit EmergencyExited(posId, balance);
     }
 
     /// @notice Closes multiple positions, saving gas than calling `close` multiple times.
