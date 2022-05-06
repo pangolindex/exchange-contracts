@@ -117,6 +117,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
     error PNGPos__RewardOverflow(uint256 rewardAdded);
     error PNGPos__NotOwnerOfPosition(uint256 posId);
     error PNGPos__NoReward();
+    error PNGPos__NoBalance();
     error ERC721__InvalidToken(uint256 tokenId);
 
     modifier onlyOwner(uint256 posId) {
@@ -209,6 +210,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
     function emergencyExit(uint256 posId) external onlyOwner(posId) {
         Position memory position = positions[posId];
         uint96 balance = position.balance;
+        if (balance == 0) revert PNGPos__NoBalance();
         totalStaked -= balance;
         sumOfEntryTimes -= position.entryTimes;
         position.balance = 0;
