@@ -112,7 +112,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
     event ApprovalPauseDurationSet(uint256 approvalPauseDuration);
 
     error PNGPos__InsufficientBalance(uint256 currentBalance, uint256 requiredBalance);
-    error PNGPos__ApprovalPauseDurationTooLong(uint256 newApprovalPauseDuration);
+    error PNGPos__InvalidApprovalPauseDuration(uint256 newApprovalPauseDuration);
     error PNGPos__InvalidInputAmount(uint256 inputAmount);
     error PNGPos__RewardOverflow(uint256 rewardAdded);
     error PNGPos__NotOwnerOfPosition(uint256 posId);
@@ -230,7 +230,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         if (newApprovalPauseDuration > MAX_APPROVAL_PAUSE_DURATION) {
-            revert PNGPos__ApprovalPauseDurationTooLong(newApprovalPauseDuration);
+            revert PNGPos__InvalidApprovalPauseDuration(newApprovalPauseDuration);
         }
         approvalPauseDuration = newApprovalPauseDuration;
         emit ApprovalPauseDurationSet(newApprovalPauseDuration);
