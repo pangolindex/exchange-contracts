@@ -139,10 +139,12 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
      * @param amount The amount of tokens to transfer to the opened position.
      */
     function open(uint256 amount) external {
-        if (totalStaked != 0) {
-            _updateRewardVariables();
-        } else if (initTime == 0) {
+        if (totalStaked == 0) {
+            // restart all when total staked is zero
             initTime = block.timestamp;
+            (_idealPosition, _rewardPerValue) = (0, 0);
+        } else {
+            _updateRewardVariables();
         }
         _open(amount);
     }
@@ -153,7 +155,14 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
      * @param posId The ID of the position to deposit the funds into.
      */
     function stake(uint256 posId, uint256 amount) external {
-        _updateRewardVariables();
+        if (totalStaked == 0) {
+            // restart all when total staked is zero
+            // open and stake are the only actions that can be made when there is nothing staked
+            initTime = block.timestamp;
+            (_idealPosition, _rewardPerValue) = (0, 0);
+        } else {
+            _updateRewardVariables();
+        }
         _stake(posId, amount);
     }
 
@@ -259,12 +268,14 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
             _pendingRewards()
         );
         Position memory position = positions[posId];
+        uint256 balance = position.balance;
+        if (balance == 0) return 0;
         tmpRewardPerValue -= position.rewardPerValue;
         tmpIdealPosition -= position.idealPosition;
         // duplicate of `_earned()` with temporary/local reward variables
         return
             (((tmpIdealPosition - (tmpRewardPerValue * (position.lastUpdate - initTime))) *
-                position.balance) + (tmpRewardPerValue * position.previousValues)) / PRECISION;
+                balance) + (tmpRewardPerValue * position.previousValues)) / PRECISION;
     }
 
     /**
@@ -521,11 +532,13 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
      */
     function _earned(uint256 posId) private view returns (uint256) {
         Position memory position = positions[posId];
+        uint256 balance = position.balance;
+        if (balance == 0) return 0;
         uint256 rewardPerValue = _rewardPerValue - position.rewardPerValue;
         uint256 idealPosition = _idealPosition - position.idealPosition;
         return
-            (((idealPosition - (rewardPerValue * (position.lastUpdate - initTime))) *
-                position.balance) + (rewardPerValue * position.previousValues)) / PRECISION;
+            (((idealPosition - (rewardPerValue * (position.lastUpdate - initTime))) * balance) +
+                (rewardPerValue * position.previousValues)) / PRECISION;
     }
 
     /**
