@@ -8,8 +8,10 @@ abstract contract Claimable is Ownable {
 
     event PendingOwnerSet(address indexed pendingOwner);
 
-    constructor() {
-        _pendingOwner = _msgSender();
+    constructor(address initialOwner) {
+        require(initialOwner != address(0), "Claimable: new owner is the zero address");
+        _pendingOwner = initialOwner;
+        _transferOwnership(initialOwner);
     }
 
     function claimOwnership() external {
