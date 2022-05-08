@@ -35,7 +35,6 @@ contract Merkledrop is Claimable, Pausable {
     }
 
     function setMerkleRoot(bytes32 newMerkleRoot) external whenPaused onlyOwner {
-        require(newMerkleRoot != 0x00, "invalid merkle root");
         merkleRoot = newMerkleRoot;
         emit MerkleRootSet(newMerkleRoot);
     }
