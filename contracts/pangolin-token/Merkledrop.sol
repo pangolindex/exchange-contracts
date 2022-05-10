@@ -22,10 +22,10 @@ contract Merkledrop is Claimable, Pausable {
 
     function claim(uint256 amount, bytes32[] calldata merkleProof) external whenNotPaused {
         require(amount != 0 && amount <= type(uint96).max, "invalid amount");
-        bytes32 node = bytes32(abi.encodePacked(msg.sender, uint96(amount)));
-        require(MerkleProof.verify(merkleProof, merkleRoot, node), "invalid proof");
         uint256 previouslyClaimed = claimedAmounts[msg.sender];
         require(previouslyClaimed < amount, "nothing to claim");
+        bytes32 node = bytes32(abi.encodePacked(msg.sender, uint96(amount)));
+        require(MerkleProof.verify(merkleProof, merkleRoot, node), "invalid proof");
         claimedAmounts[msg.sender] = amount;
         unchecked {
             amount -= previouslyClaimed;
