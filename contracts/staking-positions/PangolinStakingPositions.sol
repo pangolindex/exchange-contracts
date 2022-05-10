@@ -124,7 +124,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
     error ERC721__InvalidToken(uint256 tokenId);
 
     modifier onlyOwner(uint256 posId) {
-        if (ownerOf(posId) != msg.sender) revert PNGPos__NotOwnerOfPosition(posId);
+        if (ERC721._ownerOf[posId] != msg.sender) revert PNGPos__NotOwnerOfPosition(posId);
         _;
     }
 
@@ -293,6 +293,20 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         return block.timestamp * position.balance - position.entryTimes;
     }
 
+    function transferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public override(ERC721) {
+        if (
+            ERC721._ownerOf[tokenId] != msg.sender &&
+            block.timestamp <= positions[tokenId].lastDevaluation + approvalPauseDuration
+        ) {
+            revert PNGPos__ApprovalsPaused();
+        }
+        ERC721.transferFrom(from, to, tokenId);
+    }
+
     /// @notice NFT metadata
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         /*************** TBD ***************/
@@ -306,20 +320,6 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
     {
         return
             AccessControl.supportsInterface(interfaceId) || ERC721.supportsInterface(interfaceId);
-    }
-
-    function transferFrom(
-        address from,
-        address to,
-        uint256 tokenId
-    ) public override(ERC721) {
-        if (
-            msg.sender != ERC721.ownerOf(tokenId) &&
-            block.timestamp < positions[tokenId].lastDevaluation + approvalPauseDuration
-        ) {
-            revert PNGPos__ApprovalsPaused();
-        }
-        ERC721.transferFrom(from, to, tokenId);
     }
 
     /**
