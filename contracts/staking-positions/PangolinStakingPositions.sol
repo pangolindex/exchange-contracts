@@ -2,7 +2,7 @@
 // solhint-disable not-rely-on-time
 pragma solidity 0.8.13;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "./ERC721.sol";
 import "./RewardFunding.sol";
 
 /**
@@ -35,6 +35,8 @@ import "./RewardFunding.sol";
  * @author shung for Pangolin
  */
 contract PangolinStakingPositions is ERC721, RewardFunding {
+    using SafeERC20 for IERC20;
+
     struct Position {
         // The amount of tokens staked in the position.
         uint96 balance;
@@ -118,6 +120,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
     error PNGPos__NotOwnerOfPosition(uint256 posId);
     error PNGPos__NoReward();
     error PNGPos__NoBalance();
+    error PNGPos__ApprovalsPaused();
     error ERC721__InvalidToken(uint256 tokenId);
 
     modifier onlyOwner(uint256 posId) {
@@ -217,7 +220,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         position.previousValues = 0;
         position.entryTimes = 0;
         position.lastDevaluation = uint48(block.timestamp);
-        _sendRewardsToken(msg.sender, balance);
+        rewardsToken.safeTransfer(msg.sender, balance);
         emit EmergencyExited(posId, balance);
     }
 
@@ -285,7 +288,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
      * https://ethereum-magicians.org/t/erc721-extension-valueof-as-a-slippage-control/9071
      */
     function valueOf(uint256 tokenId) external view returns (uint256) {
-        if (!_exists(tokenId)) revert ERC721__InvalidToken(tokenId);
+        if (ERC721._ownerOf[tokenId] == address(0)) revert ERC721__InvalidToken(tokenId);
         Position memory position = positions[tokenId];
         return block.timestamp * position.balance - position.entryTimes;
     }
@@ -305,24 +308,18 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
             AccessControl.supportsInterface(interfaceId) || ERC721.supportsInterface(interfaceId);
     }
 
-    function _isApprovedOrOwner(address spender, uint256 tokenId)
-        internal
-        view
-        override(ERC721)
-        returns (bool)
-    {
-        if (!_exists(tokenId)) revert ERC721__InvalidToken(tokenId);
-        address owner = ERC721.ownerOf(tokenId);
-        if (spender == owner) return true;
-        // The following if statement is added to prevent frontrunning due to MEV or due to NFT
-        // marketplaces being slow in updating metadata. Since there is no standardized way of
-        // slippage checks for NFTs, we simply ignore token approvals for `approvalPauseDuration`
-        // after an action which inherently devalues the NFT is made (i.e.: `withdraw` and
-        // `harvest`). This prevents MEV, and greatly reduces the risk of buyers getting tricked.
-        if (block.timestamp < positions[tokenId].lastDevaluation + approvalPauseDuration) {
-            return false;
+    function transferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public override(ERC721) {
+        if (
+            msg.sender != ERC721.ownerOf(tokenId) &&
+            block.timestamp < positions[tokenId].lastDevaluation + approvalPauseDuration
+        ) {
+            revert PNGPos__ApprovalsPaused();
         }
-        return (getApproved(tokenId) == spender || isApprovedForAll(owner, spender));
+        ERC721.transferFrom(from, to, tokenId);
     }
 
     /**
@@ -354,7 +351,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         position.rewardPerValue = _rewardPerValue;
 
         // send tokens from user to the contract
-        _receiveRewardsToken(msg.sender, amount);
+        rewardsToken.safeTransferFrom(msg.sender, address(this), amount);
         emit Opened(posId, amount);
     }
 
@@ -377,7 +374,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         delete positions[posId];
         _burn(posId);
 
-        _sendRewardsToken(msg.sender, balance + reward);
+        rewardsToken.safeTransfer(msg.sender, balance + reward);
         emit Closed(posId, balance, reward);
     }
 
@@ -415,7 +412,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         position.rewardPerValue = _rewardPerValue;
 
         // transfer tokens from user to the contract
-        _receiveRewardsToken(msg.sender, amount);
+        rewardsToken.safeTransferFrom(msg.sender, address(this), amount);
         emit Staked(posId, amount, reward);
     }
 
@@ -478,7 +475,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         position.rewardPerValue = _rewardPerValue;
 
         // transfer rewards to the user
-        _sendRewardsToken(msg.sender, reward);
+        rewardsToken.safeTransfer(msg.sender, reward);
         emit Harvested(posId, reward);
     }
 
@@ -516,7 +513,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         position.rewardPerValue = _rewardPerValue;
 
         // transfer rewards and withdrawn amount to the user
-        _sendRewardsToken(msg.sender, reward + amount);
+        rewardsToken.safeTransfer(msg.sender, reward + amount);
         emit Withdrawn(posId, amount, reward);
     }
 

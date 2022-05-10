@@ -13,9 +13,6 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
  * same call was made. Then, based on the reward amount, the inheriting contract shall determine
  * the distribution to stakers. The purpose of this model is to separate the logic of funding from
  * the staking and the reward distribution.
- * @dev The inheriting contract must use `_sendRewardsToken()` and `_receiveRewardsToken()`
- * whenever transferring the `rewardsToken` to not mess the `reserved` amount. Failure to do so
- * might cause the balance check in `notifyRewardAmount()` to incorrectly pass.
  */
 abstract contract RewardFunding is AccessControl {
     using SafeERC20 for IERC20;
@@ -24,7 +21,6 @@ abstract contract RewardFunding is AccessControl {
     uint64 public lastUpdate;
     uint64 public periodFinish;
 
-    uint256 public reserved;
     uint256 public periodDuration = 1 days;
     uint256 private constant MAX_DURATION = type(uint32).max;
 
@@ -58,13 +54,9 @@ abstract contract RewardFunding is AccessControl {
         emit PeriodDurationUpdated(newDuration);
     }
 
-    function notifyRewardAmount(uint256 amount) external onlyRole(FUNDER_ROLE) {
-        uint256 newReserved = reserved + amount;
-        if (amount == 0 || amount > unreserved() || newReserved > type(uint96).max) {
-            revert RewardFunding__InvalidInputAmount(amount);
-        }
-        reserved = newReserved;
+    function addReward(uint256 amount) external onlyRole(FUNDER_ROLE) {
         uint256 tmpPeriodDuration = periodDuration;
+        if (amount == 0) revert RewardFunding__InvalidInputAmount(0);
         if (lastUpdate >= periodFinish) {
             rewardRate = uint128(amount / tmpPeriodDuration);
         } else {
@@ -73,27 +65,14 @@ abstract contract RewardFunding is AccessControl {
         }
         lastUpdate = uint64(block.timestamp);
         periodFinish = uint64(block.timestamp + tmpPeriodDuration);
+        rewardsToken.safeTransferFrom(msg.sender, address(this), amount);
         emit RewardAdded(amount);
-    }
-
-    function unreserved() public view returns (uint256) {
-        return rewardsToken.balanceOf(address(this)) - reserved;
     }
 
     function _claim() internal returns (uint256) {
         uint256 reward = _pendingRewards();
         lastUpdate = uint64(block.timestamp);
         return reward;
-    }
-
-    function _sendRewardsToken(address to, uint256 amount) internal {
-        reserved -= amount;
-        rewardsToken.safeTransfer(to, amount);
-    }
-
-    function _receiveRewardsToken(address from, uint256 amount) internal {
-        reserved += amount;
-        rewardsToken.safeTransferFrom(from, address(this), amount);
     }
 
     function _pendingRewards() internal view returns (uint256) {
