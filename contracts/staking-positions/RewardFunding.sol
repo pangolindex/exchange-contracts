@@ -56,7 +56,9 @@ abstract contract RewardFunding is AccessControl {
 
     function addReward(uint256 amount) external onlyRole(FUNDER_ROLE) {
         uint256 tmpPeriodDuration = periodDuration;
-        if (amount == 0) revert RewardFunding__InvalidInputAmount(0);
+        if (amount == 0 || amount > type(uint96).max) {
+            revert RewardFunding__InvalidInputAmount(amount);
+        }
         if (lastUpdate >= periodFinish) {
             rewardRate = uint128(amount / tmpPeriodDuration);
         } else {
