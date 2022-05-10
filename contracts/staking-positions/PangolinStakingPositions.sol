@@ -2,7 +2,7 @@
 // solhint-disable not-rely-on-time
 pragma solidity 0.8.13;
 
-import "./ERC721.sol";
+import "@rari-capital/solmate/src/tokens/ERC721.sol";
 import "./RewardFunding.sol";
 
 /**
@@ -124,7 +124,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
     error ERC721__InvalidToken(uint256 tokenId);
 
     modifier onlyOwner(uint256 posId) {
-        if (ERC721._ownerOf[posId] != msg.sender) revert PNGPos__NotOwnerOfPosition(posId);
+        if (ownerOf[posId] != msg.sender) revert PNGPos__NotOwnerOfPosition(posId);
         _;
     }
 
@@ -288,7 +288,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
      * https://ethereum-magicians.org/t/erc721-extension-valueof-as-a-slippage-control/9071
      */
     function valueOf(uint256 tokenId) external view returns (uint256) {
-        if (ERC721._ownerOf[tokenId] == address(0)) revert ERC721__InvalidToken(tokenId);
+        if (ownerOf[tokenId] == address(0)) revert ERC721__InvalidToken(tokenId);
         Position memory position = positions[tokenId];
         return block.timestamp * position.balance - position.entryTimes;
     }
@@ -299,12 +299,12 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         uint256 tokenId
     ) public override(ERC721) {
         if (
-            ERC721._ownerOf[tokenId] != msg.sender &&
+            ownerOf[tokenId] != msg.sender &&
             block.timestamp <= positions[tokenId].lastDevaluation + approvalPauseDuration
         ) {
             revert PNGPos__ApprovalsPaused();
         }
-        ERC721.transferFrom(from, to, tokenId);
+        super.transferFrom(from, to, tokenId);
     }
 
     /// @notice NFT metadata
@@ -314,12 +314,16 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
 
     function supportsInterface(bytes4 interfaceId)
         public
-        view
+        pure
         override(ERC721, AccessControl)
         returns (bool)
     {
         return
-            AccessControl.supportsInterface(interfaceId) || ERC721.supportsInterface(interfaceId);
+            interfaceId == 0x01ffc9a7 || // ERC165 Interface ID for ERC165
+            interfaceId == 0x80ac58cd || // ERC165 Interface ID for ERC721
+            interfaceId == 0x5b5e139f || // ERC165 Interface ID for ERC721Metadata
+            interfaceId == type(IAccessControl).interfaceId ||
+            interfaceId == type(IERC165).interfaceId;
     }
 
     /**
