@@ -2,7 +2,7 @@
 // solhint-disable not-rely-on-time
 pragma solidity 0.8.13;
 
-import "@rari-capital/solmate/src/tokens/ERC721.sol";
+import "./ERC721NoBalance.sol";
 import "./RewardFunding.sol";
 
 /**
@@ -34,7 +34,7 @@ import "./RewardFunding.sol";
  *
  * @author shung for Pangolin
  */
-contract PangolinStakingPositions is ERC721, RewardFunding {
+contract PangolinStakingPositions is ERC721NoBalance, RewardFunding {
     using SafeERC20 for IERC20;
 
     struct Position {
@@ -104,27 +104,27 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
     /// @notice The maximum approvalPauseDuration that can be set by the admin
     uint256 private constant MAX_APPROVAL_PAUSE_DURATION = 2 days;
 
-    event Opened(uint256 position, uint256 amount);
-    event Closed(uint256 position, uint256 amount, uint256 reward);
-    event Staked(uint256 position, uint256 amount, uint256 reward);
     event Withdrawn(uint256 position, uint256 amount, uint256 reward);
-    event Harvested(uint256 position, uint256 reward);
-    event Compounded(uint256 position, uint256 reward);
+    event Staked(uint256 position, uint256 amount, uint256 reward);
+    event Closed(uint256 position, uint256 amount, uint256 reward);
     event EmergencyExited(uint256 position, uint256 amount);
-    event ApprovalPauseDurationSet(uint256 approvalPauseDuration);
+    event PauseDurationSet(uint256 approvalPauseDuration);
+    event Compounded(uint256 position, uint256 reward);
+    event Harvested(uint256 position, uint256 reward);
+    event Opened(uint256 position, uint256 amount);
 
     error PNGPos__InsufficientBalance(uint256 currentBalance, uint256 requiredBalance);
     error PNGPos__InvalidApprovalPauseDuration(uint256 newApprovalPauseDuration);
     error PNGPos__InvalidInputAmount(uint256 inputAmount);
     error PNGPos__RewardOverflow(uint256 rewardAdded);
     error PNGPos__NotOwnerOfPosition(uint256 posId);
-    error PNGPos__NoReward();
-    error PNGPos__NoBalance();
+    error PNGPos__InvalidToken(uint256 tokenId);
     error PNGPos__ApprovalsPaused();
-    error ERC721__InvalidToken(uint256 tokenId);
+    error PNGPos__NoBalance();
+    error PNGPos__NoReward();
 
     modifier onlyOwner(uint256 posId) {
-        if (ownerOf[posId] != msg.sender) revert PNGPos__NotOwnerOfPosition(posId);
+        if (_ownerOf[posId] != msg.sender) revert PNGPos__NotOwnerOfPosition(posId);
         _;
     }
 
@@ -134,7 +134,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
      * @param newAdmin The initial owner of the contract.
      */
     constructor(address newRewardsToken, address newAdmin)
-        ERC721("Pangolin Staking Positions", "PNG-POS")
+        ERC721NoBalance("Pangolin Staking Positions", "PNG-POS")
         RewardFunding(newRewardsToken, newAdmin)
     {}
 
@@ -247,7 +247,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
             revert PNGPos__InvalidApprovalPauseDuration(newApprovalPauseDuration);
         }
         approvalPauseDuration = newApprovalPauseDuration;
-        emit ApprovalPauseDurationSet(newApprovalPauseDuration);
+        emit PauseDurationSet(newApprovalPauseDuration);
     }
 
     /**
@@ -283,28 +283,39 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
                 balance) + (tmpRewardPerValue * position.previousValues)) / PRECISION;
     }
 
+    /* *************** *
+     * NFT STUFF BEGIN *
+     * *************** */
+
     /**
      * @notice A suggested interface standard for NFT slippage control. Join the discussion:
      * https://ethereum-magicians.org/t/erc721-extension-valueof-as-a-slippage-control/9071
      */
-    function valueOf(uint256 tokenId) external view returns (uint256) {
-        if (ownerOf[tokenId] == address(0)) revert ERC721__InvalidToken(tokenId);
-        Position memory position = positions[tokenId];
+    function valueOf(uint256 id) external view returns (uint256) {
+        if (_ownerOf[id] == address(0)) revert PNGPos__InvalidToken(id);
+        Position memory position = positions[id];
         return block.timestamp * position.balance - position.entryTimes;
     }
 
     function transferFrom(
         address from,
         address to,
-        uint256 tokenId
-    ) public override(ERC721) {
-        if (
-            ownerOf[tokenId] != msg.sender &&
-            block.timestamp <= positions[tokenId].lastDevaluation + approvalPauseDuration
-        ) {
-            revert PNGPos__ApprovalsPaused();
-        }
-        super.transferFrom(from, to, tokenId);
+        uint256 id
+    ) public override(ERC721NoBalance) {
+        require(from == _ownerOf[id], "WRONG_FROM");
+        require(to != address(0), "INVALID_RECIPIENT");
+        require(
+            msg.sender == from ||
+                ((isApprovedForAll[from][msg.sender] || msg.sender == getApproved[id]) &&
+                    // Ignore approvals for the Approval Pause Duration since last devaluation of
+                    // the NFT. This prevents frontrunning due to MEV or marketplaces being late in
+                    // updating the metadata. We do this cuz there is no slippage control for NFTs.
+                    block.timestamp > positions[id].lastDevaluation + approvalPauseDuration),
+            "NOT_AUTHORIZED"
+        );
+        _ownerOf[id] = to;
+        delete getApproved[id];
+        emit Transfer(from, to, id);
     }
 
     /// @notice NFT metadata
@@ -314,17 +325,31 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
 
     function supportsInterface(bytes4 interfaceId)
         public
-        pure
-        override(ERC721, AccessControl)
+        view
+        override(ERC721NoBalance, AccessControl)
         returns (bool)
     {
         return
-            interfaceId == 0x01ffc9a7 || // ERC165 Interface ID for ERC165
-            interfaceId == 0x80ac58cd || // ERC165 Interface ID for ERC721
-            interfaceId == 0x5b5e139f || // ERC165 Interface ID for ERC721Metadata
-            interfaceId == type(IAccessControl).interfaceId ||
-            interfaceId == type(IERC165).interfaceId;
+            AccessControl.supportsInterface(interfaceId) ||
+            ERC721NoBalance.supportsInterface(interfaceId);
     }
+
+    /// @dev NFT mint function
+    function _mint(uint256 id) private {
+        _ownerOf[id] = msg.sender;
+        emit Transfer(address(0), msg.sender, id);
+    }
+
+    /// @dev NFT burn function
+    function _burn(uint256 id) private {
+        delete _ownerOf[id];
+        delete getApproved[id];
+        emit Transfer(msg.sender, address(0), id);
+    }
+
+    /* ************* *
+     * NFT STUFF END *
+     * ************* */
 
     /**
      * @dev Specs:
@@ -346,7 +371,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
 
         // mint nft and create position
         uint256 posId = _positionsLength++;
-        _mint(msg.sender, posId);
+        _mint(posId);
         Position storage position = positions[posId];
         position.balance = uint96(amount);
         position.lastUpdate = uint48(block.timestamp);
