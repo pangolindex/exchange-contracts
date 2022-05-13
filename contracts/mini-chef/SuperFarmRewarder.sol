@@ -33,6 +33,11 @@ contract SuperFarmRewarder is Ownable {
         uint40 expiration;
     }
 
+    struct UserInfo {
+        uint256 credits;
+        uint256 debts;
+    }
+
     uint256 public rewardCount;
     uint256 public constant MAX_REWARD_COUNT = 32;
 
@@ -41,8 +46,7 @@ contract SuperFarmRewarder is Ownable {
     uint256 public lastUpdateTime;
 
     mapping(address => uint256) public userAmounts;
-    mapping(address => mapping(uint256 => uint256)) public userRewardDebts;
-    mapping(address => mapping(uint256 => uint256)) public userRewardCredits;
+    mapping(address => mapping(uint256 => UserInfo)) public userInfos;
 
     // Permissions (RewardID => Manager => Permission)
     mapping(uint256 => mapping(address => mapping(bytes32 => bool))) public permissions;
@@ -111,17 +115,18 @@ contract SuperFarmRewarder is Ownable {
         uint256 _rewardCount = rewardCount;
         for (uint256 i; i < _rewardCount; ++i) {
             RewardInfo memory rewardInfo = rewardInfos[i];
+            UserInfo storage userInfo = userInfos[user][i];
             if (userAmount > 0) {
-                uint256 owed = userRewardCredits[user][i] + (userAmount * rewardInfo.accRewardPerShare / PRECISION) - userRewardDebts[user][i];
+                uint256 owed = userInfo.credits + (userAmount * rewardInfo.accRewardPerShare / PRECISION) - userInfo.debts;
                 if (rewardAmount > 0) {
-                    userRewardCredits[user][i] = 0;
+                    userInfo.credits = 0;
                     rewardInfo.reward.safeTransfer(recipient, owed);
                     emit RewardPaid(i, user, owed, recipient);
                 } else {
-                    userRewardCredits[user][i] = owed;
+                    userInfo.credits = owed;
                 }
             }
-            userRewardDebts[user][i] = newLpAmount * rewardInfo.accRewardPerShare / PRECISION;
+            userInfo.debts = newLpAmount * rewardInfo.accRewardPerShare / PRECISION;
         }
 
         userAmounts[user] = newLpAmount;
@@ -138,11 +143,12 @@ contract SuperFarmRewarder is Ownable {
         for (uint256 i; i < len; ++i) {
             uint256 rewardId = rewardIds[i];
             RewardInfo memory rewardInfo = rewardInfos[rewardId];
+            UserInfo storage userInfo = userInfos[msg.sender][rewardId];
             uint256 accumulated = userAmount * rewardInfo.accRewardPerShare / PRECISION;
-            uint256 owed = userRewardCredits[msg.sender][rewardId] + accumulated - userRewardDebts[msg.sender][rewardId];
-            userRewardDebts[msg.sender][rewardId] = accumulated;
+            uint256 owed = userInfo.credits + accumulated - userInfo.debts;
+            userInfo.debts = accumulated;
             if (owed > 0) {
-                userRewardCredits[msg.sender][rewardId] = 0;
+                userInfo.credits = 0;
                 rewardInfo.reward.safeTransfer(to, owed);
                 emit RewardPaid(rewardId, msg.sender, owed, to);
             }
@@ -179,6 +185,7 @@ contract SuperFarmRewarder is Ownable {
 
         for (uint256 i; i < _rewardCount; ++i) {
             RewardInfo memory rewardInfo = rewardInfos[i];
+            UserInfo memory userInfo = userInfos[user][i];
             if (block.timestamp > _lastUpdateTime && block.timestamp > rewardInfo.beginning && lpSupply > 0) {
                 uint256 time;
                 unchecked {
@@ -196,7 +203,7 @@ contract SuperFarmRewarder is Ownable {
                 rewardInfo.accRewardPerShare += (pending * PRECISION / lpSupply).toUint176();
             }
             rewardTokens[i] = rewardInfos[i].reward;
-            rewardAmounts[i] = userRewardCredits[user][i] + (userAmount * rewardInfo.accRewardPerShare / PRECISION) - userRewardDebts[user][i];
+            rewardAmounts[i] = userInfo.credits + (userAmount * rewardInfo.accRewardPerShare / PRECISION) - userInfo.debts;
         }
 
         return (rewardTokens, rewardAmounts);
