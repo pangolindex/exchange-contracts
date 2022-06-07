@@ -33,8 +33,8 @@ contract Vampire is Ownable {
 
     mapping(address => bool) private approvedStakingContracts;
 
-    event Migrate(address from, address to, address user);
-    event DustSweep(address dust, uint256 amount);
+    event Migrate(address indexed pairFrom, address indexed pairTo, uint256 amount, address userFrom, address userTo);
+    event DustSweep(address indexed dust, uint256 amount);
 
     constructor(address _factory, bytes32 _initHash, address firstOwner) {
         FACTORY = _factory;
@@ -229,7 +229,7 @@ contract Vampire is Ownable {
             TransferHelper.safeTransfer(token1, msg.sender, amount1);
         }
 
-        emit Migrate(pairFrom, pairTo, liquidityTo);
+        emit Migrate(pairFrom, pairTo, deposited, msg.sender, liquidityTo);
     }
 
     function _stake(
