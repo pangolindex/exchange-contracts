@@ -5,14 +5,12 @@ const {
     PNG_SYMBOL,
     PNG_NAME,
     TOTAL_SUPPLY,
-    MULTISIG,
     USE_GNOSIS_SAFE,
     PROPOSAL_THRESHOLD,
     WRAPPED_NATIVE_TOKEN,
     INITIAL_FARMS,
     AIRDROP_AMOUNT,
     VESTER_ALLOCATIONS,
-    REVENUE_DISTRIBUTION,
     TIMELOCK_DELAY,
     PNG_STAKING_ALLOCATION,
     WETH_PNG_FARM_ALLOCATION,
@@ -110,26 +108,12 @@ async function main() {
             signer: deployer,
         });
         var Multisig = await SafeFactory.create({ ethAdapter });
-        var multisig = await Multisig.deploySafe(MULTISIG);
+        var multisig = await Multisig.deploySafe(FOUNDATION_MULTISIG);
         await confirmTransactionCount();
         multisig.address = multisig.getAddress();
         console.log(multisig.address, ": Gnosis");
     } else {
         var multisig = await deploy("MultiSigWalletWithDailyLimit", [
-            MULTISIG.owners,
-            MULTISIG.threshold,
-            0,
-        ]);
-    }
-
-    // Deploy foundation multisig
-    if (USE_GNOSIS_SAFE) {
-        var foundation = await Multisig.deploySafe(FOUNDATION_MULTISIG);
-        await confirmTransactionCount();
-        foundation.address = foundation.getAddress();
-        console.log(foundation.address, ": Gnosis");
-    } else {
-        var foundation = await deploy("MultiSigWalletWithDailyLimit", [
             FOUNDATION_MULTISIG.owners,
             FOUNDATION_MULTISIG.threshold,
             0,
@@ -177,35 +161,6 @@ async function main() {
      * FEE COLLECTOR *
      *****************/
 
-    // Deploy 2/2 Joint Multisig
-    if (USE_GNOSIS_SAFE) {
-        var jointMultisig = await Multisig.deploySafe({
-            owners: [multisig.address, foundation.address],
-            threshold: 2,
-        });
-        await confirmTransactionCount();
-        jointMultisig.address = jointMultisig.getAddress();
-        console.log(jointMultisig.address, ": Gnosis");
-    } else {
-        var jointMultisig = await deploy("MultiSigWalletWithDailyLimit", [
-            [multisig.address, foundation.address],
-            2,
-            0,
-        ]);
-    }
-
-    // Deploy Revenue Distributor (Joint treasury of PNG and FPNG)
-    var revenueDistribution = [];
-    for (let i = 0; i < REVENUE_DISTRIBUTION.length; i++) {
-        revenueDistribution.push([
-            eval(REVENUE_DISTRIBUTION[i].recipient + ".address"),
-            REVENUE_DISTRIBUTION[i].allocation,
-        ]);
-    }
-    const revenueDistributor = await deploy("RevenueDistributor", [
-        revenueDistribution,
-    ]);
-
     // Deploy Fee Collector
     const feeCollector = await deploy("FeeCollector", [
         nativeToken,
@@ -214,9 +169,9 @@ async function main() {
         staking.address,
         chef.address,
         0, // chef pid for dummy PGL
-        revenueDistributor.address,
-        timelock.address,
-        multisig.address
+        multisig.address, // treasury
+        timelock.address, // governor
+        multisig.address // admin
     ]);
 
     // Deploy DummyERC20 for diverting some PNG emissions to PNG staking
@@ -256,10 +211,6 @@ async function main() {
     await vester.transferOwnership(timelock.address);
     await confirmTransactionCount();
     console.log("Transferred TreasuryVester ownership to Timelock.");
-
-    await revenueDistributor.transferOwnership(jointMultisig.address);
-    await confirmTransactionCount();
-    console.log("Transferred RevenueDistributor ownership to Joint Multisig.");
 
     await dummyERC20.renounceOwnership();
     await confirmTransactionCount();
