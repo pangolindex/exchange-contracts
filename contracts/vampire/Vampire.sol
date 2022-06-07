@@ -32,6 +32,7 @@ contract Vampire is Ownable {
     uint256 private constant minimumAmount = 1000;
 
     mapping(address => bool) private approvedStakingContracts;
+    address[] public stakingContracts;
 
     event Migrate(address indexed pairFrom, address indexed pairTo, uint256 amount, address userFrom, address userTo);
     event DustSweep(address indexed dust, uint256 amount);
@@ -95,6 +96,7 @@ contract Vampire is Ownable {
 
     /// @notice Migrate liquidity and stake resulting liquidity
     /// @dev Not all 3rd party pairs will support `permit` but some will
+    /// @dev Requires that an owner has approved the staking contract for use
     /// @dev The `liquidityTo` param is excluded and the EOA caller is used
     function migrateWithPermitAndStake(
         address pairFrom,
@@ -108,6 +110,7 @@ contract Vampire is Ownable {
         uint256 deadline,
         uint8 v, bytes32 r, bytes32 s
     ) external {
+        require(approvedStakingContracts[stakingContract], "Invalid staking contract");
         IPair(pairFrom).permit(msg.sender, address(this), liquidity, deadline, v, r, s);
         uint256 deposited = _migrate(
             pairFrom,
@@ -119,15 +122,12 @@ contract Vampire is Ownable {
             dustThreshold1,
             address(this)
         );
-        _stake(
-            stakingContract,
-            deposited,
-            msg.sender
-        );
+        IStakingRewardsLocked(stakingContract).stake(deposited, msg.sender);
     }
 
     /// @notice Migrate liquidity and stake resulting liquidity
     /// @dev Requires that `pairFrom` is approved for spending via this contract
+    /// @dev Requires that an owner has approved the staking contract for use
     function migrateAndStake(
         address pairFrom,
         uint256 liquidity,
@@ -139,6 +139,7 @@ contract Vampire is Ownable {
         address liquidityTo,
         address stakingContract
     ) external {
+        require(approvedStakingContracts[stakingContract], "Invalid staking contract");
         uint256 deposited = _migrate(
             pairFrom,
             liquidity,
@@ -149,11 +150,7 @@ contract Vampire is Ownable {
             dustThreshold1,
             address(this)
         );
-        _stake(
-            stakingContract,
-            deposited,
-            liquidityTo
-        );
+        IStakingRewardsLocked(stakingContract).stake(deposited, liquidityTo);
     }
 
     /// @notice Moves liquidity from a UniswapV2-based pool2 implementation to Pangolin
@@ -232,20 +229,6 @@ contract Vampire is Ownable {
         emit Migrate(pairFrom, pairTo, deposited, msg.sender, liquidityTo);
     }
 
-    function _stake(
-        address stakingContract,
-        uint256 amount,
-        address to
-    ) private {
-        if (!approvedStakingContracts[stakingContract]) {
-            address principle = IStakingRewardsLocked(stakingContract).stakingToken();
-            require(principle != address(0), "Invalid staking contract");
-            IPair(principle).approve(stakingContract, type(uint256).max);
-            approvedStakingContracts[stakingContract] = true;
-        }
-        IStakingRewardsLocked(stakingContract).stake(amount, to);
-    }
-
     function _removeLiquidity(
         address pair,
         uint256 amount
@@ -284,17 +267,22 @@ contract Vampire is Ownable {
         }
     }
 
-    /// @notice Anybody can approve a staking contract
+    /// @notice Approve a staking contract
     /// @param stakingContract - Address of a staking contract to migrate into
-    /// @dev The first migrator for a staking contract will trigger an approval
-    ///      but this methods allows an admin or other to front the approval gas
+    /// @dev Allows the owner to whitelist a staking contract and the required approvals
+    /// @dev Note via shung from Pangolin that callers can provide a malicious `stakingContract` address
+    ///      which returns a `stakingToken` of a dust token residing in this contract and proceed
+    ///      to use the transferFrom method to extract dust bypassing the `sweepDust` onlyOwner
+    ///      check. Since only owners can call this method, semantically no additional risk is presented
+    ///      beyond a previously removed malicious owner potentially having a lingering ability to withdraw dust.
     function approveStakingContract(
         address stakingContract
-    ) external {
+    ) external onlyOwner {
         require(!approvedStakingContracts[stakingContract], "Already approved");
         address principle = IStakingRewardsLocked(stakingContract).stakingToken();
         require(principle != address(0), "Invalid staking token");
         IPair(principle).approve(stakingContract, type(uint256).max);
+        stakingContracts.push(stakingContract);
         approvedStakingContracts[stakingContract] = true;
     }
 
