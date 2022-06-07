@@ -12,11 +12,11 @@ for(let i = 0; i < ALL_CHAINS.length; i++) {
     chainId: ALL_CHAINS[i].chain_id,
     accounts: [process.env.PRIVATE_KEY]
   };
-};
+}
 networksFromSdk["hardhat"] = {
   chainId: 43112,
   initialDate: "2021-10-10",
-}
+};
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -68,13 +68,38 @@ module.exports = {
         }
       },
       {
-        version: "0.8.9"
-      }
+        version: "0.8.9",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 1000,
+          }
+        }
+      },
+      {
+        version: "0.8.13",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 2000,
+          }
+        }
+      },
     ],
     overrides: {
       "contracts/mini-chef-zapper/MiniChefV2Zapper.sol": {
         version: "0.8.11"
-      }
+      },
+      "contracts/pangolin-token/PNG.sol": {
+        version: "0.5.16",
+        settings: { // For mocking
+          outputSelection: {
+            "*": {
+              "*": ["storageLayout"],
+            },
+          },
+        },
+      },
     }
   },
   networks: networksFromSdk,
