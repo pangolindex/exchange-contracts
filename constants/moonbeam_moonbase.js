@@ -1,6 +1,6 @@
-const WETH = "0x9D29f395524B3C817ed86e2987A14c1897aFF849";
-exports.WRAPPED_NATIVE_TOKEN = WETH;
-exports.PNG_SYMBOL = "mooPNG";
+const WDEV = "0x9D29f395524B3C817ed86e2987A14c1897aFF849";
+exports.WRAPPED_NATIVE_TOKEN = WDEV;
+exports.PNG_SYMBOL = "PMA";
 exports.PNG_NAME = "Pangolin";
 exports.TOTAL_SUPPLY = 230000000; // 230M
 exports.AIRDROP_AMOUNT = 11500000; // 11.5M or 5% of max supply
@@ -12,7 +12,7 @@ exports.MULTISIG = {
   ],
   threshold: 2
 };
-exports.USE_GNOSIS_SAFE = false;
+exports.USE_GNOSIS_SAFE = true;
 exports.PROPOSAL_THRESHOLD = 100000; // 100K
 exports.PNG_STAKING_ALLOCATION = 500, // 5x weight in minichef
 exports.WETH_PNG_FARM_ALLOCATION = 3000, // 30x weight
