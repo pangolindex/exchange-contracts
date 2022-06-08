@@ -2,15 +2,9 @@ const { ethers } = require('hardhat');
 const { BigNumber } = require('ethers');
 const fs = require('fs');
 const { ADDRESSES } = require(`../../addresses/${network.name}.js`);
+const { attach } = require('./modules/utils');
 
 async function main() {
-
-    async function attach(factory, address) {
-        let ContractFactory = await ethers.getContractFactory(factory);
-        let contract = await ContractFactory.attach(address);
-        console.log(factory, "has been load");
-        return contract;
-    }
 
     const [deployer] = await ethers.getSigners();
     

@@ -2,26 +2,9 @@ const { ethers } = require('hardhat');
 const { BigNumber } = require('ethers');
 const fs = require('fs');
 const { ADDRESSES } = require(`../../addresses/${network.name}.js`);
+const { attach, multisigWallet} = require('./modules/utils')
 
 async function main() {
-
-    async function attach(factory, address) {
-        let ContractFactory = await ethers.getContractFactory(factory);
-        let contract = await ContractFactory.attach(address);
-        console.log(factory, "has been load");
-        return contract;
-    }
-
-    async function multisigWallet(contract, args) {
-        let estimatedGas = await estimateGas(contract.estimateGas.submitTransaction, args);
-        tx = await contract.submitTransaction(...args, {gasLimit: estimatedGas}); 
-        await tx.wait();
-        if (await contract.required() > 1) {
-            console.log("Vote has been emitted")
-        } else {
-            console.log("Proposition has been accepted")
-        }
-    }
 
     const [deployer] = await ethers.getSigners();
     console.log("Using script with the account:", deployer.address);
@@ -48,20 +31,6 @@ async function main() {
 
     const endBalance = await deployer.getBalance();
     console.log("Deploy cost: ", initBalance.sub(endBalance).toString())
-}
-
-async function estimateGas(ft, args) {
-    let estimatedGas;
-    while (1) {
-	    try {
-			    estimatedGas = await ft(...args);
-            return (estimatedGas.mul(2)).toNumber();
-	    } catch (e) {
-		    console.log("EstimateGas: something went wrong");
-            console.log(e);
-            process.exit(1);
-	    }
-    }
 }
 
 main()

@@ -3,21 +3,7 @@ const { BigNumber } = require('ethers');
 const fs = require('fs');
 const csv = require('csvtojson');
 const { ADDRESSES } = require(`../../addresses/${network.name}.js`);
-
-async function check_whitelister(Airdrop, deployer) {
-    if (await Airdrop.whitelister() != deployer.address) {
-        console.error("You are not the whitelister of Airdrop");
-        process.exit(1);
-    }
-}
-
-async function check_arrays_equal_length(airdropAddresses, airdropAmounts) {
-    if (airdropAddresses.length != airdropAmounts.length) {
-        console.log("Airdrop address length need to be equal with airdrop amounts length");
-        process.exit(1);
-    }
-}
-
+const { attach, check_whitelister, check_arrays_equal_length} = require('./modules/utils');
 
 async function main() {
 
@@ -43,13 +29,6 @@ async function main() {
             }
             break;
         }
-    }
-
-    async function attach(factory, address) {
-        let ContractFactory = await ethers.getContractFactory(factory);
-        let contract = await ContractFactory.attach(address);
-        console.log(factory, "has been load");
-        return contract;
     }
 
     const initBalance = await deployer.getBalance();
