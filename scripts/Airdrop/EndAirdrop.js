@@ -12,11 +12,11 @@ async function main() {
         return contract;
     }
 
-    async function multisigWallet(multisig, args) {
-        let estimatedGas = await estimateGas(multisig.estimateGas.submitTransaction, args);
-        tx = await multisig.submitTransaction(...args, {gasLimit: estimatedGas}); 
+    async function multisigWallet(contract, args) {
+        let estimatedGas = await estimateGas(contract.estimateGas.submitTransaction, args);
+        tx = await contract.submitTransaction(...args, {gasLimit: estimatedGas}); 
         await tx.wait();
-        if (await multisig.required() > 1) {
+        if (await contract.required() > 1) {
             console.log("Vote has been emitted")
         } else {
             console.log("Proposition has been accepted")
@@ -28,8 +28,8 @@ async function main() {
     const initBalance = await deployer.getBalance();
     console.log("Account balance:", initBalance.toString());
 
-    const Airdrop = await attach("Airdrop", ADDRESSES[10 - (16 - ADDRESSES.length) ].address);
-    const multisig = await attach("MultiSigWalletWithDailyLimit", ADDRESSES[2 - (16 - ADDRESSES.length) ].address);
+    const Airdrop = await attach("Airdrop", ADDRESSES[9 - (13 - ADDRESSES.length) ].address);
+    const multisig = await attach("MultiSigWalletWithDailyLimit", ADDRESSES[2 - (13 - ADDRESSES.length) ].address);
 
     let tx;
     

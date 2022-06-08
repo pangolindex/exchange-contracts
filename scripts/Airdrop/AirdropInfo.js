@@ -14,7 +14,7 @@ async function main() {
 
     const [deployer] = await ethers.getSigners();
     
-    const Airdrop = await attach("Airdrop", ADDRESSES[10 - (16 - ADDRESSES.length) ].address);
+    const Airdrop = await attach("Airdrop", ADDRESSES[9 - (13 - ADDRESSES.length) ].address);
     
     let info;
 

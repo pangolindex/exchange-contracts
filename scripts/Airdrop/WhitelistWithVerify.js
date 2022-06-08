@@ -4,6 +4,20 @@ const fs = require('fs');
 const csv = require('csvtojson');
 const { ADDRESSES } = require(`../../addresses/${network.name}.js`);
 
+async function check_whitelister(Airdrop, deployer) {
+    if (await Airdrop.whitelister() != deployer.address) {
+        console.error("You are not the whitelister of Airdrop");
+        process.exit(1);
+    }
+}
+
+async function check_arrays_equal_length(airdropAddresses, airdropAmounts) {
+    if (airdropAddresses.length != airdropAmounts.length) {
+        console.log("Airdrop address length need to be equal with airdrop amounts length");
+        process.exit(1);
+    }
+}
+
 async function main() {
 
     const [deployer] = await ethers.getSigners();
@@ -39,12 +53,9 @@ async function main() {
     const initBalance = await deployer.getBalance();
     console.log("Account balance:", initBalance.toString());
 
-    const Airdrop = await attach("Airdrop", ADDRESSES[10 - (16 - ADDRESSES.length) ].address);
+    const Airdrop = await attach("Airdrop", ADDRESSES[9 - (13 - ADDRESSES.length) ].address);
 
-    if (await Airdrop.whitelister() != deployer.address) {
-        console.error("You are not the whitelister of Airdrop");
-        process.exit(1);
-    }
+    await check_whitelister(Airdrop, deployer);
 
     let csvFile = await csv().fromFile(`scripts/Airdrop/lists/${network.name}.csv`)
     let airdropAddresses = [], airdropAmounts = [];
@@ -55,10 +66,7 @@ async function main() {
             airdropAddresses.push(csvFile[i].address);
             airdropAmounts.push(amount);
             if (airdropAddresses.length == 250) {
-                if (airdropAddresses.length != airdropAmounts.length) {
-                    console.log("Airdrop address length need to be equal with airdrop amounts length");
-                    process.exit(1);
-                }
+                await check_arrays_equal_length(airdropAddresses, airdropAmounts);
                 await Airdrop.whitelistAddresses(airdropAddresses, airdropAmounts);
                 await confirmTransactionCount();
                 console.log("Whitelist has been added");
@@ -68,12 +76,7 @@ async function main() {
         }
     }
     if (airdropAddresses.length > 0) {
-
-        if (airdropAddresses.length != airdropAmounts.length) {
-            console.log("Airdrop address length need to be equal with airdrop amounts length");
-            process.exit(1);
-        }
-    
+        await check_arrays_equal_length(airdropAddresses, airdropAmounts);
         await Airdrop.whitelistAddresses(airdropAddresses, airdropAmounts);
         await confirmTransactionCount();
         console.log("Whitelist has been added");
@@ -82,20 +85,6 @@ async function main() {
     
     const endBalance = await deployer.getBalance();
     console.log("Deploy cost: ", initBalance.sub(endBalance).toString())
-}
-
-async function estimateGas(ft, args) {
-    let estimatedGas;
-    while (1) {
-	    try {
-			    estimatedGas = await ft(...args);
-            return (estimatedGas.mul(2)).toNumber();
-	    } catch (e) {
-		    console.log("EstimateGas: something went wrong");
-            console.log(e);
-            process.exit(1);
-	    }
-    }
 }
 
 main()

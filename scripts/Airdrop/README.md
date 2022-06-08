@@ -31,6 +31,8 @@ To execute a script use: `npx hardhat --network avalanche_fuji run yourScriptPat
 2. deploy contracts ``yarn deploy --network avalanche_fuji``
 3. check airdrop info `npx hardhat --network avalanche_fuji run scripts/Airdrop/AirdropInfo.js`
 4. fill list data in scripts/Airdrop/lists/avalanche_fuji.csv
-4. set up airdrop `npx hardhat --network avalanche_fuji run scripts/Airdrop/Airdrop.js`
+5. set up airdrop your address to whitelister `npx hardhat --network avalanche_fuji run scripts/Airdrop/SetWhitelister.js`
+6. Add all addresses with the csv file `npx hardhat --network avalanche_fuji run scripts/Airdrop/AddWhitelistAddresses.js`
+7. Start airdrop `npx hardhat --network avalanche_fuji run scripts/Airdrop/AllowClaiming.js`
 5. check new airdrop info `npx hardhat --network avalanche_fuji run scripts/Airdrop/AirdropInfo.js`
 5. end airdrop `npx hardhat --network avalanche_fuji run scripts/Airdrop/EndAirdrop.js`
