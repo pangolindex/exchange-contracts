@@ -37,10 +37,10 @@ async function main() {
 
     await check_whitelister(airdrop, verifier);
 
-    let csv = await csv().fromFile(`scripts/airdrop/lists/${network.name}.csv`)
+    let csvF = await csv().fromFile(`scripts/airdrop/lists/${network.name}.csv`)
     let addresses = [], amounts = [];
     let amount;
-    for(const csvInfo of csv) {
+    for(const csvInfo of csvF) {
         amount = BigNumber.from(csvInfo.allocated_amount);
         if (!((await airdrop.withdrawAmount(csvInfo.address)).eq(amount))) {
             addresses.push(csvInfo.address);
