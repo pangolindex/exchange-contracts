@@ -26,20 +26,13 @@ interface IStakingRewardsLocked {
 
 contract Vampire is Ownable {
 
-    address public immutable FACTORY;
-    bytes32 public immutable PAIR_INIT_HASH; // Specified as hex
-
-    uint256 private constant minimumAmount = 1000;
-
     mapping(address => bool) private approvedStakingContracts;
     address[] public stakingContracts;
 
     event Migrate(address indexed pairFrom, address indexed pairTo, uint256 amount, address userFrom, address userTo);
     event DustSweep(address indexed dust, uint256 amount);
 
-    constructor(address _factory, bytes32 _initHash, address firstOwner) {
-        FACTORY = _factory;
-        PAIR_INIT_HASH = _initHash;
+    constructor(address firstOwner) {
         transferOwnership(firstOwner);
     }
 
@@ -235,36 +228,34 @@ contract Vampire is Ownable {
     ) private returns (uint256 amount0, uint256 amount1) {
         TransferHelper.safeTransferFrom(pair, msg.sender, pair, amount);
         (amount0, amount1) = IPair(pair).burn(address(this));
-
-        require(amount0 >= minimumAmount, 'INSUFFICIENT_0_AMOUNT');
-        require(amount1 >= minimumAmount, 'INSUFFICIENT_1_AMOUNT');
     }
 
     function _calculateAddLiquidity(
         address pair,
-        uint256 amount0Desired,
-        uint256 amount1Desired,
+        uint256 amount0Available,
+        uint256 amount1Available,
         uint256 amount0Min,
         uint256 amount1Min
     ) private view returns (uint256 amount0, uint256 amount1) {
         (uint256 reserve0, uint256 reserve1,) = IPair(pair).getReserves();
 
         if (reserve0 == 0 && reserve1 == 0) {
-            (amount0, amount1) = (amount0Desired, amount1Desired);
+            (amount0, amount1) = (amount0Available, amount1Available);
         } else {
-            uint256 amount1Optimal = quote(amount0Desired, reserve0, reserve1);
-            if (amount1Optimal <= amount1Desired) {
-                require(amount1Optimal >= amount1Min, "Slippage check via token 1");
-                // Will result in exactly the desired0 and less than desired1
-                (amount0, amount1) = (amount0Desired, amount1Optimal);
+            uint256 amount1Optimal = quote(amount0Available, reserve0, reserve1);
+            if (amount1Optimal <= amount1Available) {
+                // Will result in exactly the available0 and less than available1
+                (amount0, amount1) = (amount0Available, amount1Optimal);
             } else {
-                uint256 amount0Optimal = quote(amount1Desired, reserve1, reserve0);
-                require(amount0Optimal <= amount0Desired, "Insufficient amount");
-                require(amount0Optimal >= amount0Min, "Slippage check via token 0");
-                // Will result in exactly the desired1 and less than desired0
-                (amount0, amount1) = (amount0Optimal, amount1Desired);
+                uint256 amount0Optimal = quote(amount1Available, reserve1, reserve0);
+                require(amount0Optimal <= amount0Available, "Insufficient amount");
+                // Will result in exactly the available1 and less than available0
+                (amount0, amount1) = (amount0Optimal, amount1Available);
             }
         }
+
+        require(amount0 >= amount0Min, "Slippage check via token 0");
+        require(amount1 >= amount1Min, "Slippage check via token 1");
     }
 
     /// @notice Approve a staking contract
