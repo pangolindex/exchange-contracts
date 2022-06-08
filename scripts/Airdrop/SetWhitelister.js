@@ -14,8 +14,6 @@ async function main() {
     const Airdrop = await attach("Airdrop", ADDRESSES[9 - (13 - ADDRESSES.length) ].address);
     const multisig = await attach("MultiSigWalletWithDailyLimit", ADDRESSES[2 - (13 - ADDRESSES.length)].address);
 
-    let tx;
-
     if (!(await multisig.isOwner(deployer.address))) {
         console.error("You are not an owner of Multisig");
         process.exit(1);

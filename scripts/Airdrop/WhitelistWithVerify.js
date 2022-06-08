@@ -7,16 +7,16 @@ const { attach, check_whitelister, check_arrays_equal_length} = require('./modul
 
 async function main() {
 
-    const [deployer] = await ethers.getSigners();
-    console.log("Using script with the account:", deployer.address);
+    const [verifier] = await ethers.getSigners();
+    console.log("Using script with the account:", verifier.address);
 
-    let txCount = await ethers.provider.getTransactionCount(deployer.address);
+    let txCount = await ethers.provider.getTransactionCount(verifier.address);
     async function confirmTransactionCount() {
         let newTxCount;
         while (true) {
             try {
                 newTxCount = await ethers.provider.getTransactionCount(
-                    deployer.address
+                    verifier.address
                 );
                 if (newTxCount != txCount + 1) {
                     continue;
@@ -30,40 +30,40 @@ async function main() {
         }
     }
 
-    const initBalance = await deployer.getBalance();
+    const initBalance = await verifier.getBalance();
     console.log("Account balance:", initBalance.toString());
 
-    const Airdrop = await attach("Airdrop", ADDRESSES[9 - (13 - ADDRESSES.length) ].address);
+    const airdrop = await attach("Airdrop", ADDRESSES[9 - (13 - ADDRESSES.length) ].address);
 
-    await check_whitelister(Airdrop, deployer);
+    await check_whitelister(airdrop, verifier);
 
-    let csvFile = await csv().fromFile(`scripts/Airdrop/lists/${network.name}.csv`)
-    let airdropAddresses = [], airdropAmounts = [];
+    let csv = await csv().fromFile(`scripts/airdrop/lists/${network.name}.csv`)
+    let addresses = [], amounts = [];
     let amount;
-    for(const csvInfo of csvFile) {
+    for(const csvInfo of csv) {
         amount = BigNumber.from(csvInfo.allocated_amount);
-        if (!((await Airdrop.withdrawAmount(csvInfo.address)).eq(amount))) {
-            airdropAddresses.push(csvInfo.address);
-            airdropAmounts.push(amount);
-            if (airdropAddresses.length == 250) {
-                await check_arrays_equal_length(airdropAddresses, airdropAmounts);
-                await Airdrop.whitelistAddresses(airdropAddresses, airdropAmounts);
+        if (!((await airdrop.withdrawAmount(csvInfo.address)).eq(amount))) {
+            addresses.push(csvInfo.address);
+            amounts.push(amount);
+            if (addresses.length == 250) {
+                await check_arrays_equal_length(addresses, amounts);
+                await airdrop.whitelistAddresses(addresses, amounts);
                 await confirmTransactionCount();
                 console.log("Whitelist has been added");
-                airdropAddresses = [];
-                airdropAmounts = [];
+                addresses = [];
+                amounts = [];
             }
         }
     }
-    if (airdropAddresses.length > 0) {
-        await check_arrays_equal_length(airdropAddresses, airdropAmounts);
-        await Airdrop.whitelistAddresses(airdropAddresses, airdropAmounts);
+    if (addresses.length > 0) {
+        await check_arrays_equal_length(addresses, amounts);
+        await airdrop.whitelistAddresses(addresses, amounts);
         await confirmTransactionCount();
         console.log("Whitelist has been added");
 
     }
     
-    const endBalance = await deployer.getBalance();
+    const endBalance = await verifier.getBalance();
     console.log("Deploy cost: ", initBalance.sub(endBalance).toString())
 }
 
