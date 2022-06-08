@@ -9,7 +9,7 @@ async function main() {
     const [deployer] = await ethers.getSigners();
     console.log("Using script with the account:", deployer.address);
 
-    var txCount = await ethers.provider.getTransactionCount(deployer.address);
+    let txCount = await ethers.provider.getTransactionCount(deployer.address);
     async function confirmTransactionCount() {
         let newTxCount;
         while (true) {
@@ -30,17 +30,14 @@ async function main() {
     }
 
     async function attach(factory, address) {
-        var ContractFactory = await ethers.getContractFactory(factory);
-        var contract = await ContractFactory.attach(address);
+        let ContractFactory = await ethers.getContractFactory(factory);
+        let contract = await ContractFactory.attach(address);
         console.log(factory, "has been load");
         return contract;
     }
 
-
     const initBalance = await deployer.getBalance();
     console.log("Account balance:", initBalance.toString());
-
-    let info, tx;
 
     const Airdrop = await attach("Airdrop", ADDRESSES[10 - (16 - ADDRESSES.length) ].address);
 
@@ -49,10 +46,10 @@ async function main() {
         process.exit(1);
     }
 
-    csvFile = await csv().fromFile(`scripts/Airdrop/lists/${network.name}.csv`)
+    let csvFile = await csv().fromFile(`scripts/Airdrop/lists/${network.name}.csv`)
     let airdropAddresses = [], airdropAmounts = [];
     let amount;
-    for(i = 0; i < csvFile.length; i++) {
+    for(let i = 0; i < csvFile.length; i++) {
         amount = BigNumber.from(csvFile[i].allocated_amount);
         if (!((await Airdrop.withdrawAmount(csvFile[i].address)).eq(amount))) {
             airdropAddresses.push(csvFile[i].address);
@@ -62,7 +59,7 @@ async function main() {
                     console.log("Airdrop address length need to be equal with airdrop amounts length");
                     process.exit(1);
                 }
-                tx = await Airdrop.whitelistAddresses(airdropAddresses, airdropAmounts);
+                await Airdrop.whitelistAddresses(airdropAddresses, airdropAmounts);
                 await confirmTransactionCount();
                 console.log("Whitelist has been added");
                 airdropAddresses = [];
@@ -77,7 +74,7 @@ async function main() {
             process.exit(1);
         }
     
-        tx = await Airdrop.whitelistAddresses(airdropAddresses, airdropAmounts);
+        await Airdrop.whitelistAddresses(airdropAddresses, airdropAmounts);
         await confirmTransactionCount();
         console.log("Whitelist has been added");
 

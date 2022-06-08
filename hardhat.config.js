@@ -6,10 +6,10 @@ require('dotenv').config();
 
 // Create hardhat networks from @pangolindex/sdk
 let networksFromSdk = {};
-for(let i = 0; i < ALL_CHAINS.length; i++) {
-  networksFromSdk[ALL_CHAINS[i].id] = {
-    url: ALL_CHAINS[i].rpc_uri,
-    chainId: ALL_CHAINS[i].chain_id,
+for(const chain of ALL_CHAINS) {
+  networksFromSdk[chain.id] = {
+    url: chain.rpc_uri,
+    chainId: chain.chain_id,
     accounts: [process.env.PRIVATE_KEY]
   };
 }

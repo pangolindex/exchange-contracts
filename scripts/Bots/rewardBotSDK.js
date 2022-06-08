@@ -6,14 +6,14 @@ const { Chains, ALL_CHAINS, CHAINS } = require('@pangolindex/sdk');
 async function main() {
 
     async function attach(factory, address) {
-        var ContractFactory = await ethers.getContractFactory(factory);
-        var contract = await ContractFactory.attach(address);
+        let ContractFactory = await ethers.getContractFactory(factory);
+        let contract = await ContractFactory.attach(address);
         console.log(factory, "has been load");
         return contract;
     }
 
     function getTreasuryVester() {
-        var i;
+        let i;
         for(i = 0; i < ALL_CHAINS.length; i++) {
             if (ALL_CHAINS[i].id == `${network.name}`) {
                 return ALL_CHAINS[i].contracts.treasury_vester;
@@ -30,13 +30,13 @@ async function main() {
     let tx;
 
     let vestingEnabled = await TreasuryVester.vestingEnabled();
-    if(vestingEnabled == false) {
+    if(!vestingEnabled) {
         console.log("Vesting is disable");
         process.exit(1);
     }
     const ONE_SECOND = BigNumber.from(1000);
     const ONE_DAY = BigNumber.from(86400).mul(ONE_SECOND);
-    while (await TreasuryVester.vestingEnabled() == true) {
+    while (await TreasuryVester.vestingEnabled()) {
         let lastUpdate = (await TreasuryVester.lastUpdate()).mul(ONE_SECOND);
         console.log("lastUpdate: ", lastUpdate.toNumber());
         let time = getTime();
@@ -49,12 +49,10 @@ async function main() {
             tx = await TreasuryVester.distribute();
             await tx.wait();
             console.log(getTime().toString(), "Transaction hash:", tx.hash)
-        //    fs.appendFileSync(`${network.name}.log`, getTime().toString() + " Transaction hash: " + tx.hash + "\n");
             const endBalance = await deployer.getBalance();
             console.log("Total cost: ", initBalance.sub(endBalance).toString())
             let balance = await deployer.getBalance();
             console.log("Actual balance: " + balance.toString());
-        //    fs.appendFileSync(`${network.name}.log`, "Actual balance: " + balance.toString());
         } catch (error) {
             console.error("Errpr attempting distribute()")
             console.error(error.message);

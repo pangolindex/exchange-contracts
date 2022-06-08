@@ -6,8 +6,8 @@ const { ADDRESSES } = require(`../../addresses/${network.name}.js`);
 async function main() {
 
     async function attach(factory, address) {
-        var ContractFactory = await ethers.getContractFactory(factory);
-        var contract = await ContractFactory.attach(address);
+        let ContractFactory = await ethers.getContractFactory(factory);
+        let contract = await ContractFactory.attach(address);
         console.log(factory, "has been load");
         return contract;
     }
@@ -31,9 +31,9 @@ async function main() {
     const Airdrop = await attach("Airdrop", ADDRESSES[10 - (16 - ADDRESSES.length) ].address);
     const multisig = await attach("MultiSigWalletWithDailyLimit", ADDRESSES[2 - (16 - ADDRESSES.length) ].address);
 
-    let info, tx;
+    let tx;
     
-    if (await multisig.isOwner(deployer.address) == false) {
+    if (!(await multisig.isOwner(deployer.address))) {
         console.error("You are not an owner of Multisig");
         process.exit(1);
     }

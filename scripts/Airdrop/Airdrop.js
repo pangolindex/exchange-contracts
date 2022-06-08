@@ -7,8 +7,8 @@ const { ADDRESSES } = require(`../../addresses/${network.name}.js`);
 async function main() {
 
     async function attach(factory, address) {
-        var ContractFactory = await ethers.getContractFactory(factory);
-        var contract = await ContractFactory.attach(address);
+        let ContractFactory = await ethers.getContractFactory(factory);
+        let contract = await ContractFactory.attach(address);
         console.log(factory, "has been load");
         return contract;
     }
@@ -18,13 +18,13 @@ async function main() {
     const initBalance = await deployer.getBalance();
     console.log("Account balance:", initBalance.toString());
 
-    csvFile = await csv().fromFile(`scripts/Airdrop/lists/${network.name}.csv`)
+    let csvFile = await csv().fromFile(`scripts/Airdrop/lists/${network.name}.csv`)
     let airdropAddresses = [], airdropAmounts = [];
 
     const Airdrop = await attach("Airdrop", ADDRESSES[10 - (16 - ADDRESSES.length) ].address);
     const multisig = await attach("MultiSigWalletWithDailyLimit", ADDRESSES[2 - (16 - ADDRESSES.length) ].address);
 
-    let info, tx;
+    let tx;
     const multisigRequired = await multisig.required();
     
     if (multisigRequired > 1) {
@@ -46,8 +46,8 @@ async function main() {
     tx = await multisig.submitTransaction(Airdrop.address, 0, "0xf98f5b92000000000000000000000000" + deployer.address.substr(2), {gasLimit: estimatedGas}); 
     await tx.wait();
     console.log("Whitelister has been set");
-    for(i = 0; i < csvFile.length; i++) {
-        amount = BigNumber.from(csvFile[i].allocated_amount);
+    for(let i = 0; i < csvFile.length; i++) {
+        let amount = BigNumber.from(csvFile[i].allocated_amount);
         airdropAddresses.push(csvFile[i].address);
         airdropAmounts.push(amount);
         if (airdropAddresses.length == 250) {
