@@ -3,7 +3,7 @@
 pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /**
  * @title Reward Funding
@@ -15,7 +15,6 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
  * the staking and the reward distribution.
  */
 abstract contract RewardFunding is AccessControl {
-    using SafeERC20 for IERC20;
 
     uint128 public rewardRate;
     uint64 public lastUpdate;
@@ -34,6 +33,7 @@ abstract contract RewardFunding is AccessControl {
 
     error RewardFunding__ZeroAddress();
     error RewardFunding__OngoingPeriod();
+    error RewardFunding__FailedTransfer();
     error RewardFunding__InvalidInputAmount(uint256 inputAmount);
     error RewardFunding__InvalidInputDuration(uint256 inputDuration);
 
@@ -67,7 +67,9 @@ abstract contract RewardFunding is AccessControl {
         }
         lastUpdate = uint64(block.timestamp);
         periodFinish = uint64(block.timestamp + tmpPeriodDuration);
-        rewardsToken.safeTransferFrom(msg.sender, address(this), amount);
+        if (!rewardsToken.transferFrom(msg.sender, address(this), amount)) {
+            revert RewardFunding__FailedTransfer();
+        }
         emit RewardAdded(amount);
     }
 

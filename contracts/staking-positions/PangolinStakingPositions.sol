@@ -35,7 +35,6 @@ import "./RewardFunding.sol";
  * @author shung for Pangolin
  */
 contract PangolinStakingPositions is ERC721NoBalance, RewardFunding {
-    using SafeERC20 for IERC20;
 
     struct Position {
         // The amount of tokens staked in the position.
@@ -120,6 +119,7 @@ contract PangolinStakingPositions is ERC721NoBalance, RewardFunding {
     error PNGPos__NotOwnerOfPosition(uint256 posId);
     error PNGPos__InvalidToken(uint256 tokenId);
     error PNGPos__ApprovalsPaused();
+    error PNGPos__FailedTransfer();
     error PNGPos__NoBalance();
     error PNGPos__NoReward();
 
@@ -220,7 +220,7 @@ contract PangolinStakingPositions is ERC721NoBalance, RewardFunding {
         position.previousValues = 0;
         position.entryTimes = 0;
         position.lastDevaluation = uint48(block.timestamp);
-        rewardsToken.safeTransfer(msg.sender, balance);
+        if (!rewardsToken.transfer(msg.sender, balance)) revert PNGPos__FailedTransfer();
         emit EmergencyExited(posId, balance);
     }
 
@@ -228,14 +228,24 @@ contract PangolinStakingPositions is ERC721NoBalance, RewardFunding {
     function multiClose(uint256[] calldata posIds) external {
         _updateRewardVariables();
         uint256 length = posIds.length;
-        for (uint256 i; i < length; ++i) _close(posIds[i]);
+        for (uint256 i; i < length;) {
+            _close(posIds[i]);
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     /// @notice Compounds multiple positions, saving gas than calling `compound` multiple times.
     function multiCompound(uint256[] calldata posIds) external {
         _updateRewardVariables();
         uint256 length = posIds.length;
-        for (uint256 i; i < length; ++i) _compound(posIds[i]);
+        for (uint256 i; i < length;) {
+            _compound(posIds[i]);
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     /// @notice Sets how long the token approvals should be ignored after a destructive action.
@@ -370,7 +380,7 @@ contract PangolinStakingPositions is ERC721NoBalance, RewardFunding {
         totalStaked = uint96(newTotalStaked);
 
         // mint nft and create position
-        uint256 posId = _positionsLength++;
+        uint256 posId = ++_positionsLength; // start from posId 1
         _mint(posId);
         Position storage position = positions[posId];
         position.balance = uint96(amount);
@@ -380,7 +390,9 @@ contract PangolinStakingPositions is ERC721NoBalance, RewardFunding {
         position.rewardPerValue = _rewardPerValue;
 
         // send tokens from user to the contract
-        rewardsToken.safeTransferFrom(msg.sender, address(this), amount);
+        if (!rewardsToken.transferFrom(msg.sender, address(this), amount)) {
+            revert PNGPos__FailedTransfer();
+        }
         emit Opened(posId, amount);
     }
 
@@ -403,7 +415,7 @@ contract PangolinStakingPositions is ERC721NoBalance, RewardFunding {
         delete positions[posId];
         _burn(posId);
 
-        rewardsToken.safeTransfer(msg.sender, balance + reward);
+        if (!rewardsToken.transfer(msg.sender, balance + reward)) revert PNGPos__FailedTransfer();
         emit Closed(posId, balance, reward);
     }
 
@@ -441,7 +453,9 @@ contract PangolinStakingPositions is ERC721NoBalance, RewardFunding {
         position.rewardPerValue = _rewardPerValue;
 
         // transfer tokens from user to the contract
-        rewardsToken.safeTransferFrom(msg.sender, address(this), amount);
+        if (!rewardsToken.transferFrom(msg.sender, address(this), amount)) {
+            revert PNGPos__FailedTransfer();
+        }
         emit Staked(posId, amount, reward);
     }
 
@@ -504,7 +518,7 @@ contract PangolinStakingPositions is ERC721NoBalance, RewardFunding {
         position.rewardPerValue = _rewardPerValue;
 
         // transfer rewards to the user
-        rewardsToken.safeTransfer(msg.sender, reward);
+        if (!rewardsToken.transfer(msg.sender, reward)) revert PNGPos__FailedTransfer();
         emit Harvested(posId, reward);
     }
 
@@ -542,7 +556,7 @@ contract PangolinStakingPositions is ERC721NoBalance, RewardFunding {
         position.rewardPerValue = _rewardPerValue;
 
         // transfer rewards and withdrawn amount to the user
-        rewardsToken.safeTransfer(msg.sender, reward + amount);
+        if (!rewardsToken.transfer(msg.sender, reward + amount)) revert PNGPos__FailedTransfer();
         emit Withdrawn(posId, amount, reward);
     }
 
