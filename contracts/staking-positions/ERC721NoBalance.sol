@@ -102,11 +102,21 @@ abstract contract ERC721NoBalance {
         return type(uint256).max;
     }
 
-
     function supportsInterface(bytes4 interfaceId) public view virtual returns (bool) {
         return
             interfaceId == 0x01ffc9a7 || // ERC165 Interface ID for ERC165
             interfaceId == 0x80ac58cd || // ERC165 Interface ID for ERC721
             interfaceId == 0x5b5e139f; // ERC165 Interface ID for ERC721Metadata
+    }
+
+    function _mint(uint256 id) internal {
+        _ownerOf[id] = msg.sender;
+        emit Transfer(address(0), msg.sender, id);
+    }
+
+    function _burn(uint256 id) internal {
+        delete _ownerOf[id];
+        delete getApproved[id];
+        emit Transfer(msg.sender, address(0), id);
     }
 }

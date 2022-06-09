@@ -356,19 +356,6 @@ contract PangolinStakingPositions is ERC721NoBalance, RewardFunding {
             ERC721NoBalance.supportsInterface(interfaceId);
     }
 
-    /// @dev NFT mint function
-    function _mint(uint256 id) private {
-        _ownerOf[id] = msg.sender;
-        emit Transfer(address(0), msg.sender, id);
-    }
-
-    /// @dev NFT burn function
-    function _burn(uint256 id) private {
-        delete _ownerOf[id];
-        delete getApproved[id];
-        emit Transfer(msg.sender, address(0), id);
-    }
-
     /* ************* *
      * NFT STUFF END *
      * ************* */
