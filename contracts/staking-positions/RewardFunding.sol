@@ -38,7 +38,9 @@ abstract contract RewardFunding is AccessControl {
     error RewardFunding__InvalidInputDuration(uint256 inputDuration);
 
     constructor(address newRewardsToken, address newAdmin) {
-        if (newRewardsToken == address(0)) revert RewardFunding__ZeroAddress();
+        if (newRewardsToken == address(0)) {
+            revert RewardFunding__ZeroAddress();
+        }
         rewardsToken = IERC20(newRewardsToken);
         _grantRole(DEFAULT_ADMIN_ROLE, newAdmin);
         _grantRole(FUNDER_ROLE, newAdmin);
@@ -46,7 +48,9 @@ abstract contract RewardFunding is AccessControl {
     }
 
     function setPeriodDuration(uint256 newDuration) external onlyRole(DURATION_ROLE) {
-        if (periodFinish > block.timestamp) revert RewardFunding__OngoingPeriod();
+        if (periodFinish > block.timestamp) {
+            revert RewardFunding__OngoingPeriod();
+        }
         if (newDuration == 0 || newDuration > MAX_DURATION) {
             revert RewardFunding__InvalidInputDuration(newDuration);
         }

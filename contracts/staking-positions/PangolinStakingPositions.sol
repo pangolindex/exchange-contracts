@@ -292,7 +292,9 @@ contract PangolinStakingPositions is ERC721NoBalance, RewardFunding {
         );
         Position memory position = positions[posId];
         uint256 balance = position.balance;
-        if (balance == 0) return 0;
+        if (balance == 0) {
+            return 0;
+        }
         tmpRewardPerValue -= position.rewardPerValue;
         tmpIdealPosition -= position.idealPosition;
         // duplicate of `_earned()` with temporary/local reward variables
@@ -310,7 +312,9 @@ contract PangolinStakingPositions is ERC721NoBalance, RewardFunding {
      * https://ethereum-magicians.org/t/erc721-extension-valueof-as-a-slippage-control/9071
      */
     function valueOf(uint256 id) external view returns (uint256) {
-        if (_ownerOf[id] == address(0)) revert PNGPos__InvalidToken(id);
+        if (_ownerOf[id] == address(0)) {
+            revert PNGPos__InvalidToken(id);
+        }
         Position memory position = positions[id];
         return block.timestamp * position.balance - position.entryTimes;
     }
@@ -423,7 +427,9 @@ contract PangolinStakingPositions is ERC721NoBalance, RewardFunding {
         delete positions[posId];
         _burn(posId);
 
-        if (!rewardsToken.transfer(msg.sender, balance + reward)) revert PNGPos__FailedTransfer();
+        if (!rewardsToken.transfer(msg.sender, balance + reward)) {
+            revert PNGPos__FailedTransfer();
+        }
         emit Closed(posId, balance, reward);
     }
 
@@ -479,8 +485,12 @@ contract PangolinStakingPositions is ERC721NoBalance, RewardFunding {
 
         uint256 reward = _earned(posId);
         uint256 newTotalStaked = totalStaked + reward;
-        if (reward == 0) revert PNGPos__NoReward();
-        if (newTotalStaked > type(uint96).max) revert PNGPos__RewardOverflow(reward);
+        if (reward == 0) {
+            revert PNGPos__NoReward();
+        }
+        if (newTotalStaked > type(uint96).max) {
+            revert PNGPos__RewardOverflow(reward);
+        }
 
         uint160 addedEntryTimes = uint160(block.timestamp * reward);
         sumOfEntryTimes += addedEntryTimes;
@@ -511,7 +521,9 @@ contract PangolinStakingPositions is ERC721NoBalance, RewardFunding {
 
         uint96 balance = position.balance;
         uint256 reward = _earned(posId); // get earned rewards
-        if (reward == 0) revert PNGPos__NoReward();
+        if (reward == 0) {
+            revert PNGPos__NoReward();
+        }
 
         // update global variables (totalStaked is not changed)
         uint160 newEntryTimes = uint160(block.timestamp * balance);
@@ -526,7 +538,9 @@ contract PangolinStakingPositions is ERC721NoBalance, RewardFunding {
         position.rewardPerValue = _rewardPerValue;
 
         // transfer rewards to the user
-        if (!rewardsToken.transfer(msg.sender, reward)) revert PNGPos__FailedTransfer();
+        if (!rewardsToken.transfer(msg.sender, reward)) {
+            revert PNGPos__FailedTransfer();
+        }
         emit Harvested(posId, reward);
     }
 
@@ -542,7 +556,9 @@ contract PangolinStakingPositions is ERC721NoBalance, RewardFunding {
         Position storage position = positions[posId];
 
         uint256 oldBalance = position.balance;
-        if (amount > oldBalance) revert PNGPos__InsufficientBalance(oldBalance, amount);
+        if (amount > oldBalance) {
+            revert PNGPos__InsufficientBalance(oldBalance, amount);
+        }
         uint256 remaining;
         unchecked {
             remaining = oldBalance - amount;
@@ -564,7 +580,9 @@ contract PangolinStakingPositions is ERC721NoBalance, RewardFunding {
         position.rewardPerValue = _rewardPerValue;
 
         // transfer rewards and withdrawn amount to the user
-        if (!rewardsToken.transfer(msg.sender, reward + amount)) revert PNGPos__FailedTransfer();
+        if (!rewardsToken.transfer(msg.sender, reward + amount)) {
+            revert PNGPos__FailedTransfer();
+        }
         emit Withdrawn(posId, amount, reward);
     }
 
@@ -583,7 +601,9 @@ contract PangolinStakingPositions is ERC721NoBalance, RewardFunding {
     function _earned(uint256 posId) private view returns (uint256) {
         Position memory position = positions[posId];
         uint256 balance = position.balance;
-        if (balance == 0) return 0;
+        if (balance == 0) {
+            return 0;
+        }
         uint256 rewardPerValue = _rewardPerValue - position.rewardPerValue;
         uint256 idealPosition = _idealPosition - position.idealPosition;
         return
