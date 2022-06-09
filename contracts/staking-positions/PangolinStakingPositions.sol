@@ -7,32 +7,32 @@ import "./RewardFunding.sol";
 
 /**
  * @title Pangolin Staking Positions
- * @notice Pangolin Staking Positions is a unique staking solution. It utilizes the Sunshine
- * and Rainbows (SAR) algorithm, which distributes rewards as a function of balance and
- * staking duration. See README and the proof paper to see how SAR works. In this
- * implementation, we track positions instead of users, and also make each position an NFT.
+ * @author shung for Pangolin
+ *
+ * @notice
+ * Pangolin Staking Positions is a unique staking solution. It utilizes the Sunshine and Rainbows
+ * (SAR) algorithm, which distributes rewards as a function of balance and staking duration. See
+ * README and the proof paper to see how SAR works. In this implementation, the staking token is
+ * the same as the reward token, users can have multiple positions, and each position is an NFT.
  *
  * @dev
- *
- * SAR algorithm distributes a given reward for an interval based on the following formula:
+ * SAR allocates a user the following proportion of any given rewards:
  *
  * `(balance_position / balance_total) * (stakingDuration_position / stakingDuration_average)`.
  *
  * Staking duration is how long a token has been staked. The staking duration of a token starts
  * when it is staked, restarts when its rewards are harvested, and ends when it is withdrawn.
  *
- * We can define `balance * stakingDuration` as `value`. So the new simplified formula becomes
- * `value_position / value_total`.
+ * We can refer to `balance * stakingDuration` as `value`. Based on this definition, the formula
+ * above can be simplifed to `value_position / value_total`.
  *
  * Although this looks similar to just `balance_user / balance_total`, unlike balance, the value of
- * every position is constantly changing as a function of time. Therefore we cannot simply use the
+ * every position is constantly changing as a function of time. Therefore, we cannot simply use the
  * standard staking algorithm (i.e.: Synthetix StakingRewards) for calculating rewards of users in
  * constant time. A new algorithm had to be invented for this reason.
  *
- * To understand the algorithm, one should read the proof. Then `_rewardVariabes()` and `_earned()`
+ * To understand the algorithm, one must read the proof. Then `_rewardVariabes()` and `_earned()`
  * functions can make sense.
- *
- * @author shung for Pangolin
  */
 contract PangolinStakingPositions is ERC721NoBalance, RewardFunding {
 
@@ -124,7 +124,9 @@ contract PangolinStakingPositions is ERC721NoBalance, RewardFunding {
     error PNGPos__NoReward();
 
     modifier onlyOwner(uint256 posId) {
-        if (_ownerOf[posId] != msg.sender) revert PNGPos__NotOwnerOfPosition(posId);
+        if (_ownerOf[posId] != msg.sender) {
+            revert PNGPos__NotOwnerOfPosition(posId);
+        }
         _;
     }
 
@@ -213,14 +215,18 @@ contract PangolinStakingPositions is ERC721NoBalance, RewardFunding {
     function emergencyExit(uint256 posId) external onlyOwner(posId) {
         Position memory position = positions[posId];
         uint96 balance = position.balance;
-        if (balance == 0) revert PNGPos__NoBalance();
+        if (balance == 0) {
+            revert PNGPos__NoBalance();
+        }
         totalStaked -= balance;
         sumOfEntryTimes -= position.entryTimes;
         position.balance = 0;
         position.previousValues = 0;
         position.entryTimes = 0;
         position.lastDevaluation = uint48(block.timestamp);
-        if (!rewardsToken.transfer(msg.sender, balance)) revert PNGPos__FailedTransfer();
+        if (!rewardsToken.transfer(msg.sender, balance)) {
+            revert PNGPos__FailedTransfer();
+        }
         emit EmergencyExited(posId, balance);
     }
 
@@ -267,7 +273,9 @@ contract PangolinStakingPositions is ERC721NoBalance, RewardFunding {
      */
     function positionRewardRate(uint256 posId) external view returns (uint256) {
         uint256 totalValue = block.timestamp * totalStaked - sumOfEntryTimes;
-        if (totalValue == 0) return 0;
+        if (totalValue == 0) {
+            return 0;
+        }
         Position memory position = positions[posId];
         uint256 positionValue = block.timestamp * position.balance - position.entryTimes;
         return (rewardRate * positionValue) / totalValue;
