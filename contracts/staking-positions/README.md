@@ -21,9 +21,9 @@ These files are NOT in scope:
 Sunshine and Rainbows is a novel staking algorithm. In SAR, rewards at a given interval are
 distributed based on the below formula.
 
-![SAR](https://latex.codecogs.com/svg.image?\textit{reward&space;proportio}n&space;=&space;\frac{\textit{position&space;staked&space;balance}}{\textit{total&space;staked&space;balance}}&space;\times&space;\frac{\textit{position&space;staking&space;duration}}{\textit{average&space;staking&space;duration}} )
+$\textit{reward proportion} = \frac{\textit{position staked balance}}{\textit{total staked balance}} \times \frac{\textit{position staking duration}}{\textit{average staking duration}}$
 
-[SAR paper](https://gateway.pinata.cloud/ipfs/QmbvtoPtooSjTNfToAkRzjArvCWwGQDHk3kGeHYuSguCar)
+[SAR paper](./SunshineAndRainbows.pdf)
 describes how this formula is used to derive an algorithm that can calculate rewards in *O(1)*.
 
 ## Staking Duration
