@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPLv3
-// solhint-disable not-rely-on-time
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -11,8 +10,8 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
  * @notice A contract that is only the rewards part of `StakingRewards`.
  * @dev The inheriting contract must call `_claim()` to check its reward since the last time the
  * same call was made. Then, based on the reward amount, the inheriting contract shall determine
- * the distribution to stakers. The purpose of this model is to separate the logic of funding from
- * the staking and the reward distribution.
+ * the distribution to stakers. The purpose of this architecture is to separate the logic of
+ * funding from the staking and the reward distribution.
  */
 abstract contract RewardFunding is AccessControl {
 
