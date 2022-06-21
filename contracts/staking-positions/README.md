@@ -4,6 +4,18 @@ Pangolin Staking Positions is a unique staking solution. It utilizes the Sunshin
 (SAR) algorithm, which distributes rewards as a function of balance and staking duration. In this
 implementation SAR, we track positions instead of users, which allows leveraging NFT technology.
 
+## Auditing Scope
+
+These files are in scope:
+
+* [`PangolinStakingPositions.sol`](./PangolinStakingPositions.sol)
+* [`RewardFunding.sol`](./RewardFunding.sol)
+
+These files are NOT in scope:
+
+* [`StakingRewardsForwarder.sol`](./StakingRewardsForwarder.sol)
+* [`TokenMetadata.sol`](./TokenMetadata.sol)
+
 ## Sunshine And Rainbows (🌞,🌈)
 
 Sunshine and Rainbows is a novel staking algorithm. In SAR, rewards at a given interval are
