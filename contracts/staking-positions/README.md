@@ -9,7 +9,7 @@ implementation SAR, we track positions instead of users, which allows leveraging
 These files are in scope:
 
 * [`PangolinStakingPositions.sol`](./PangolinStakingPositions.sol)
-* [`RewardFunding.sol`](./RewardFunding.sol)
+* [`PangolinStakingFunding.sol`](./PangolinStakingFunding.sol)
 
 These files are NOT in scope:
 

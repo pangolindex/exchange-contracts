@@ -13,7 +13,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  * the distribution to stakers. The purpose of this architecture is to separate the logic of
  * funding from the staking and the reward distribution.
  */
-abstract contract RewardFunding is AccessControl {
+abstract contract PangolinStakingFunding is AccessControl {
 
     uint128 public rewardRate;
     uint64 public lastUpdate;
