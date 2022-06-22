@@ -3,7 +3,13 @@ pragma solidity 0.8.15;
 
 import "@rari-capital/solmate/src/tokens/ERC721.sol";
 import "./RewardFunding.sol";
-import "./TokenMetadata.sol";
+
+interface TokenMetadata {
+    function tokenURI(PangolinStakingPositions pangolinStakingPositions, uint256 tokenId)
+        external
+        view
+        returns (string memory);
+}
 
 /**
  * @title Pangolin Staking Positions
@@ -52,7 +58,6 @@ import "./TokenMetadata.sol";
  *   positions’ lost (due to `emergencyExit()`), harvested, and pending rewards.
  */
 contract PangolinStakingPositions is ERC721, RewardFunding {
-
     struct Position {
         // The amount of tokens staked in the position.
         uint96 balance;
@@ -82,6 +87,11 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
      * @notice The mapping of position identifiers to their properties.
      */
     mapping(uint256 => Position) public positions;
+
+    /**
+     * @notice The contract that constructs and returns tokenURIs for position tokens.
+     */
+    TokenMetadata public tokenMetadata;
 
     /**
      * @notice The sum of `balance` of all positions.
@@ -164,7 +174,8 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
     event Compounded(uint256 indexed positionId, uint256 reward);
     event Harvested(uint256 indexed positionId, uint256 reward);
     event Opened(uint256 indexed positionId, uint256 amount);
-    event PauseDurationSet(uint256 approvalPauseDuration);
+    event PauseDurationSet(uint256 newApprovalPauseDuration);
+    event TokenMetadataSet(TokenMetadata newTokenMetadata);
 
     error PNGPos__InsufficientBalance(uint256 currentBalance, uint256 requiredBalance);
     error PNGPos__InvalidApprovalPauseDuration(uint256 newApprovalPauseDuration);
@@ -189,10 +200,13 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
      * @param newRewardsToken The token used for both for staking and reward.
      * @param newAdmin The initial owner of the contract.
      */
-    constructor(address newRewardsToken, address newAdmin)
-        ERC721("Pangolin Staking Positions", "PNG-POS")
-        RewardFunding(newRewardsToken, newAdmin)
-    {}
+    constructor(
+        address newRewardsToken,
+        address newAdmin,
+        TokenMetadata newTokenMetadata
+    ) ERC721("Pangolin Staking Positions", "PNG-POS") RewardFunding(newRewardsToken, newAdmin) {
+        tokenMetadata = newTokenMetadata;
+    }
 
     /**
      * @notice External function to open a new position to the caller.
@@ -313,7 +327,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         _updateRewardVariables();
 
         uint256 length = positionIds.length;
-        for (uint256 i = 0; i < length;) {
+        for (uint256 i = 0; i < length; ) {
             _compound(positionIds[i]);
 
             // Counter realistically cannot overflow.
@@ -333,7 +347,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         _updateRewardVariables();
 
         uint256 length = positionIds.length;
-        for (uint256 i = 0; i < length;) {
+        for (uint256 i = 0; i < length; ) {
             _close(positionIds[i]);
 
             // Counter realistically cannot overflow.
@@ -344,8 +358,8 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
     }
 
     /**
-     * @notice Sets how long the token approvals should be ignored after a devaluing action.
-     * @param newApprovalPauseDuration The new duration during which token approval are ignored.
+     * @notice External only-owner function to set how long the token approvals should be ignored.
+     * @param newApprovalPauseDuration The new duration during which token approvals are ignored.
      */
     function setApprovalPauseDuration(uint256 newApprovalPauseDuration)
         external
@@ -362,12 +376,24 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
     }
 
     /**
+     * @notice External only-owner function to change the contract that constructs tokenURIs.
+     * @param newTokenMetadata The addresss of the new contract address that constructs tokenURIs.
+     */
+    function setTokenMetadata(TokenMetadata newTokenMetadata)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        tokenMetadata = newTokenMetadata;
+        emit TokenMetadataSet(newTokenMetadata);
+    }
+
+    /**
      * @notice External view function to get the reward rate of a position.
      * @dev In SAR, positions have different reward rates, unlike other staking algorithms.
      * @param positionId The identifier of the position to check the reward rate of.
      * @return The rewards per second of the position.
      */
-    function positionRewardRate(uint256 positionId) public view returns (uint256) {
+    function positionRewardRate(uint256 positionId) external view returns (uint256) {
         // Get totalValue, which is totalStaked times ‘average staking duration’.
         uint256 totalValue = block.timestamp * totalStaked - sumOfEntryTimes;
 
@@ -391,7 +417,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
      * @param positionId The identifier of the position to check the accrued rewards of.
      * @return The amount of rewards that have been accrued in the position.
      */
-    function positionPendingRewards(uint256 positionId) public view returns (uint256) {
+    function positionPendingRewards(uint256 positionId) external view returns (uint256) {
         // Get reward variables based on the total pending rewards since the last update.
         (uint256 tmpIdealPosition, uint256 tmpRewardPerValue) = _rewardVariables(
             _pendingRewards()
@@ -804,7 +830,11 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
     /*   OVERRIDES   */
     /* ************* */
 
-    function transferFrom(address from, address to, uint256 id) public override(ERC721) {
+    function transferFrom(
+        address from,
+        address to,
+        uint256 id
+    ) public override(ERC721) {
         uint256 approvalPauseUntil = positions[id].lastDevaluation + approvalPauseDuration;
         if (msg.sender != from && block.timestamp <= approvalPauseUntil) {
             revert PNGPos__ApprovalPaused(approvalPauseUntil);
@@ -813,17 +843,10 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
     }
 
     function tokenURI(uint256 tokenId) public view override(ERC721) returns (string memory) {
-        Position memory position = positions[tokenId];
-        return TokenMetadata.generateTokenURI(
-            totalStaked,
-            sumOfEntryTimes,
-            rewardRate,
-            position.balance,
-            position.entryTimes,
-            positionRewardRate(tokenId),
-            positionPendingRewards(tokenId),
-            ownerOf(tokenId)
-        );
+        if (_ownerOf[tokenId] == address(0)) {
+            revert PNGPos__InvalidToken(tokenId);
+        }
+        return tokenMetadata.tokenURI(this, tokenId);
     }
 
     function supportsInterface(bytes4 interfaceId)
@@ -833,7 +856,6 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         returns (bool)
     {
         return
-            AccessControl.supportsInterface(interfaceId) ||
-            ERC721.supportsInterface(interfaceId);
+            AccessControl.supportsInterface(interfaceId) || ERC721.supportsInterface(interfaceId);
     }
 }
