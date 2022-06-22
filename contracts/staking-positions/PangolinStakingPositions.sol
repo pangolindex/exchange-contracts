@@ -43,7 +43,8 @@ interface TokenMetadata {
  *
  * @dev Assumptions (not checked to be true):
  * - `rewardsToken` reverts or returns false on invalid transfers,
- * - `block.timestamp - initTime` times ‘sum of all rewards’ fits 128 bits.
+ * - `block.timestamp - initTime` times ‘sum of all rewards’ fits 128 bits,
+ * - `block.timestamp` fits 48 bits.
  *
  * @dev Limitations (checked to be true):
  * - `totalStaked` fits 96 bits.
@@ -485,9 +486,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
             position.entryTimes = addedEntryTimes;
 
             // Snapshot the lastUpdate and reward variables.
-            position.lastUpdate = uint48(block.timestamp);
-            position.idealPosition = _idealPosition;
-            position.rewardPerValue = _rewardPerValue;
+            _snapshotRewardVariables(position);
 
             // Transfer amount tokens from user to the contract, and emit the associated event.
             if (!rewardsToken.transferFrom(msg.sender, address(this), amount)) {
@@ -541,9 +540,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         position.previousValues += uint160(oldBalance * (block.timestamp - position.lastUpdate));
 
         // Snapshot the lastUpdate and reward variables.
-        position.lastUpdate = uint48(block.timestamp);
-        position.idealPosition = _idealPosition;
-        position.rewardPerValue = _rewardPerValue;
+        _snapshotRewardVariables(position);
 
         // Transfer amount tokens from user to the contract, and emit the associated event.
         if (!rewardsToken.transferFrom(msg.sender, address(this), amount)) {
@@ -588,9 +585,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         position.lastDevaluation = uint48(block.timestamp);
 
         // Snapshot the lastUpdate and reward variables.
-        position.lastUpdate = uint48(block.timestamp);
-        position.idealPosition = _idealPosition;
-        position.rewardPerValue = _rewardPerValue;
+        _snapshotRewardVariables(position);
 
         // Transfer reward tokens to the user, and emit the associated event.
         if (!rewardsToken.transfer(msg.sender, reward)) {
@@ -640,9 +635,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         position.previousValues += uint160(oldBalance * (block.timestamp - position.lastUpdate));
 
         // Snapshot the lastUpdate and reward variables.
-        position.lastUpdate = uint48(block.timestamp);
-        position.idealPosition = _idealPosition;
-        position.rewardPerValue = _rewardPerValue;
+        _snapshotRewardVariables(position);
 
         // Only emit the associated event, as there is no need to transfer.
         emit Compounded(positionId, reward);
@@ -700,9 +693,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         position.lastDevaluation = uint48(block.timestamp);
 
         // Snapshot the lastUpdate and reward variables.
-        position.lastUpdate = uint48(block.timestamp);
-        position.idealPosition = _idealPosition;
-        position.rewardPerValue = _rewardPerValue;
+        _snapshotRewardVariables(position);
 
         // Transfer withdrawn amount and rewards to the user, and emit the associated event.
         if (!rewardsToken.transfer(msg.sender, reward + amount)) {
@@ -781,6 +772,16 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
      */
     function _updateRewardVariables() private {
         (_idealPosition, _rewardPerValue) = _rewardVariables(_claim());
+    }
+
+    /**
+     * @notice Private function to snapshots two rewards variables and record the timestamp.
+     * @param position The storage pointer to the position to record the snapshot for.
+     */
+    function _snapshotRewardVariables(Position storage position) private {
+        position.lastUpdate = uint48(block.timestamp);
+        position.idealPosition = _idealPosition;
+        position.rewardPerValue = _rewardPerValue;
     }
 
     /**
