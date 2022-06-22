@@ -683,7 +683,7 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         // Decrement the withdrawn amount from position balance.
         position.balance = uint96(remaining);
 
-        // update position variables (must behave as if position is re-opened)
+        // Update position entryTimes.
         position.entryTimes = uint160(newEntryTimes);
 
         // Reset the previous values, as we have restarted the staking duration.
@@ -725,7 +725,6 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         sumOfEntryTimes -= position.entryTimes;
 
         // Delete the position and burn the NFT.
-        delete positions[positionId];
         _burn(positionId);
 
         // Transfer withdrawn amount and rewards to the user, and emit the associated event.
@@ -756,7 +755,6 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
         sumOfEntryTimes -= position.entryTimes;
 
         // Delete the position and burn the NFT.
-        delete positions[positionId];
         _burn(positionId);
 
         // Transfer only the staked balance from the contract to user.
@@ -831,16 +829,21 @@ contract PangolinStakingPositions is ERC721, RewardFunding {
     /*   OVERRIDES   */
     /* ************* */
 
+    function _burn(uint256 tokenId) internal override(ERC721) {
+        delete positions[tokenId];
+        super._burn(tokenId);
+    }
+
     function transferFrom(
         address from,
         address to,
-        uint256 id
+        uint256 tokenId
     ) public override(ERC721) {
-        uint256 approvalPauseUntil = positions[id].lastDevaluation + approvalPauseDuration;
+        uint256 approvalPauseUntil = positions[tokenId].lastDevaluation + approvalPauseDuration;
         if (msg.sender != from && block.timestamp <= approvalPauseUntil) {
             revert PNGPos__ApprovalPaused(approvalPauseUntil);
         }
-        super.transferFrom(from, to, id);
+        super.transferFrom(from, to, tokenId);
     }
 
     function tokenURI(uint256 tokenId) public view override(ERC721) returns (string memory) {
