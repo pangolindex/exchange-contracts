@@ -372,7 +372,7 @@ contract PangolinRouterSupportingFees is Ownable {
 
     // **** FEE FUNCTIONS ****
     function alterManagement(address partner, address manager, bool isAllowed) external {
-        require(msg.sender == owner(), "Permission denied");
+        require(msg.sender == owner() || msg.sender == partner, "Permission denied");
         managers[partner][manager] = isAllowed;
         emit AlterManager(partner, manager, isAllowed);
     }
