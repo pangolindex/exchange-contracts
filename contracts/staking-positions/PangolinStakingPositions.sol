@@ -205,7 +205,10 @@ contract PangolinStakingPositions is ERC721, PangolinStakingFunding {
         address newRewardsToken,
         address newAdmin,
         TokenMetadata newTokenMetadata
-    ) ERC721("Pangolin Staking Positions", "PNG-POS") RewardFunding(newRewardsToken, newAdmin) {
+    )
+        ERC721("Pangolin Staking Positions", "PNG-POS")
+        PangolinStakingFunding(newRewardsToken, newAdmin)
+    {
         tokenMetadata = newTokenMetadata;
     }
 
@@ -437,7 +440,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingFunding {
             return 0;
         }
 
-        // Get the deltas of reward variables since position was last updated.
+        // Get the delta of reward variables since position was last updated.
         tmpRewardPerValue -= position.rewardPerValue;
         tmpIdealPosition -= position.idealPosition;
 
@@ -773,7 +776,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingFunding {
     }
 
     /**
-     * @notice Private function to snapshots two rewards variables and record the timestamp.
+     * @notice Private function to snapshot two rewards variables and record the timestamp.
      * @param position The storage pointer to the position to record the snapshot for.
      */
     function _snapshotRewardVariables(Position storage position) private {
@@ -796,7 +799,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingFunding {
             return 0;
         }
 
-        // Get the deltas of the reward variables since the position was last updated.
+        // Get the delta of the reward variables since the position was last updated.
         uint256 rewardPerValue = _rewardPerValue - position.rewardPerValue;
         uint256 idealPosition = _idealPosition - position.idealPosition;
 
