@@ -699,7 +699,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingFunding {
         _snapshotRewardVariables(position);
 
         // Transfer withdrawn amount and rewards to the user, and emit the associated event.
-        if (!rewardsToken.transfer(msg.sender, reward + amount)) {
+        if (!rewardsToken.transfer(msg.sender, amount + reward)) {
             revert PNGPos__FailedTransfer();
         }
         emit Withdrawn(positionId, amount, reward);
@@ -819,7 +819,9 @@ contract PangolinStakingPositions is ERC721, PangolinStakingFunding {
     function _rewardVariables(uint256 rewards) private view returns (uint256, uint256) {
         // Calculate the totalValue, and return non-incremented reward values if value is zero.
         uint256 totalValue = block.timestamp * totalStaked - sumOfEntryTimes;
-        if (totalValue == 0) return (_idealPosition, _rewardPerValue);
+        if (totalValue == 0) {
+            return (_idealPosition, _rewardPerValue);
+        }
 
         // Return the incremented reward variables. Refer to the Proofs on why this is needed.
         return (
