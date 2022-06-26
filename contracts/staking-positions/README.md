@@ -8,7 +8,7 @@ Pangolin Staking Positions is a unique staking solution. It utilizes the Sunshin
 These files are in scope:
 
 * [`PangolinStakingPositions.sol`](./PangolinStakingPositions.sol)
-* [`PangolinStakingFunding.sol`](./PangolinStakingFunding.sol)
+* [`PangolinStakingPositionsFunding.sol`](./PangolinStakingPositionsFunding.sol)
 
 These files are NOT in scope:
 

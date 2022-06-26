@@ -2,7 +2,7 @@
 pragma solidity 0.8.15;
 
 import "@rari-capital/solmate/src/tokens/ERC721.sol";
-import "./PangolinStakingFunding.sol";
+import "./PangolinStakingPositionsFunding.sol";
 
 interface TokenMetadata {
     function tokenURI(PangolinStakingPositions pangolinStakingPositions, uint256 tokenId)
@@ -58,7 +58,7 @@ interface TokenMetadata {
  * - The sum of total claimed and pending rewards from `RewardFunding`, must equal to sum of all
  *   positions’ lost (due to `emergencyExit()`), harvested, and pending rewards.
  */
-contract PangolinStakingPositions is ERC721, PangolinStakingFunding {
+contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     struct Position {
         // The amount of tokens staked in the position.
         uint96 balance;
@@ -207,7 +207,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingFunding {
         TokenMetadata newTokenMetadata
     )
         ERC721("Pangolin Staking Positions", "PNG-POS")
-        PangolinStakingFunding(newRewardsToken, newAdmin)
+        PangolinStakingPositionsFunding(newRewardsToken, newAdmin)
     {
         tokenMetadata = newTokenMetadata;
     }
