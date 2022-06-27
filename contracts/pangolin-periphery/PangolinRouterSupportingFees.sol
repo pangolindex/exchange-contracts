@@ -13,7 +13,6 @@ contract PangolinRouterSupportingFees is Ownable {
 
     address public immutable FACTORY;
     address public immutable WAVAX;
-    address public immutable TREASURY;
 
     uint24 constant private BIPS = 100_00;
     uint24 constant public MAX_FEE = 2_00;
@@ -33,18 +32,19 @@ contract PangolinRouterSupportingFees is Ownable {
     mapping(address => mapping(address => bool)) public managers;
 
     modifier ensure(uint256 deadline) {
-        require(deadline >= block.timestamp, "PangolinRouter: EXPIRED");
+        require(deadline >= block.timestamp, "EXPIRED");
         _;
     }
 
-    event FeePaid(address indexed partner, address indexed token, uint256 amount);
+    event ProtocolFee(address indexed partner, address indexed token, uint256 amount);
+    event PartnerFee(address indexed partner, address indexed token, uint256 amount);
+    event FeeWithdrawn(address indexed token, uint256 amount, address to);
     event FeeChange(address indexed partner, uint24 feePartner, uint24 feeProtocol, uint24 feeTotal, uint24 feeCut);
     event AlterManager(address indexed partner, address manager, bool isAllowed);
 
-    constructor(address _factory, address _WAVAX, address _TREASURY, address firstOwner) public {
+    constructor(address _factory, address _WAVAX, address firstOwner) public {
         FACTORY = _factory; // 0xefa94DE7a4656D787667C749f7E1223D71E9FD88
         WAVAX = _WAVAX; // 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7
-        TREASURY = _TREASURY; // 0x66c048d27aFB5EE59E4C07101A483654246A4eda
         transferOwnership(firstOwner);
     }
 
@@ -68,7 +68,7 @@ contract PangolinRouterSupportingFees is Ownable {
         }
     }
     function _distribute(
-        uint256 actualAmountOut,
+        uint256 userAmountOut,
         address tokenOut,
         address userTo,
         address partnerFeeTo,
@@ -79,17 +79,16 @@ contract PangolinRouterSupportingFees is Ownable {
         uint256 partnerFeeAmount = feeTotalAmount - pangolinFeeAmount;
 
         if (pangolinFeeAmount > 0) {
-            TransferHelper.safeTransfer(tokenOut, TREASURY, pangolinFeeAmount);
-            emit FeePaid(TREASURY, tokenOut, pangolinFeeAmount);
+            emit ProtocolFee(partnerFeeTo, tokenOut, pangolinFeeAmount);
         }
         if (partnerFeeAmount > 0) {
             TransferHelper.safeTransfer(tokenOut, partnerFeeTo, partnerFeeAmount);
-            emit FeePaid(partnerFeeTo, tokenOut, partnerFeeAmount);
+            emit PartnerFee(partnerFeeTo, tokenOut, partnerFeeAmount);
         }
-        TransferHelper.safeTransfer(tokenOut, userTo, actualAmountOut.sub(feeTotalAmount));
+        TransferHelper.safeTransfer(tokenOut, userTo, userAmountOut);
     }
     function _distributeAVAX(
-        uint256 actualAmountOut,
+        uint256 userAmountOut,
         address userTo,
         address partnerFeeTo,
         uint256 feeCut,
@@ -97,18 +96,16 @@ contract PangolinRouterSupportingFees is Ownable {
     ) internal {
         uint256 pangolinFeeAmount = feeTotalAmount.mul(feeCut) / BIPS;
         uint256 partnerFeeAmount = feeTotalAmount - pangolinFeeAmount;
-        uint256 userAmount = actualAmountOut.sub(feeTotalAmount);
 
         if (pangolinFeeAmount > 0) {
-            TransferHelper.safeTransfer(WAVAX, TREASURY, pangolinFeeAmount);
-            emit FeePaid(TREASURY, WAVAX, pangolinFeeAmount);
+            emit ProtocolFee(partnerFeeTo, WAVAX, pangolinFeeAmount);
         }
         if (partnerFeeAmount > 0) {
             TransferHelper.safeTransfer(WAVAX, partnerFeeTo, partnerFeeAmount);
-            emit FeePaid(partnerFeeTo, WAVAX, partnerFeeAmount);
+            emit PartnerFee(partnerFeeTo, WAVAX, partnerFeeAmount);
         }
-        IWAVAX(WAVAX).withdraw(userAmount);
-        TransferHelper.safeTransferAVAX(userTo, userAmount);
+        IWAVAX(WAVAX).withdraw(userAmountOut);
+        TransferHelper.safeTransferAVAX(userTo, userAmountOut);
     }
     function swapExactTokensForTokens(
         uint256 amountIn,
@@ -121,19 +118,24 @@ contract PangolinRouterSupportingFees is Ownable {
         FeeInfo storage feeInfo = feeInfos[feeTo];
 
         amounts = PangolinLibrary.getAmountsOut(FACTORY, amountIn, path);
-        uint256 amountOut = amounts[amounts.length - 1];
 
-        uint256 feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
-        require(feeTotalAmount < amountOutMin, "Insufficient fee");
+        uint256 feeTotalAmount;
+        uint256 userAmountOut;
 
-        require(amountOut >= amountOutMin, "PangolinRouter: INSUFFICIENT_OUTPUT_AMOUNT");
+        { // Scope amountOut locally
+            uint256 amountOut = amounts[amounts.length - 1];
+            feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
+            userAmountOut = amountOut - feeTotalAmount;
+        }
+
+        require(userAmountOut >= amountOutMin, "INSUFFICIENT_OUTPUT_AMOUNT");
 
         TransferHelper.safeTransferFrom(
-            path[0], msg.sender, PangolinLibrary.pairFor(FACTORY, path[0], path[1]), amounts[0]
+            path[0], msg.sender, PangolinLibrary.pairFor(FACTORY, path[0], path[1]), amountIn
         );
 
         _swap(amounts, path);
-        _distribute(amountOut, path[path.length - 1], to, feeTo, feeInfo.feeCut, feeTotalAmount);
+        _distribute(userAmountOut, path[path.length - 1], to, feeTo, feeInfo.feeCut, feeTotalAmount);
     }
     function swapTokensForExactTokens(
         uint256 amountOut,
@@ -148,9 +150,8 @@ contract PangolinRouterSupportingFees is Ownable {
         uint256 feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
 
         // Adjust amountOut to include fee
-        amountOut = amountOut.add(feeTotalAmount);
-        amounts = PangolinLibrary.getAmountsIn(FACTORY, amountOut, path);
-        require(amounts[0] <= amountInMax, "PangolinRouter: EXCESSIVE_INPUT_AMOUNT");
+        amounts = PangolinLibrary.getAmountsIn(FACTORY, amountOut.add(feeTotalAmount), path);
+        require(amounts[0] <= amountInMax, "EXCESSIVE_INPUT_AMOUNT");
 
         TransferHelper.safeTransferFrom(
             path[0], msg.sender, PangolinLibrary.pairFor(FACTORY, path[0], path[1]), amounts[0]
@@ -166,23 +167,23 @@ contract PangolinRouterSupportingFees is Ownable {
         uint256 deadline,
         address feeTo
     ) external payable ensure(deadline) returns (uint256[] memory amounts) {
-        require(path[0] == WAVAX, "PangolinRouter: INVALID_PATH");
+        require(path[0] == WAVAX, "INVALID_PATH");
 
         FeeInfo storage feeInfo = feeInfos[feeTo];
 
         amounts = PangolinLibrary.getAmountsOut(FACTORY, msg.value, path);
+
         uint256 amountOut = amounts[amounts.length - 1];
-
         uint256 feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
-        require(feeTotalAmount < amountOutMin, "Insufficient fee");
+        uint256 userAmountOut = amountOut - feeTotalAmount;
 
-        require(amountOut >= amountOutMin, "PangolinRouter: INSUFFICIENT_OUTPUT_AMOUNT");
+        require(userAmountOut >= amountOutMin, "INSUFFICIENT_OUTPUT_AMOUNT");
 
         IWAVAX(WAVAX).deposit{value: amounts[0]}();
         assert(IWAVAX(WAVAX).transfer(PangolinLibrary.pairFor(FACTORY, path[0], path[1]), amounts[0]));
 
         _swap(amounts, path);
-        _distribute(amountOut, path[path.length - 1], to, feeTo, feeInfo.feeCut, feeTotalAmount);
+        _distribute(userAmountOut, path[path.length - 1], to, feeTo, feeInfo.feeCut, feeTotalAmount);
     }
     function swapTokensForExactAVAX(
         uint256 amountOut,
@@ -192,16 +193,15 @@ contract PangolinRouterSupportingFees is Ownable {
         uint256 deadline,
         address feeTo
     ) external ensure(deadline) returns (uint256[] memory amounts) {
-        require(path[path.length - 1] == WAVAX, "PangolinRouter: INVALID_PATH");
+        require(path[path.length - 1] == WAVAX, "INVALID_PATH");
 
         FeeInfo storage feeInfo = feeInfos[feeTo];
 
         uint256 feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
 
         // Adjust amountOut to include fee
-        amountOut = amountOut.add(feeTotalAmount);
-        amounts = PangolinLibrary.getAmountsIn(FACTORY, amountOut, path);
-        require(amounts[0] <= amountInMax, "PangolinRouter: EXCESSIVE_INPUT_AMOUNT");
+        amounts = PangolinLibrary.getAmountsIn(FACTORY, amountOut.add(feeTotalAmount), path);
+        require(amounts[0] <= amountInMax, "EXCESSIVE_INPUT_AMOUNT");
 
         TransferHelper.safeTransferFrom(
             path[0], msg.sender, PangolinLibrary.pairFor(FACTORY, path[0], path[1]), amounts[0]
@@ -218,23 +218,29 @@ contract PangolinRouterSupportingFees is Ownable {
         uint256 deadline,
         address feeTo
     ) external ensure(deadline) returns (uint256[] memory amounts) {
-        require(path[path.length - 1] == WAVAX, "PangolinRouter: INVALID_PATH");
+        require(path[path.length - 1] == WAVAX, "INVALID_PATH");
 
         FeeInfo storage feeInfo = feeInfos[feeTo];
 
         amounts = PangolinLibrary.getAmountsOut(FACTORY, amountIn, path);
-        uint256 amountOut = amounts[amounts.length - 1];
 
-        uint256 feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
-        require(feeTotalAmount < amountOutMin, "Insufficient fee");
+        uint256 feeTotalAmount;
+        uint256 userAmountOut;
 
-        require(amounts[amounts.length - 1] >= amountOutMin, "PangolinRouter: INSUFFICIENT_OUTPUT_AMOUNT");
+        { // Scope amountOut locally
+            uint256 amountOut = amounts[amounts.length - 1];
+            feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
+            userAmountOut = amountOut - feeTotalAmount;
+        }
+
+        require(userAmountOut >= amountOutMin, "INSUFFICIENT_OUTPUT_AMOUNT");
+
         TransferHelper.safeTransferFrom(
             path[0], msg.sender, PangolinLibrary.pairFor(FACTORY, path[0], path[1]), amounts[0]
         );
 
         _swap(amounts, path);
-        _distributeAVAX(amountOut, to, feeTo, feeInfo.feeCut, feeTotalAmount);
+        _distributeAVAX(userAmountOut, to, feeTo, feeInfo.feeCut, feeTotalAmount);
     }
     function swapAVAXForExactTokens(
         uint256 amountOut,
@@ -243,16 +249,15 @@ contract PangolinRouterSupportingFees is Ownable {
         uint256 deadline,
         address feeTo
     ) external payable ensure(deadline) returns (uint256[] memory amounts) {
-        require(path[0] == WAVAX, "PangolinRouter: INVALID_PATH");
+        require(path[0] == WAVAX, "INVALID_PATH");
 
         FeeInfo storage feeInfo = feeInfos[feeTo];
 
-        // Adjust amountOut to include fee
         uint256 feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
-        amountOut = amountOut.add(feeTotalAmount);
 
-        amounts = PangolinLibrary.getAmountsIn(FACTORY, amountOut, path);
-        require(amounts[0] <= msg.value, "PangolinRouter: EXCESSIVE_INPUT_AMOUNT");
+        // Adjust amountOut to include fee
+        amounts = PangolinLibrary.getAmountsIn(FACTORY, amountOut.add(feeTotalAmount), path);
+        require(amounts[0] <= msg.value, "EXCESSIVE_INPUT_AMOUNT");
 
         IWAVAX(WAVAX).deposit{value: amounts[0]}();
         assert(IWAVAX(WAVAX).transfer(PangolinLibrary.pairFor(FACTORY, path[0], path[1]), amounts[0]));
@@ -303,13 +308,12 @@ contract PangolinRouterSupportingFees is Ownable {
 
         FeeInfo storage feeInfo = feeInfos[feeTo];
         uint256 feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
-        require(feeTotalAmount < amountOutMin, "Insufficient fee");
 
         _distribute(amountOut, tokenOut, to, feeTo, feeInfo.feeCut, feeTotalAmount);
 
         require(
             IERC20(tokenOut).balanceOf(to).sub(balanceBefore) >= amountOutMin,
-            "PangolinRouter: INSUFFICIENT_OUTPUT_AMOUNT"
+            "INSUFFICIENT_OUTPUT_AMOUNT"
         );
     }
     function swapExactAVAXForTokensSupportingFeeOnTransferTokens(
@@ -319,7 +323,7 @@ contract PangolinRouterSupportingFees is Ownable {
         uint256 deadline,
         address feeTo
     ) external payable ensure(deadline) {
-        require(path[0] == WAVAX, "PangolinRouter: INVALID_PATH");
+        require(path[0] == WAVAX, "INVALID_PATH");
         uint256 amountIn = msg.value;
         IWAVAX(WAVAX).deposit{value: amountIn}();
         assert(IWAVAX(WAVAX).transfer(PangolinLibrary.pairFor(FACTORY, path[0], path[1]), amountIn));
@@ -330,13 +334,12 @@ contract PangolinRouterSupportingFees is Ownable {
 
         FeeInfo storage feeInfo = feeInfos[feeTo];
         uint256 feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
-        require(feeTotalAmount < amountOutMin, "Insufficient fee");
 
         _distribute(amountOut, tokenOut, to, feeTo, feeInfo.feeCut, feeTotalAmount);
 
         require(
             IERC20(tokenOut).balanceOf(to).sub(balanceBefore) >= amountOutMin,
-            "PangolinRouter: INSUFFICIENT_OUTPUT_AMOUNT"
+            "INSUFFICIENT_OUTPUT_AMOUNT"
         );
     }
     function swapExactTokensForAVAXSupportingFeeOnTransferTokens(
@@ -347,7 +350,7 @@ contract PangolinRouterSupportingFees is Ownable {
         uint256 deadline,
         address feeTo
     ) external ensure(deadline) {
-        require(path[path.length - 1] == WAVAX, "PangolinRouter: INVALID_PATH");
+        require(path[path.length - 1] == WAVAX, "INVALID_PATH");
         TransferHelper.safeTransferFrom(
             path[0], msg.sender, PangolinLibrary.pairFor(FACTORY, path[0], path[1]), amountIn
         );
@@ -356,8 +359,7 @@ contract PangolinRouterSupportingFees is Ownable {
 
         FeeInfo storage feeInfo = feeInfos[feeTo];
         uint256 feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
-        require(feeTotalAmount < amountOutMin, "Insufficient fee");
-        require(amountOut >= amountOutMin, "PangolinRouter: INSUFFICIENT_OUTPUT_AMOUNT");
+        require(amountOut >= amountOutMin, "INSUFFICIENT_OUTPUT_AMOUNT");
 
         _distributeAVAX(amountOut, to, feeTo, feeInfo.feeCut, feeTotalAmount);
     }
@@ -407,6 +409,15 @@ contract PangolinRouterSupportingFees is Ownable {
         feeInfo.feeTotal = feeTotal;
 
         emit FeeChange(partner, feePartner, feeProtocol, feeTotal, feeInfo.feeCut);
+    }
+    function withdrawFees(address[] calldata tokens, uint256[] calldata amounts, address to) external {
+        require(msg.sender == owner(), "Permission denied");
+        uint256 tokensLength = tokens.length;
+        require(tokensLength == amounts.length, "Mismatched array lengths");
+        for (uint256 i; i < tokensLength; ++i) {
+            TransferHelper.safeTransfer(tokens[i], to, amounts[i]);
+            emit FeeWithdrawn(tokens[i], amounts[i], to);
+        }
     }
 
     // **** LIBRARY FUNCTIONS ****

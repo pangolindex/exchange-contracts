@@ -7,13 +7,13 @@ const { expect } = chai;
 describe('PangolinRouterSupportingFees', function() {
     const BIPS = 10_000;
 
-    let OWNER, treasury, user1, user2, user3;
+    let OWNER, user1, user2, user3;
     let PangolinRouterSupportingFees, PangolinFactory, PangolinPair, _Token, _Wavax;
     let router, pangolinFactory;
-    let wavax,tokenA, tokenB;
+    let wavax, tokenA, tokenB;
 
     before(async function() {
-        [ OWNER, treasury, user1, user2, user3 ] = await ethers.getSigners();
+        [ OWNER, user1, user2, user3 ] = await ethers.getSigners();
 
         PangolinRouterSupportingFees = await ethers.getContractFactory('PangolinRouterSupportingFees');
         PangolinFactory = await ethers.getContractFactory('PangolinFactory');
@@ -49,7 +49,6 @@ describe('PangolinRouterSupportingFees', function() {
         router = await PangolinRouterSupportingFees.deploy(
             pangolinFactory.address,
             wavax.address,
-            treasury.address,
             OWNER.address,
         );
         await router.deployed();
@@ -351,35 +350,23 @@ describe('PangolinRouterSupportingFees', function() {
 
                 it('Transfers protocol fee', async function() {
                     const { protocolFee } = getFees(actualAmountOut, feeTotal, feeCut);
-                    expect(await tokenB.balanceOf(treasury.address)).to.equal(protocolFee);
+                    expect(await tokenB.balanceOf(router.address)).to.equal(protocolFee);
                 });
                 it('Transfers partner fee', async function() {
                     const { partnerFee } = getFees(actualAmountOut, feeTotal, feeCut);
                     expect(await tokenB.balanceOf(partner1)).to.equal(partnerFee);
                 });
                 it('Transfers swap output', async function() {
-                    const { totalFee, protocolFee, partnerFee } = getFees(actualAmountOut, feeTotal, feeCut);
+                    const { totalFee, partnerFee } = getFees(actualAmountOut, feeTotal, feeCut);
                     const userAmount = actualAmountOut.sub(totalFee);
                     // tokenB.transfer 0: provide liquidity
                     // tokenB.transfer 1: from pair to router
                     let transferCount = 2;
-                    // tokenB.transfer 2: protocol fee transfer
-                    if (protocolFee.gt(0)) transferCount++;
-                    // tokenB.transfer 3: partner fee transfer
+                    // tokenB.transfer 2: partner fee transfer
                     if (partnerFee.gt(0)) transferCount++;
                     const userTransfer = tokenB.transfer.getCall(transferCount);
                     expect(userTransfer.args[0]).to.equal(OWNER.address);
                     expect(userTransfer.args[1]).to.equal(userAmount);
-                });
-                it('Requires sufficient fees', async function() {
-                    await expect(router.swapExactTokensForTokens(
-                        ethers.utils.parseEther('100'),
-                        0, // Infinite slippage
-                        [tokenA.address, tokenB.address],
-                        OWNER.address,
-                        deadline,
-                        partner1,
-                    )).to.be.revertedWith('Insufficient fee');
                 });
             });
 
@@ -407,20 +394,18 @@ describe('PangolinRouterSupportingFees', function() {
 
                 it('Transfers protocol fee', async function() {
                     const { protocolFee } = getFees(desiredAmountOut, feeTotal, feeCut);
-                    expect(await tokenB.balanceOf(treasury.address)).to.equal(protocolFee);
+                    expect(await tokenB.balanceOf(router.address)).to.equal(protocolFee);
                 });
                 it('Transfers partner fee', async function() {
                     const { partnerFee } = getFees(desiredAmountOut, feeTotal, feeCut);
                     expect(await tokenB.balanceOf(partner1)).to.equal(partnerFee);
                 });
                 it('Transfers swap output', async function() {
-                    const { protocolFee, partnerFee } = getFees(actualAmountOut, feeTotal, feeCut);
+                    const { partnerFee } = getFees(actualAmountOut, feeTotal, feeCut);
                     // tokenB.transfer 0: provide liquidity
                     // tokenB.transfer 1: from pair to router
                     let transferCount = 2;
-                    // tokenB.transfer 2: protocol fee transfer
-                    if (protocolFee.gt(0)) transferCount++;
-                    // tokenB.transfer 3: partner fee transfer
+                    // tokenB.transfer 2: partner fee transfer
                     if (partnerFee.gt(0)) transferCount++;
                     const userTransfer = tokenB.transfer.getCall(transferCount);
                     expect(userTransfer.args[0]).to.equal(OWNER.address);
@@ -455,37 +440,23 @@ describe('PangolinRouterSupportingFees', function() {
 
                 it('Transfers protocol fee', async function() {
                     const { protocolFee } = getFees(actualAmountOut, feeTotal, feeCut);
-                    expect(await tokenB.balanceOf(treasury.address)).to.equal(protocolFee);
+                    expect(await tokenB.balanceOf(router.address)).to.equal(protocolFee);
                 });
                 it('Transfers partner fee', async function() {
                     const { partnerFee } = getFees(actualAmountOut, feeTotal, feeCut);
                     expect(await tokenB.balanceOf(partner1)).to.equal(partnerFee);
                 });
                 it('Transfers swap output', async function() {
-                    const { totalFee, protocolFee, partnerFee } = getFees(actualAmountOut, feeTotal, feeCut);
+                    const { totalFee, partnerFee } = getFees(actualAmountOut, feeTotal, feeCut);
                     const userAmount = actualAmountOut.sub(totalFee);
                     // tokenB.transfer 0: provide liquidity
                     // tokenB.transfer 1: from pair to router
                     let transferCount = 2;
-                    // tokenB.transfer 2: protocol fee transfer
-                    if (protocolFee.gt(0)) transferCount++;
-                    // tokenB.transfer 3: partner fee transfer
+                    // tokenB.transfer 2: partner fee transfer
                     if (partnerFee.gt(0)) transferCount++;
                     const userTransfer = tokenB.transfer.getCall(transferCount);
                     expect(userTransfer.args[0]).to.equal(OWNER.address);
                     expect(userTransfer.args[1]).to.equal(userAmount);
-                });
-                it('Requires sufficient fees', async function() {
-                    await expect(router.swapExactAVAXForTokens(
-                        0, // Infinite slippage
-                        [wavax.address, tokenB.address],
-                        OWNER.address,
-                        deadline,
-                        partner1,
-                        {
-                            value: ethers.utils.parseEther('100'),
-                        },
-                    )).to.be.revertedWith('Insufficient fee');
                 });
             });
 
@@ -514,7 +485,7 @@ describe('PangolinRouterSupportingFees', function() {
 
                 it('Transfers protocol fee', async function() {
                     const { protocolFee } = getFees(desiredAmountOut, feeTotal, feeCut);
-                    expect(await wavax.balanceOf(treasury.address)).to.equal(protocolFee);
+                    expect(await wavax.balanceOf(router.address)).to.equal(protocolFee);
                 });
                 it('Transfers partner fee', async function() {
                     const { partnerFee } = getFees(desiredAmountOut, feeTotal, feeCut);
@@ -551,7 +522,7 @@ describe('PangolinRouterSupportingFees', function() {
 
                 it('Transfers protocol fee', async function() {
                     const { protocolFee } = getFees(actualAmountOut, feeTotal, feeCut);
-                    expect(await wavax.balanceOf(treasury.address)).to.equal(protocolFee);
+                    expect(await wavax.balanceOf(router.address)).to.equal(protocolFee);
                 });
                 it('Transfers partner fee', async function() {
                     const { partnerFee } = getFees(actualAmountOut, feeTotal, feeCut);
@@ -559,16 +530,6 @@ describe('PangolinRouterSupportingFees', function() {
                 });
                 xit('Transfers swap output', async function() {
                     // TODO: Track AVAX transfer
-                });
-                it('Requires sufficient fees', async function() {
-                    await expect(router.swapExactTokensForAVAX(
-                        ethers.utils.parseEther('100'),
-                        0, // Infinite slippage
-                        [tokenA.address, wavax.address],
-                        OWNER.address,
-                        deadline,
-                        partner1,
-                    )).to.be.revertedWith('Insufficient fee');
                 });
             });
 
@@ -598,20 +559,18 @@ describe('PangolinRouterSupportingFees', function() {
 
                 it('Transfers protocol fee', async function() {
                     const { protocolFee } = getFees(desiredAmountOut, feeTotal, feeCut);
-                    expect(await tokenB.balanceOf(treasury.address)).to.equal(protocolFee);
+                    expect(await tokenB.balanceOf(router.address)).to.equal(protocolFee);
                 });
                 it('Transfers partner fee', async function() {
                     const { partnerFee } = getFees(desiredAmountOut, feeTotal, feeCut);
                     expect(await tokenB.balanceOf(partner1)).to.equal(partnerFee);
                 });
                 it('Transfers swap output', async function() {
-                    const { protocolFee, partnerFee } = getFees(actualAmountOut, feeTotal, feeCut);
+                    const { partnerFee } = getFees(actualAmountOut, feeTotal, feeCut);
                     // tokenB.transfer 0: provide liquidity
                     // tokenB.transfer 1: from pair to router
                     let transferCount = 2;
-                    // tokenB.transfer 2: protocol fee transfer
-                    if (protocolFee.gt(0)) transferCount++;
-                    // tokenB.transfer 3: partner fee transfer
+                    // tokenB.transfer 2: partner fee transfer
                     if (partnerFee.gt(0)) transferCount++;
                     const userTransfer = tokenB.transfer.getCall(transferCount);
                     expect(userTransfer.args[0]).to.equal(OWNER.address);
