@@ -303,13 +303,14 @@ contract PangolinRouterSupportingFees is Ownable {
         );
         address tokenOut = path[path.length - 1];
         uint256 balanceBefore = IERC20(tokenOut).balanceOf(to);
-        _swapSupportingFeeOnTransferTokens(path);
         uint256 amountOut = IERC20(tokenOut).balanceOf(address(this));
+        _swapSupportingFeeOnTransferTokens(path);
+        amountOut = IERC20(tokenOut).balanceOf(address(this)).sub(amountOut); // Ensures stored fees are safe
 
         FeeInfo storage feeInfo = feeInfos[feeTo];
         uint256 feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
 
-        _distribute(amountOut, tokenOut, to, feeTo, feeInfo.feeCut, feeTotalAmount);
+        _distribute(amountOut - feeTotalAmount, tokenOut, to, feeTo, feeInfo.feeCut, feeTotalAmount);
 
         require(
             IERC20(tokenOut).balanceOf(to).sub(balanceBefore) >= amountOutMin,
@@ -329,13 +330,14 @@ contract PangolinRouterSupportingFees is Ownable {
         assert(IWAVAX(WAVAX).transfer(PangolinLibrary.pairFor(FACTORY, path[0], path[1]), amountIn));
         address tokenOut = path[path.length - 1];
         uint256 balanceBefore = IERC20(tokenOut).balanceOf(to);
-        _swapSupportingFeeOnTransferTokens(path);
         uint256 amountOut = IERC20(tokenOut).balanceOf(address(this));
+        _swapSupportingFeeOnTransferTokens(path);
+        amountOut = IERC20(tokenOut).balanceOf(address(this)).sub(amountOut); // Ensures stored fees are safe
 
         FeeInfo storage feeInfo = feeInfos[feeTo];
         uint256 feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
 
-        _distribute(amountOut, tokenOut, to, feeTo, feeInfo.feeCut, feeTotalAmount);
+        _distribute(amountOut - feeTotalAmount, tokenOut, to, feeTo, feeInfo.feeCut, feeTotalAmount);
 
         require(
             IERC20(tokenOut).balanceOf(to).sub(balanceBefore) >= amountOutMin,
@@ -354,14 +356,16 @@ contract PangolinRouterSupportingFees is Ownable {
         TransferHelper.safeTransferFrom(
             path[0], msg.sender, PangolinLibrary.pairFor(FACTORY, path[0], path[1]), amountIn
         );
-        _swapSupportingFeeOnTransferTokens(path);
         uint256 amountOut = IERC20(WAVAX).balanceOf(address(this));
+        _swapSupportingFeeOnTransferTokens(path);
+        amountOut = IERC20(WAVAX).balanceOf(address(this)).sub(amountOut); // Ensures stored fees are safe
 
         FeeInfo storage feeInfo = feeInfos[feeTo];
         uint256 feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
-        require(amountOut >= amountOutMin, "INSUFFICIENT_OUTPUT_AMOUNT");
+        uint256 userAmountOut = amountOut - feeTotalAmount;
+        require(userAmountOut >= amountOutMin, "INSUFFICIENT_OUTPUT_AMOUNT");
 
-        _distributeAVAX(amountOut, to, feeTo, feeInfo.feeCut, feeTotalAmount);
+        _distributeAVAX(userAmountOut, to, feeTo, feeInfo.feeCut, feeTotalAmount);
     }
 
     // **** FEE FUNCTIONS ****
