@@ -126,8 +126,6 @@ contract PangolinRouterSupportingFees is Ownable {
         uint256 feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
         require(feeTotalAmount < amountOutMin, "Insufficient fee");
 
-        // Adjust amountOutMin to include fee
-        amountOutMin -= feeTotalAmount;
         require(amountOut >= amountOutMin, "PangolinRouter: INSUFFICIENT_OUTPUT_AMOUNT");
 
         TransferHelper.safeTransferFrom(
@@ -178,8 +176,6 @@ contract PangolinRouterSupportingFees is Ownable {
         uint256 feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
         require(feeTotalAmount < amountOutMin, "Insufficient fee");
 
-        // Adjust amountOutMin to include fee
-        amountOutMin -= feeTotalAmount;
         require(amountOut >= amountOutMin, "PangolinRouter: INSUFFICIENT_OUTPUT_AMOUNT");
 
         IWAVAX(WAVAX).deposit{value: amounts[0]}();
@@ -229,10 +225,8 @@ contract PangolinRouterSupportingFees is Ownable {
         amounts = PangolinLibrary.getAmountsOut(FACTORY, amountIn, path);
         uint256 amountOut = amounts[amounts.length - 1];
 
-        // Adjust amountOutMin to include fee
         uint256 feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
         require(feeTotalAmount < amountOutMin, "Insufficient fee");
-        amountOutMin -= feeTotalAmount;
 
         require(amounts[amounts.length - 1] >= amountOutMin, "PangolinRouter: INSUFFICIENT_OUTPUT_AMOUNT");
         TransferHelper.safeTransferFrom(
@@ -310,7 +304,7 @@ contract PangolinRouterSupportingFees is Ownable {
         FeeInfo storage feeInfo = feeInfos[feeTo];
         uint256 feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
         require(feeTotalAmount < amountOutMin, "Insufficient fee");
-        amountOutMin -= feeTotalAmount;
+
         _distribute(amountOut, tokenOut, to, feeTo, feeInfo.feeCut, feeTotalAmount);
 
         require(
@@ -337,7 +331,6 @@ contract PangolinRouterSupportingFees is Ownable {
         FeeInfo storage feeInfo = feeInfos[feeTo];
         uint256 feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
         require(feeTotalAmount < amountOutMin, "Insufficient fee");
-        amountOutMin -= feeTotalAmount;
 
         _distribute(amountOut, tokenOut, to, feeTo, feeInfo.feeCut, feeTotalAmount);
 
@@ -364,7 +357,6 @@ contract PangolinRouterSupportingFees is Ownable {
         FeeInfo storage feeInfo = feeInfos[feeTo];
         uint256 feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
         require(feeTotalAmount < amountOutMin, "Insufficient fee");
-        amountOutMin -= feeTotalAmount;
         require(amountOut >= amountOutMin, "PangolinRouter: INSUFFICIENT_OUTPUT_AMOUNT");
 
         _distributeAVAX(amountOut, to, feeTo, feeInfo.feeCut, feeTotalAmount);
