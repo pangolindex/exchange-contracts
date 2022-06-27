@@ -56,7 +56,7 @@ contract PangolinRouterSupportingFees is Ownable {
     // requires the initial amount to have already been sent to the first pair
     // returns resulting balance to address(this)
     function _swap(uint256[] memory amounts, address[] memory path) internal {
-        for (uint256 i; i < path.length - 1; i++) {
+        for (uint256 i; i < path.length - 1; ++i) {
             (address input, address output) = (path[i], path[i + 1]);
             (address token0,) = PangolinLibrary.sortTokens(input, output);
             uint256 amountOut = amounts[i + 1];
@@ -268,7 +268,7 @@ contract PangolinRouterSupportingFees is Ownable {
     // requires the initial amount to have already been sent to the first pair
     // returns resulting balance to address(this)
     function _swapSupportingFeeOnTransferTokens(address[] memory path) internal {
-        for (uint256 i; i < path.length - 1; i++) {
+        for (uint256 i; i < path.length - 1; ++i) {
             (address input, address output) = (path[i], path[i + 1]);
             (address token0,) = PangolinLibrary.sortTokens(input, output);
             IPangolinPair pair = IPangolinPair(PangolinLibrary.pairFor(FACTORY, input, output));
