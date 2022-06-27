@@ -580,6 +580,48 @@ describe('PangolinRouterSupportingFees', function() {
         }
     });
 
+    describe('Withdrawing fees', async function() {
+        let feesA = ethers.utils.parseEther('5000000');
+        let feesB = ethers.utils.parseEther('1000000');
+
+        beforeEach(async function() {
+            tokenA.transfer(router.address, feesA);
+            tokenB.transfer(router.address, feesB);
+        });
+
+        it('Non-owner cannot withdraw fees', async function() {
+            await expect(router.connect(user1).withdrawFees(
+                [tokenA.address],
+                [feesA],
+                user1.address,
+            )).to.be.revertedWith('Permission denied');
+        });
+        it('Token and amount arguments must match', async function() {
+            await expect(router.connect(OWNER).withdrawFees(
+                [tokenA.address],
+                [],
+                user1.address,
+            )).to.be.revertedWith('Mismatched array lengths');
+        });
+        it('Owner can withdraw single token fees', async function() {
+            await expect(router.connect(OWNER).withdrawFees(
+                [tokenA.address],
+                [feesA],
+                user1.address,
+            )).not.to.be.reverted;
+            expect(await tokenA.balanceOf(user1.address)).to.equal(feesA);
+        });
+        it('Owner can withdraw multiple token fees', async function() {
+            await expect(router.connect(OWNER).withdrawFees(
+                [tokenA.address, tokenB.address],
+                [feesA, feesB],
+                user1.address,
+            )).not.to.be.reverted;
+            expect(await tokenA.balanceOf(user1.address)).to.equal(feesA);
+            expect(await tokenB.balanceOf(user1.address)).to.equal(feesB);
+        });
+    });
+
     // Helpers
     async function createPair(tokenA, tokenB, factory = pangolinFactory) {
         await factory.createPair(tokenA.address, tokenB.address);
