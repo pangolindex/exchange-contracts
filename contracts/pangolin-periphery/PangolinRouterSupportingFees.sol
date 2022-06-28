@@ -151,10 +151,11 @@ contract PangolinRouterSupportingFees is Ownable {
 
         // Adjust amountOut to include fee
         amounts = PangolinLibrary.getAmountsIn(FACTORY, amountOut.add(feeTotalAmount), path);
-        require(amounts[0] <= amountInMax, "EXCESSIVE_INPUT_AMOUNT");
+        uint256 amountIn = amounts[0];
+        require(amountIn <= amountInMax, "EXCESSIVE_INPUT_AMOUNT");
 
         TransferHelper.safeTransferFrom(
-            path[0], msg.sender, PangolinLibrary.pairFor(FACTORY, path[0], path[1]), amounts[0]
+            path[0], msg.sender, PangolinLibrary.pairFor(FACTORY, path[0], path[1]), amountIn
         );
 
         _swap(amounts, path);
@@ -179,8 +180,8 @@ contract PangolinRouterSupportingFees is Ownable {
 
         require(userAmountOut >= amountOutMin, "INSUFFICIENT_OUTPUT_AMOUNT");
 
-        IWAVAX(WAVAX).deposit{value: amounts[0]}();
-        assert(IWAVAX(WAVAX).transfer(PangolinLibrary.pairFor(FACTORY, path[0], path[1]), amounts[0]));
+        IWAVAX(WAVAX).deposit{value: msg.value}();
+        assert(IWAVAX(WAVAX).transfer(PangolinLibrary.pairFor(FACTORY, WAVAX, path[1]), msg.value));
 
         _swap(amounts, path);
         _distribute(userAmountOut, path[path.length - 1], to, feeTo, feeInfo.feeCut, feeTotalAmount);
@@ -201,10 +202,11 @@ contract PangolinRouterSupportingFees is Ownable {
 
         // Adjust amountOut to include fee
         amounts = PangolinLibrary.getAmountsIn(FACTORY, amountOut.add(feeTotalAmount), path);
-        require(amounts[0] <= amountInMax, "EXCESSIVE_INPUT_AMOUNT");
+        uint256 amountIn = amounts[0];
+        require(amountIn <= amountInMax, "EXCESSIVE_INPUT_AMOUNT");
 
         TransferHelper.safeTransferFrom(
-            path[0], msg.sender, PangolinLibrary.pairFor(FACTORY, path[0], path[1]), amounts[0]
+            path[0], msg.sender, PangolinLibrary.pairFor(FACTORY, path[0], path[1]), amountIn
         );
 
         _swap(amounts, path);
@@ -257,16 +259,17 @@ contract PangolinRouterSupportingFees is Ownable {
 
         // Adjust amountOut to include fee
         amounts = PangolinLibrary.getAmountsIn(FACTORY, amountOut.add(feeTotalAmount), path);
-        require(amounts[0] <= msg.value, "EXCESSIVE_INPUT_AMOUNT");
+        uint256 amountIn = amounts[0];
+        require(amountIn <= msg.value, "EXCESSIVE_INPUT_AMOUNT");
 
-        IWAVAX(WAVAX).deposit{value: amounts[0]}();
-        assert(IWAVAX(WAVAX).transfer(PangolinLibrary.pairFor(FACTORY, path[0], path[1]), amounts[0]));
+        IWAVAX(WAVAX).deposit{value: amountIn}();
+        assert(IWAVAX(WAVAX).transfer(PangolinLibrary.pairFor(FACTORY, WAVAX, path[1]), amountIn));
 
         _swap(amounts, path);
         _distribute(amountOut, path[path.length - 1], to, feeTo, feeInfo.feeCut, feeTotalAmount);
 
         // refund dust AVAX, if any
-        if (msg.value > amounts[0]) TransferHelper.safeTransferAVAX(msg.sender, msg.value - amounts[0]);
+        if (msg.value > amountIn) TransferHelper.safeTransferAVAX(msg.sender, msg.value - amountIn);
     }
 
     // **** SWAP (supporting fee-on-transfer tokens) ****
@@ -325,9 +328,8 @@ contract PangolinRouterSupportingFees is Ownable {
         address feeTo
     ) external payable ensure(deadline) {
         require(path[0] == WAVAX, "INVALID_PATH");
-        uint256 amountIn = msg.value;
-        IWAVAX(WAVAX).deposit{value: amountIn}();
-        assert(IWAVAX(WAVAX).transfer(PangolinLibrary.pairFor(FACTORY, path[0], path[1]), amountIn));
+        IWAVAX(WAVAX).deposit{value: msg.value}();
+        assert(IWAVAX(WAVAX).transfer(PangolinLibrary.pairFor(FACTORY, WAVAX, path[1]), msg.value));
         address tokenOut = path[path.length - 1];
         uint256 balanceBefore = IERC20(tokenOut).balanceOf(to);
         uint256 amountOut = IERC20(tokenOut).balanceOf(address(this));
