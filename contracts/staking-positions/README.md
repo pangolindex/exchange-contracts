@@ -64,9 +64,9 @@ revenue. The revenue tokens get converted to PNG through `FeeCollector` (`SushiM
 and then PNG is added to `PangolinStakingPositions` as reward. In this implementation of SAR, we also
 track positions instead of users, which allows leveraging the NFT technology.
 
-This implementation allows us to add an extra `compound` function to the core SAR functions. This
+This implementation allows us to add an extra `compound` (✅) function to the core SAR functions. This
 function makes no external calls because the reward and staking tokens are the same. Note that the
-compounding function is not just for convenience, it is also a way to bypass calling `harvest()`
+compounding function is not just for convenience, it is also a way to bypass calling `harvest()` (❗)
 and restarting the staking duration.
 
 * ✅ `compound()`:
@@ -88,6 +88,9 @@ will revert.
 ### `PangoChef`
 
 [`PangoChef`](./PangoChef.sol) is a MiniChef analogue that uses SAR algorithm.
+
+In this implementation, there can be infinite amount of pools which separetely utilize the SAR algorithm.
+So each pool has its own total staked balance and average staking duration.
 
 To be added:
 * Compounding WAVAX-PNG pool by supplying AVAX

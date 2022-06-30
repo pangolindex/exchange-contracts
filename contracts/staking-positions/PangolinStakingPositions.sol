@@ -38,7 +38,7 @@ interface TokenMetadata {
  * simply use the standard staking algorithm (i.e.: Synthetix StakingRewards) for calculating
  * rewards of users in constant time. A new algorithm had to be invented for this reason.
  *
- * To understand the algorithm, one must read the Proofs. Then `_rewardVariabes()` and `_earned()`
+ * To understand the algorithm, one must read the Proofs. Then `_rewardVariables()` and `_earned()`
  * functions will make sense.
  *
  * @dev Assumptions (not checked to be true):
@@ -59,6 +59,23 @@ interface TokenMetadata {
  *   positions’ lost (due to `emergencyExit()`), harvested, and pending rewards.
  */
 contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
+    struct RewardVariables {
+        // Imaginary rewards accrued by a position with
+        // `lastUpdate == initTime && balance == 1`. At the end of each interval, the ideal
+        // position has a staking duration of `block.timestamp - initTime`. Since its balance is
+        // one, its “value” equals its staking duration. So, its value is also `block.timestamp
+        // - initTime`, and for a given reward at an interval, the ideal position accrues
+        // `reward * (block.timestamp - initTime) / totalValue`. Refer to `Ideal Position` section
+        // of the Proofs on why we need this variable.
+        uint256 idealPosition;
+        // The sum of `reward/totalValue` of each interval. `totalValue` is the sum of all staked
+        // tokens multiplied by their respective staking durations.  On every update, the
+        // `rewardPerValue` is incremented by rewards given during that interval divided by the
+        // total value, which is average staking duration multiplied by total staked. See `Regular
+        // Position from Ideal Position` for more details.
+        uint256 rewardPerValue;
+    }
+
     struct Position {
         // The amount of tokens staked in the position.
         uint96 balance;
@@ -77,11 +94,8 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         // The last time the position’s staking duration was restarted (withdraw or harvest).
         // This is used to prevent frontrunning when selling the NFT. It is not part of core algo.
         uint48 lastDevaluation;
-        // `_idealPosition` on position’s last update. Refer to `Ideal Position` section of the
-        // Proofs.
-        uint256 idealPosition;
-        // `_rewardPerValue` on position’s last update. See `Regular Position from Ideal Position`.
-        uint256 rewardPerValue;
+        // Reward variables snapshotted on the last update of the position.
+        RewardVariables rewardVariablesPaid;
     }
 
     /**
@@ -107,8 +121,8 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      * simply derived from that. Continuing the example, if current time stamp is second 15, then
      * the average staking duration of those 3 tokens would be `(3 * 15 - 25)/3 = 6.67`. And the
      * total value would be `6.67 * 3 = 20`. Since we do not care about the intermediate staking
-     * duration, we can just use `3 * 15 - 25`. The proof for this math is not provided in the
-     * Proofs, as it is trivial to verify by hand.
+     * duration, we can just use `3 * 15 - 25` to get totalValue. The proof for this math is not
+     * provided in the Proofs, as it is trivial to verify by hand.
      */
     uint160 public sumOfEntryTimes;
 
@@ -142,22 +156,10 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     uint256 private _positionsLength;
 
     /**
-     * @notice The sum of `reward/totalValue` of each interval.
-     * @dev `totalValue` is the sum of all staked tokens multiplied by their respective staking
-     * durations. This variable is one of “reward variables” that govern the reward distribution.
-     * On every update, the `_rewardPerValue` is incremented by rewards given during that interval
-     * divided by the total value, which is average staking duration multiplied by total staked.
+     * @notice The variables that govern the reward distribution. They are incremented on every
+     * update.
      */
-    uint256 private _rewardPerValue;
-
-    /**
-     * @notice Imaginary rewards accrued by a position with `lastUpdate == initTime && balance == 1`.
-     * @dev At the end of each interval, the ideal position has a staking duration of
-     * `block.timestamp - initTime`. Since its balance is one, its value equals its staking
-     * duration. So, its “value” is also `block.timestamp - initTime`, and for a given reward at an
-     * interval, the ideal position accrues `reward * (block.timestamp - initTime) / totalValue`.
-     */
-    uint256 private _idealPosition;
+    RewardVariables public rewardVariablesStored;
 
     /**
      * @notice The fixed denominator used for storing reward variables.
@@ -224,7 +226,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
             // Reset reward variables to zero. This is in case in the unlikely scenario that reward
             // variables are non-zero on first staking (i.e.: a period of staking is followed by a
             // period of no one staking).
-            (_idealPosition, _rewardPerValue) = (0, 0);
+            delete rewardVariablesStored;
         } else {
             // Update reward variables that govern the reward distribution. One can regard these
             // variables as analogue of `rewardPerTokenStored` of Synthetix’ Staking rewards.
@@ -248,7 +250,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
             // Reset reward variables to zero. This is in case in the unlikely scenario that reward
             // variables are non-zero on first staking (i.e.: a period of staking is followed by a
             // period of no one staking).
-            (_idealPosition, _rewardPerValue) = (0, 0);
+            delete rewardVariablesStored;
         } else {
             // Update reward variables that govern the reward distribution. One can regard these
             // variables as analogue of `rewardPerTokenStored` of Synthetix’ Staking rewards.
@@ -422,10 +424,27 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      * @return The amount of rewards that have been accrued in the position.
      */
     function positionPendingRewards(uint256 positionId) external view returns (uint256) {
-        // Get reward variables based on the total pending rewards since the last update.
-        (uint256 tmpIdealPosition, uint256 tmpRewardPerValue) = _rewardVariables(
-            _pendingRewards()
-        );
+        // Get the pending rewards without updating the last update time.
+        uint256 rewards = _pendingRewards();
+
+        // Calculate the totalValue.
+        uint256 totalValue = block.timestamp * totalStaked - sumOfEntryTimes;
+
+        // Create a memory struct to store the temporary updated reward variables.
+        RewardVariables memory tmpRewardVariables;
+
+        // Assign appropriate values to tmpRewardVariables based on if totalValue is zero or not.
+        if (totalValue == 0) {
+            tmpRewardVariables = rewardVariablesStored;
+        } else {
+            // This is duplicate of the calculation in `_updateRewardVariables`. Refer to proofs.
+            tmpRewardVariables = RewardVariables(
+                rewardVariablesStored.idealPosition +
+                    ((rewards * (block.timestamp - initTime)) * PRECISION) /
+                    totalValue,
+                rewardVariablesStored.rewardPerValue + (rewards * PRECISION) / totalValue
+            );
+        }
 
         // Stash the queried position in memory.
         Position memory position = positions[positionId];
@@ -441,15 +460,17 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         }
 
         // Get the delta of reward variables since position was last updated.
-        tmpRewardPerValue -= position.rewardPerValue;
-        tmpIdealPosition -= position.idealPosition;
+        tmpRewardVariables.idealPosition -= position.rewardVariablesPaid.idealPosition;
+        tmpRewardVariables.rewardPerValue -= position.rewardVariablesPaid.rewardPerValue;
 
         // Return the pending rewards of the position. This is the same formula used in
         // `_earned()`, but it uses temporary reward variables instead of state reward variables.
         // Refer to the Combined Position section of the Proofs on why and how this formula works.
         return
-            (((tmpIdealPosition - (tmpRewardPerValue * (position.lastUpdate - initTime))) *
-                balance) + (tmpRewardPerValue * position.previousValues)) / PRECISION;
+            (((tmpRewardVariables.idealPosition -
+                (tmpRewardVariables.rewardPerValue * (position.lastUpdate - initTime))) *
+                balance) + (tmpRewardVariables.rewardPerValue * position.previousValues)) /
+            PRECISION;
     }
 
     /**
@@ -772,7 +793,17 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      * update the two variables that govern the reward distribution.
      */
     function _updateRewardVariables() private {
-        (_idealPosition, _rewardPerValue) = _rewardVariables(_claim());
+        // Claim the rewards, in the process updating the last update time.
+        uint256 rewards = _claim();
+        // Calculate the totalValue, and incremented reward values only if value is non-zero.
+        uint256 totalValue = block.timestamp * totalStaked - sumOfEntryTimes;
+        if (totalValue != 0) {
+            // Refer to the Proofs on what these formulas mean.
+            rewardVariablesStored.idealPosition +=
+                ((rewards * (block.timestamp - initTime)) * PRECISION) /
+                totalValue;
+            rewardVariablesStored.rewardPerValue += (rewards * PRECISION) / totalValue;
+        }
     }
 
     /**
@@ -781,8 +812,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      */
     function _snapshotRewardVariables(Position storage position) private {
         position.lastUpdate = uint48(block.timestamp);
-        position.idealPosition = _idealPosition;
-        position.rewardPerValue = _rewardPerValue;
+        position.rewardVariablesPaid = rewardVariablesStored;
     }
 
     /**
@@ -800,34 +830,16 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         }
 
         // Get the delta of the reward variables since the position was last updated.
-        uint256 rewardPerValue = _rewardPerValue - position.rewardPerValue;
-        uint256 idealPosition = _idealPosition - position.idealPosition;
+        uint256 idealPosition = rewardVariablesStored.idealPosition -
+            position.rewardVariablesPaid.idealPosition;
+        uint256 rewardPerValue = rewardVariablesStored.rewardPerValue -
+            position.rewardVariablesPaid.rewardPerValue;
 
         // Return the pending rewards of the position. Refer to the Combined Position section of
         // the Proofs on why and how this formula works.
         return
             (((idealPosition - (rewardPerValue * (position.lastUpdate - initTime))) * balance) +
                 (rewardPerValue * position.previousValues)) / PRECISION;
-    }
-
-    /**
-     * @dev Calculates the variables that govern the reward distribution.
-     * @param rewards The amount of reward this contract can distribute.
-     * @return The incremented _idealPosition.
-     * @return The incremented _rewardPerValue.
-     */
-    function _rewardVariables(uint256 rewards) private view returns (uint256, uint256) {
-        // Calculate the totalValue, and return non-incremented reward values if value is zero.
-        uint256 totalValue = block.timestamp * totalStaked - sumOfEntryTimes;
-        if (totalValue == 0) {
-            return (_idealPosition, _rewardPerValue);
-        }
-
-        // Return the incremented reward variables. Refer to the Proofs on why this is needed.
-        return (
-            _idealPosition + ((rewards * (block.timestamp - initTime)) * PRECISION) / totalValue,
-            _rewardPerValue + (rewards * PRECISION) / totalValue
-        );
     }
 
     /* ************* */
