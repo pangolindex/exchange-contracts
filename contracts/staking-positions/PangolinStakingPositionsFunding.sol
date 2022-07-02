@@ -21,19 +21,21 @@ abstract contract PangolinStakingPositionsFunding is AccessControl {
 
     uint256 public periodDuration = 1 days;
 
-    uint256 private constant MIN_PERIOD_DURATION = uint256(type(uint16).max) + 1;
-    uint256 private constant MAX_PERIOD_DURATION = type(uint32).max;
+    uint256 private constant MIN_PERIOD_DURATION = 2**16 + 1;
+    uint256 private constant MAX_PERIOD_DURATION = 2**32;
     uint256 private constant MAX_TOTAL_REWARD = type(uint96).max;
 
     bytes32 private constant FUNDER_ROLE = keccak256("FUNDER_ROLE");
 
     IERC20 public immutable rewardsToken;
 
+    event PeriodEnded();
     event RewardAdded(uint256 reward);
     event PeriodDurationUpdated(uint256 newDuration);
 
     error RewardFunding__OngoingPeriod();
     error RewardFunding__FailedTransfer();
+    error RewardFunding__PeriodAlreadyEnded();
     error RewardFunding__RewardRateTruncatedToZero();
     error RewardFunding__InvalidInputAmount(uint256 inputAmount);
     error RewardFunding__InvalidInputDuration(uint256 inputDuration);
@@ -67,6 +69,31 @@ abstract contract PangolinStakingPositionsFunding is AccessControl {
         // Assign the new duration to the state variable, and emit the associated event.
         periodDuration = newDuration;
         emit PeriodDurationUpdated(newDuration);
+    }
+
+    /** @notice External restricted function to end the period and withdraw leftover rewards. */
+    function endPeriod() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        // Ensure period has not already ended.
+        if (block.timestamp >= periodFinish) {
+            revert RewardFunding__PeriodAlreadyEnded();
+        }
+
+        unchecked {
+            // Get the rewards remaining to be distributed.
+            uint256 leftover = (periodFinish - block.timestamp) * rewardRate;
+
+            // Decrement totalRewardAdded by the amount to be withdrawn.
+            totalRewardAdded -= uint96(leftover);
+
+            // Update periodFinish.
+            periodFinish = uint40(block.timestamp);
+
+            // Transfer leftover tokens from the contract to the caller.
+            if (!rewardsToken.transfer(msg.sender, leftover)) {
+                revert RewardFunding__FailedTransfer();
+            }
+            emit PeriodEnded();
+        }
     }
 
     /**
