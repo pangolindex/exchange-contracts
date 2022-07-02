@@ -26,6 +26,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControl {
     uint256 private constant MAX_TOTAL_REWARD = type(uint96).max;
 
     bytes32 private constant FUNDER_ROLE = keccak256("FUNDER_ROLE");
+    bytes32 private constant DEFUNDER_ROLE = keccak256("DEFUNDER_ROLE");
 
     IERC20 public immutable rewardsToken;
 
@@ -49,6 +50,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControl {
         rewardsToken = IERC20(newRewardsToken);
         _grantRole(DEFAULT_ADMIN_ROLE, newAdmin);
         _grantRole(FUNDER_ROLE, newAdmin);
+        _grantRole(DEFUNDER_ROLE, newAdmin);
     }
 
     /**
@@ -72,7 +74,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControl {
     }
 
     /** @notice External restricted function to end the period and withdraw leftover rewards. */
-    function endPeriod() external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function endPeriod() external onlyRole(DEFUNDER_ROLE) {
         // Ensure period has not already ended.
         if (block.timestamp >= periodFinish) {
             revert RewardFunding__PeriodAlreadyEnded();
