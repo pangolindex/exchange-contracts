@@ -98,19 +98,13 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         RewardVariables rewardVariablesPaid;
     }
 
-    /**
-     * @notice The mapping of position identifiers to their properties.
-     */
+    /** @notice The mapping of position identifiers to their properties. */
     mapping(uint256 => Position) public positions;
 
-    /**
-     * @notice The contract that constructs and returns tokenURIs for position tokens.
-     */
+    /** @notice The contract that constructs and returns tokenURIs for position tokens. */
     TokenMetadata public tokenMetadata;
 
-    /**
-     * @notice The sum of `balance` of all positions.
-     */
+    /** @notice The sum of `balance` of all positions. */
     uint96 public totalStaked;
 
     /**
@@ -161,22 +155,15 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      */
     RewardVariables public rewardVariablesStored;
 
-    /**
-     * @notice The fixed denominator used for storing reward variables.
-     */
+    /** @notice The fixed denominator used for storing reward variables. */
     uint256 private constant PRECISION = 2**128;
 
-    /**
-     * @notice The maximum approvalPauseDuration that can be set by the admin.
-     */
+    /** @notice The maximum approvalPauseDuration that can be set by the admin. */
     uint256 private constant MAX_APPROVAL_PAUSE_DURATION = 2 days;
 
     event Withdrawn(uint256 indexed positionId, uint256 amount, uint256 reward);
     event Staked(uint256 indexed positionId, uint256 amount, uint256 reward);
-    event Closed(uint256 indexed positionId, uint256 amount, uint256 reward);
     event Compounded(uint256 indexed positionId, uint256 reward);
-    event Harvested(uint256 indexed positionId, uint256 reward);
-    event Opened(uint256 indexed positionId, uint256 amount);
     event PauseDurationSet(uint256 newApprovalPauseDuration);
     event TokenMetadataSet(TokenMetadata newTokenMetadata);
 
@@ -184,9 +171,11 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     error PNGPos__InvalidApprovalPauseDuration(uint256 newApprovalPauseDuration);
     error PNGPos__InvalidInputAmount(uint256 inputAmount);
     error PNGPos__NotOwnerOfPosition(uint256 positionId);
+    error PNGPos__BurningPositionWithPositiveBalance();
     error PNGPos__RewardOverflow(uint256 rewardAdded);
     error PNGPos__InvalidToken(uint256 tokenId);
     error PNGPos__ApprovalPaused(uint256 until);
+    error PNGPos__NonMatchingArrayLength();
     error PNGPos__FailedTransfer();
     error PNGPos__NoBalance();
     error PNGPos__NoReward();
@@ -218,23 +207,16 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      * @notice External function to open a new position to the caller.
      * @param amount The amount of tokens to transfer from the caller to the position.
      */
-    function open(uint256 amount) external {
-        if (totalStaked == 0) {
-            // Update `initTime` on first stake. It is used for calculating `_idealPosition`.
-            initTime = block.timestamp;
+    function mint(uint256 amount) external {
+        // Only update reward variables when there is existing stake, else update initTime.
+        _updateRewardVariablesWhenStaking();
 
-            // Reset reward variables to zero. This is in case in the unlikely scenario that reward
-            // variables are non-zero on first staking (i.e.: a period of staking is followed by a
-            // period of no one staking).
-            delete rewardVariablesStored;
-        } else {
-            // Update reward variables that govern the reward distribution. One can regard these
-            // variables as analogue of `rewardPerTokenStored` of Synthetix’ Staking rewards.
-            _updateRewardVariables();
-        }
+        // Get the new positionId and mint the associated NFT.
+        uint256 positionId = ++_positionsLength;
+        _mint(msg.sender, positionId);
 
         // Use a private function to handle the logic pertaining to opening a position.
-        _open(amount);
+        _stake(positionId, amount);
     }
 
     /**
@@ -243,19 +225,8 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      * @param positionId The identifier of the position to deposit the funds into.
      */
     function stake(uint256 positionId, uint256 amount) external {
-        if (totalStaked == 0) {
-            // Update `initTime` on first stake. It is used for calculating `_idealPosition`.
-            initTime = block.timestamp;
-
-            // Reset reward variables to zero. This is in case in the unlikely scenario that reward
-            // variables are non-zero on first staking (i.e.: a period of staking is followed by a
-            // period of no one staking).
-            delete rewardVariablesStored;
-        } else {
-            // Update reward variables that govern the reward distribution. One can regard these
-            // variables as analogue of `rewardPerTokenStored` of Synthetix’ Staking rewards.
-            _updateRewardVariables();
-        }
+        // Only update reward variables when there is existing stake, else update initTime.
+        _updateRewardVariablesWhenStaking();
 
         // Use a private function to handle the logic pertaining to depositing into a position.
         _stake(positionId, amount);
@@ -270,7 +241,8 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         _updateRewardVariables();
 
         // Use a private function to handle the logic pertaining to harvesting rewards.
-        _harvest(positionId);
+        // `_withdraw` with zero input amount works as harvesting.
+        _withdraw(positionId, 0);
     }
 
     /**
@@ -304,12 +276,14 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      * all the accrued rewards.
      * @param positionId The identifier of the position to close.
      */
-    function close(uint256 positionId) external {
-        // Update reward variables that govern the reward distribution.
-        _updateRewardVariables();
+    function burn(uint256 positionId) external {
+        // To prevent mistakes, ensure only valueless positions can be burned.
+        if (positions[positionId].balance != 0) {
+            revert PNGPos__BurningPositionWithPositiveBalance();
+        }
 
-        // Use a private function to handle the logic pertaining to closing the position.
-        _close(positionId);
+        // Burn the associated NFT and delete all position properties.
+        _burn(positionId);
     }
 
     /**
@@ -344,17 +318,23 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     }
 
     /**
-     * @notice External function to close multiple positions.
+     * @notice External function to withdraw from multiple positions.
      * @dev This saves gas by updating reward variables only once.
-     * @param positionIds An array of identifiers of positions to compound the rewards of.
+     * @param positionIds An array of identifiers of positions to withdraw from.
+     * @param amounts An array of amount of tokens to withdraw from corresponding positions.
      */
-    function multiClose(uint256[] calldata positionIds) external {
+    function multiWithdraw(uint256[] calldata positionIds, uint256[] calldata amounts) external {
         // Update reward variables only once.
         _updateRewardVariables();
 
+        // Ensure array lengths match.
         uint256 length = positionIds.length;
+        if (length != amounts.length) {
+            revert PNGPos__NonMatchingArrayLength();
+        }
+
         for (uint256 i = 0; i < length; ) {
-            _close(positionIds[i]);
+            _withdraw(positionIds[i], amounts[i]);
 
             // Counter realistically cannot overflow.
             unchecked {
@@ -474,53 +454,6 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     }
 
     /**
-     * @notice Private function to open a new position to the caller.
-     * @param amount The amount of tokens to transfer from the caller to the position.
-     * @dev Specifications:
-     * - Mint a new NFT,
-     * - Open a new position linked to the NFT,
-     * - Deposit `amount` tokens to the position,
-     * - Make the staking duration of `amount` start from zero.
-     */
-    function _open(uint256 amount) private {
-        // Get the new total staked amount and ensure it fits 96 bits.
-        uint256 newTotalStaked = totalStaked + amount;
-        if (amount == 0 || newTotalStaked > type(uint96).max) {
-            revert PNGPos__InvalidInputAmount(amount);
-        }
-
-        // Increment the state variables pertaining to total value calculation.
-        uint160 addedEntryTimes = uint160(block.timestamp * amount);
-        sumOfEntryTimes += addedEntryTimes;
-        totalStaked = uint96(newTotalStaked);
-
-        // Use unchecked block because `_positionsLength` counter cannot realistically overflow.
-        unchecked {
-            // Get the position identifier, starting from 1.
-            uint256 positionId = ++_positionsLength;
-
-            // Mint the NFT associated with the position.
-            _mint(msg.sender, positionId);
-
-            // Create a storage pointer for the position.
-            Position storage position = positions[positionId];
-
-            // Update the position properties without incrementation, as this is the first deposit.
-            position.balance = uint96(amount);
-            position.entryTimes = addedEntryTimes;
-
-            // Snapshot the lastUpdate and reward variables.
-            _snapshotRewardVariables(position);
-
-            // Transfer amount tokens from user to the contract, and emit the associated event.
-            if (!rewardsToken.transferFrom(msg.sender, address(this), amount)) {
-                revert PNGPos__FailedTransfer();
-            }
-            emit Opened(positionId, amount);
-        }
-    }
-
-    /**
      * @notice Private function to deposit tokens to an existing position.
      * @param amount The amount of tokens to deposit into the position.
      * @param positionId The identifier of the position to deposit the funds into.
@@ -574,51 +507,6 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     }
 
     /**
-     * @notice Private function to claim the accrued rewards of a position.
-     * @param positionId The identifier of the position to claim the rewards of.
-     * @dev Specifications:
-     * - Claim accrued `reward` tokens of the position,
-     * - Send `reward` tokens to the user wallet,
-     * - Make the staking duration of the existing `balance` restart,
-     * - Ignore NFT spending approvals for a duration set by the admin.
-     */
-    function _harvest(uint256 positionId) private onlyOwner(positionId) {
-        // Create a storage pointer for the position.
-        Position storage position = positions[positionId];
-
-        // Stash balance to save gas.
-        uint96 balance = position.balance;
-
-        // Get accrued rewards of the position, and revert if there are no rewards.
-        uint256 reward = _earned(position);
-        if (reward == 0) {
-            revert PNGPos__NoReward();
-        }
-
-        // Only update sumOfEntryTimes, as totalStaked is not changed.
-        uint160 newEntryTimes = uint160(block.timestamp * balance);
-        sumOfEntryTimes += (newEntryTimes - position.entryTimes);
-
-        // Update the entryTimes to now so that the staking duration restarts from zero.
-        position.entryTimes = newEntryTimes;
-
-        // Reset the previous values, as we have restarted the staking duration.
-        position.previousValues = 0;
-
-        // Update lastDevaluation, as resetting the staking duration devalues the position.
-        position.lastDevaluation = uint48(block.timestamp);
-
-        // Snapshot the lastUpdate and reward variables.
-        _snapshotRewardVariables(position);
-
-        // Transfer reward tokens to the user, and emit the associated event.
-        if (!rewardsToken.transfer(msg.sender, reward)) {
-            revert PNGPos__FailedTransfer();
-        }
-        emit Harvested(positionId, reward);
-    }
-
-    /**
      * @notice Private function to deposit the accrued rewards of a position back to itself.
      * @param positionId The identifier of the position to compound the rewards of.
      * @dev Specifications:
@@ -667,7 +555,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
 
     /**
      * @notice Private function to withdraw given amount of staked balance, plus all the accrued
-     * rewards from the position.
+     * rewards from the position. Also acts as harvest when input amount is zero.
      * @param positionId The identifier of the position to withdraw the balance.
      * @param amount The amount of staked tokens, excluding rewards, to withdraw from the position.
      * @dev Specifications:
@@ -693,8 +581,14 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
             remaining = oldBalance - amount;
         }
 
-        // Get accrued rewards of the position.
+        // Get accrued rewards of the position, and get totalAmount to withdraw (incl. rewards).
         uint256 reward = _earned(position);
+        uint256 totalAmount = amount + reward;
+
+        // Revert if nothing to withdraw or harvest.
+        if (totalAmount == 0) {
+            revert PNGPos__NoReward();
+        }
 
         // Decrement the withdrawn amount from totalStaked.
         totalStaked -= uint96(amount);
@@ -727,38 +621,6 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     }
 
     /**
-     * @notice Private function to close a position by withdrawing the staked balance and claiming
-     * all the accrued rewards.
-     * @param positionId The identifier of the position to close.
-     * @dev Specifications:
-     * - Burn the NFT associated with `positionId`,
-     * - Close the position associated with `positionId`,
-     * - Send `balance` tokens of the position to the user wallet,
-     * - Send `reward` tokens accumulated in the position to the user wallet.
-     */
-    function _close(uint256 positionId) private onlyOwner(positionId) {
-        // Create a storage pointer for the position.
-        Position storage position = positions[positionId];
-
-        // Get the position balance and the accrued rewards.
-        uint96 balance = position.balance;
-        uint256 reward = _earned(position);
-
-        // Decrement the state variables pertaining to total value calculation.
-        totalStaked -= balance;
-        sumOfEntryTimes -= position.entryTimes;
-
-        // Delete the position and burn the NFT.
-        _burn(positionId);
-
-        // Transfer withdrawn amount and rewards to the user, and emit the associated event.
-        if (!rewardsToken.transfer(msg.sender, balance + reward)) {
-            revert PNGPos__FailedTransfer();
-        }
-        emit Closed(positionId, balance, reward);
-    }
-
-    /**
      * @notice External function to exit from a position by forgoing rewards.
      * @param positionId The identifier of the position to exit from.
      * @dev Specifications:
@@ -778,14 +640,33 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         totalStaked -= balance;
         sumOfEntryTimes -= position.entryTimes;
 
-        // Delete the position and burn the NFT.
-        _burn(positionId);
+        delete positions[positionId];
 
         // Transfer only the staked balance from the contract to user.
         if (!rewardsToken.transfer(msg.sender, balance)) {
             revert PNGPos__FailedTransfer();
         }
-        emit Closed(positionId, balance, 0);
+        emit Withdrawn(positionId, balance, 0);
+    }
+
+    /**
+     * @notice Private function to call `_updateRewardVariables`, if there already some stake
+     * exists. Else it updates the `initTime`, starting from fresh.
+     */
+    function _updateRewardVariablesWhenStaking() private {
+        if (totalStaked == 0) {
+            // Update `initTime` on first stake. It is used for calculating `_idealPosition`.
+            initTime = block.timestamp;
+
+            // Reset reward variables to zero. This is in case in the unlikely scenario that reward
+            // variables are non-zero on first staking (i.e.: a period of staking is followed by a
+            // period of no one staking).
+            delete rewardVariablesStored;
+        } else {
+            // Update reward variables that govern the reward distribution. One can regard these
+            // variables as analogue of `rewardPerTokenStored` of Synthetix’ Staking rewards.
+            _updateRewardVariables();
+        }
     }
 
     /**
@@ -846,7 +727,8 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     /*   OVERRIDES   */
     /* ************* */
 
-    function _burn(uint256 tokenId) internal override(ERC721) {
+    function _burn(uint256 tokenId) internal onlyOwner(tokenId) override(ERC721) {
+        // Delete position when burning the NFT.
         delete positions[tokenId];
         super._burn(tokenId);
     }
@@ -856,6 +738,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         address to,
         uint256 tokenId
     ) public override(ERC721) {
+        // Ignore approvals for a period following a destructive action.
         uint256 approvalPauseUntil = positions[tokenId].lastDevaluation + approvalPauseDuration;
         if (msg.sender != from && block.timestamp <= approvalPauseUntil) {
             revert PNGPos__ApprovalPaused(approvalPauseUntil);
@@ -867,6 +750,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         if (_ownerOf[tokenId] == address(0)) {
             revert PNGPos__InvalidToken(tokenId);
         }
+        // Use external contract to handle token metadata.
         return tokenMetadata.tokenURI(this, tokenId);
     }
 
