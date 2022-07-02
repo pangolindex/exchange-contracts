@@ -614,7 +614,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         _snapshotRewardVariables(position);
 
         // Transfer withdrawn amount and rewards to the user, and emit the associated event.
-        if (!rewardsToken.transfer(msg.sender, amount + reward)) {
+        if (!rewardsToken.transfer(msg.sender, totalAmount)) {
             revert PNGPos__FailedTransfer();
         }
         emit Withdrawn(positionId, amount, reward);
