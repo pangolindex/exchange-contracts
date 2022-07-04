@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPLv3
 pragma solidity 0.8.15;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
@@ -13,7 +13,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  * the distribution to stakers. The purpose of this architecture is to separate the logic of
  * funding from the staking and reward distribution.
  */
-abstract contract PangolinStakingPositionsFunding is AccessControl {
+abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable {
     uint80 public rewardRate;
     uint40 public lastUpdate;
     uint40 public periodFinish;
@@ -26,7 +26,6 @@ abstract contract PangolinStakingPositionsFunding is AccessControl {
     uint256 private constant MAX_TOTAL_REWARD = type(uint96).max;
 
     bytes32 private constant FUNDER_ROLE = keccak256("FUNDER_ROLE");
-    bytes32 private constant DEFUNDER_ROLE = keccak256("DEFUNDER_ROLE");
 
     IERC20 public immutable rewardsToken;
 
@@ -50,7 +49,6 @@ abstract contract PangolinStakingPositionsFunding is AccessControl {
         rewardsToken = IERC20(newRewardsToken);
         _grantRole(DEFAULT_ADMIN_ROLE, newAdmin);
         _grantRole(FUNDER_ROLE, newAdmin);
-        _grantRole(DEFUNDER_ROLE, newAdmin);
     }
 
     /**
@@ -74,7 +72,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControl {
     }
 
     /** @notice External restricted function to end the period and withdraw leftover rewards. */
-    function endPeriod() external onlyRole(DEFUNDER_ROLE) {
+    function endPeriod() external onlyRole(DEFAULT_ADMIN_ROLE) {
         // Ensure period has not already ended.
         if (block.timestamp >= periodFinish) {
             revert RewardFunding__PeriodAlreadyEnded();
