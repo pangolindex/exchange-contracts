@@ -3,6 +3,7 @@ pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./GenericErrors.sol";
 
 /**
  * @title Pangolin Staking Positions Funding
@@ -13,7 +14,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  * the distribution to stakers. The purpose of this architecture is to separate the logic of
  * funding from the staking and reward distribution.
  */
-abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable {
+abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, GenericErrors {
     uint80 public rewardRate;
     uint40 public lastUpdate;
     uint40 public periodFinish;
@@ -33,13 +34,6 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable {
     event RewardAdded(uint256 reward);
     event PeriodDurationUpdated(uint256 newDuration);
 
-    error RewardFunding__OngoingPeriod();
-    error RewardFunding__FailedTransfer();
-    error RewardFunding__PeriodAlreadyEnded();
-    error RewardFunding__RewardRateTruncatedToZero();
-    error RewardFunding__InvalidInputAmount(uint256 inputAmount);
-    error RewardFunding__InvalidInputDuration(uint256 inputDuration);
-
     /**
      * @notice Constructor to create PangolinStakingPositionsFunding contract.
      * @param newRewardsToken The token used for both for staking and reward.
@@ -58,12 +52,12 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable {
     function setPeriodDuration(uint256 newDuration) external onlyRole(DEFAULT_ADMIN_ROLE) {
         // Ensure there is no ongoing period.
         if (periodFinish > block.timestamp) {
-            revert RewardFunding__OngoingPeriod();
+            revert TooEarly();
         }
 
         // Ensure the new period is within the bounds.
         if (newDuration < MIN_PERIOD_DURATION || newDuration > MAX_PERIOD_DURATION) {
-            revert RewardFunding__InvalidInputDuration(newDuration);
+            revert OutOfBounds();
         }
 
         // Assign the new duration to the state variable, and emit the associated event.
@@ -75,7 +69,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable {
     function endPeriod() external onlyRole(DEFAULT_ADMIN_ROLE) {
         // Ensure period has not already ended.
         if (block.timestamp >= periodFinish) {
-            revert RewardFunding__PeriodAlreadyEnded();
+            revert TooLate();
         }
 
         unchecked {
@@ -90,7 +84,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable {
 
             // Transfer leftover tokens from the contract to the caller.
             if (!rewardsToken.transfer(msg.sender, leftover)) {
-                revert RewardFunding__FailedTransfer();
+                revert FailedTransfer();
             }
             emit PeriodEnded();
         }
@@ -106,7 +100,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable {
 
         // Ensure amount fits 96 bits.
         if (amount > MAX_TOTAL_REWARD) {
-            revert RewardFunding__InvalidInputAmount(amount);
+            revert Overflow();
         }
 
         // Increment totalRewardAdded, reverting on overflow to ensure it fits 96 bits.
@@ -125,7 +119,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable {
 
         // Ensure sufficient amount is supplied hence reward rate is non-zero.
         if (tmpRewardRate == 0) {
-            revert RewardFunding__RewardRateTruncatedToZero();
+            revert NoEffect();
         }
 
         // Assign the tmpRewardRate back to storage.
@@ -138,7 +132,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable {
 
         // Transfer reward tokens from the caller to the contract.
         if (!rewardsToken.transferFrom(msg.sender, address(this), amount)) {
-            revert RewardFunding__FailedTransfer();
+            revert FailedTransfer();
         }
         emit RewardAdded(amount);
     }

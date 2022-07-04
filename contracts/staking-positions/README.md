@@ -14,6 +14,7 @@ These files are NOT in scope:
 
 * [`StakingRewardsForwarder.sol`](./StakingRewardsForwarder.sol)
 * [`TokenMetadata.sol`](./TokenMetadata.sol)
+* [`GenericErrors.sol`](./GenericErrors.sol)
 
 ## Sunshine And Rainbows (🌞,🌈)
 
