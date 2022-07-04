@@ -156,7 +156,6 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
 
     event Withdrawn(uint256 indexed positionId, uint256 amount, uint256 reward);
     event Staked(uint256 indexed positionId, uint256 amount, uint256 reward);
-    event Compounded(uint256 indexed positionId, uint256 reward);
     event PauseDurationSet(uint256 newApprovalPauseDuration);
     event TokenMetadataSet(TokenMetadata newTokenMetadata);
 
@@ -172,6 +171,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     error PNGPos__FailedTransfer();
     error PNGPos__NoBalance();
     error PNGPos__NoReward();
+    error PNGPos__Overflow();
 
     modifier onlyOwner(uint256 positionId) {
         if (ownerOf(positionId) != msg.sender) {
@@ -247,7 +247,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         _updateRewardVariables();
 
         // Use a private function to handle the logic pertaining to compounding rewards.
-        _compound(positionId);
+        _stake(positionId, 0);
     }
 
     /**
@@ -291,17 +291,23 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     }
 
     /**
-     * @notice External function to compounds multiple positions.
+     * @notice External function to stake to or compound multiple positions.
      * @dev This saves gas by updating reward variables only once.
-     * @param positionIds An array of identifiers of positions to compound the rewards of.
+     * @param positionIds An array of identifiers of positions to stake to.
+     * @param amounts An array of amount of tokens to stake to the corresponding positions.
      */
-    function multiCompound(uint256[] calldata positionIds) external {
+    function multiStake(uint256[] calldata positionIds, uint256[] calldata amounts) external {
         // Update reward variables only once.
         _updateRewardVariables();
 
+        // Ensure array lengths match.
         uint256 length = positionIds.length;
+        if (length != amounts.length) {
+            revert PNGPos__NonMatchingArrayLength();
+        }
+
         for (uint256 i = 0; i < length; ) {
-            _compound(positionIds[i]);
+            _stake(positionIds[i], amounts[i]);
 
             // Counter realistically cannot overflow.
             unchecked {
@@ -311,7 +317,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     }
 
     /**
-     * @notice External function to withdraw from multiple positions.
+     * @notice External function to withdraw or harvest from multiple positions.
      * @dev This saves gas by updating reward variables only once.
      * @param positionIds An array of identifiers of positions to withdraw from.
      * @param amounts An array of amount of tokens to withdraw from corresponding positions.
@@ -409,10 +415,10 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      * @dev Specifications:
      * - Deposit `amount` tokens to the position associated with `positionId`,
      * - Make the staking duration of `amount` restart,
-     * - Do not make the staking duration of the existing `balance` restart,
      * - Claim accrued `reward` tokens of the position,
      * - Deposit `reward` tokens back into the position,
      * - Make the staking duration of `reward` tokens start from zero.
+     * - Do not make the staking duration of the existing `balance` restart,
      */
     function _stake(uint256 positionId, uint256 amount) private onlyOwner(positionId) {
         // Create a storage pointer for the position.
@@ -424,10 +430,14 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         // Include reward amount in total amount to be staked.
         uint256 totalAmount = amount + reward;
 
+        if (totalAmount == 0) {
+            revert PNGPos__NoReward();
+        }
+
         // Get the new total staked amount and ensure it fits 96 bits.
         uint256 newTotalStaked = totalValueVariables.balance + totalAmount;
-        if (amount == 0 || newTotalStaked > type(uint96).max) {
-            revert PNGPos__InvalidInputAmount(amount);
+        if (newTotalStaked > type(uint96).max) {
+            revert PNGPos__Overflow();
         }
 
         // Increment the state variables pertaining to total value calculation.
@@ -450,58 +460,12 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         _snapshotRewardVariables(position);
 
         // Transfer amount tokens from user to the contract, and emit the associated event.
-        if (!rewardsToken.transferFrom(msg.sender, address(this), amount)) {
-            revert PNGPos__FailedTransfer();
+        if (amount != 0) {
+            if (!rewardsToken.transferFrom(msg.sender, address(this), amount)) {
+                revert PNGPos__FailedTransfer();
+            }
         }
         emit Staked(positionId, amount, reward);
-    }
-
-    /**
-     * @notice Private function to deposit the accrued rewards of a position back to itself.
-     * @param positionId The identifier of the position to compound the rewards of.
-     * @dev Specifications:
-     * - Claim accrued `reward` tokens of the position,
-     * - Deposit `reward` tokens back into the position,
-     * - Make the staking duration of `reward` tokens restart,
-     * - Do not make the staking duration of the existing `balance` restart.
-     */
-    function _compound(uint256 positionId) private onlyOwner(positionId) {
-        // Create a storage pointer for the position.
-        Position storage position = positions[positionId];
-
-        // Get accrued rewards of the position, and revert if there are no rewards.
-        uint256 reward = _positionPendingRewards(position);
-        if (reward == 0) {
-            revert PNGPos__NoReward();
-        }
-
-        // Get the new total staked amount and ensure it fits 96 bits.
-        uint256 newTotalStaked = totalValueVariables.balance + reward;
-        if (newTotalStaked > type(uint96).max) {
-            revert PNGPos__RewardOverflow(reward);
-        }
-
-        // Increment the state variables pertaining to total value calculation.
-        uint160 addedEntryTimes = uint160(block.timestamp * reward);
-        totalValueVariables.sumOfEntryTimes += addedEntryTimes;
-        totalValueVariables.balance = uint96(newTotalStaked);
-
-        // Increment the position properties pertaining to position value calculation.
-        ValueVariables storage positionValueVariables = position.positionValueVariables;
-        uint256 oldBalance = positionValueVariables.balance;
-        unchecked {
-            positionValueVariables.balance = uint96(oldBalance + reward);
-        }
-        positionValueVariables.sumOfEntryTimes += addedEntryTimes;
-
-        // Increment the previousValues.
-        position.previousValues += uint160(oldBalance * (block.timestamp - position.lastUpdate));
-
-        // Snapshot the lastUpdate and reward variables.
-        _snapshotRewardVariables(position);
-
-        // Only emit the associated event, as there is no need to transfer.
-        emit Compounded(positionId, reward);
     }
 
     /**
