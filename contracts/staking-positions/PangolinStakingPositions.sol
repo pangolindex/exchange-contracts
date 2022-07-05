@@ -160,9 +160,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     event TokenMetadataSet(TokenMetadata newTokenMetadata);
 
     modifier onlyOwner(uint256 positionId) {
-        if (ownerOf(positionId) != msg.sender) {
-            revert UnprivilegedCaller();
-        }
+        if (ownerOf(positionId) != msg.sender) revert UnprivilegedCaller();
         _;
     }
 
@@ -257,9 +255,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      */
     function burn(uint256 positionId) external {
         // To prevent mistakes, ensure only valueless positions can be burned.
-        if (positions[positionId].positionValueVariables.balance != 0) {
-            revert InvalidToken();
-        }
+        if (positions[positionId].positionValueVariables.balance != 0) revert InvalidToken();
 
         // Burn the associated NFT and delete all position properties.
         _burn(positionId);
@@ -288,9 +284,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
 
         // Ensure array lengths match.
         uint256 length = positionIds.length;
-        if (length != amounts.length) {
-            revert MismatchedArrayLengths();
-        }
+        if (length != amounts.length) revert MismatchedArrayLengths();
 
         for (uint256 i = 0; i < length; ) {
             _stake(positionIds[i], amounts[i]);
@@ -314,9 +308,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
 
         // Ensure array lengths match.
         uint256 length = positionIds.length;
-        if (length != amounts.length) {
-            revert MismatchedArrayLengths();
-        }
+        if (length != amounts.length) revert MismatchedArrayLengths();
 
         for (uint256 i = 0; i < length; ) {
             _withdraw(positionIds[i], amounts[i]);
@@ -337,9 +329,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         // Ensure new approvalPauseDuration is less than the max allowed.
-        if (newApprovalPauseDuration > MAX_APPROVAL_PAUSE_DURATION) {
-            revert OutOfBounds();
-        }
+        if (newApprovalPauseDuration > MAX_APPROVAL_PAUSE_DURATION) revert OutOfBounds();
 
         // Update the state variable and emit an event.
         approvalPauseDuration = newApprovalPauseDuration;
@@ -415,17 +405,11 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
 
         // Include reward amount in total amount to be staked.
         uint256 totalAmount = amount + reward;
-
-        // Revert if there are no rewards and nothing is being staked.
-        if (totalAmount == 0) {
-            revert NoEffect();
-        }
+        if (totalAmount == 0) revert NoEffect();
 
         // Get the new total staked amount and ensure it fits 96 bits.
         uint256 newTotalStaked = totalValueVariables.balance + totalAmount;
-        if (newTotalStaked > type(uint96).max) {
-            revert Overflow();
-        }
+        if (newTotalStaked > type(uint96).max) revert Overflow();
 
         // Increment the state variables pertaining to total value calculation.
         uint160 addedEntryTimes = uint160(block.timestamp * totalAmount);
@@ -447,11 +431,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         _snapshotRewardVariables(position);
 
         // Transfer amount tokens from user to the contract, and emit the associated event.
-        if (amount != 0) {
-            if (!rewardsToken.transferFrom(msg.sender, address(this), amount)) {
-                revert FailedTransfer();
-            }
-        }
+        if (amount != 0) _transferFromCaller(amount);
         emit Staked(positionId, amount, reward);
     }
 
@@ -473,9 +453,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
 
         // Get position balance and ensure sufficient balance exists.
         uint256 oldBalance = position.positionValueVariables.balance;
-        if (amount > oldBalance) {
-            revert InsufficientBalance();
-        }
+        if (amount > oldBalance) revert InsufficientBalance();
 
         // Get the remaining balance in the position.
         uint256 remaining;
@@ -486,11 +464,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         // Get accrued rewards of the position, and get totalAmount to withdraw (incl. rewards).
         uint256 reward = _positionPendingRewards(position);
         uint256 totalAmount = amount + reward;
-
-        // Revert if nothing to withdraw or harvest.
-        if (totalAmount == 0) {
-            revert NoEffect();
-        }
+        if (totalAmount == 0) revert NoEffect();
 
         // Decrement the withdrawn amount from totalStaked.
         totalValueVariables.balance -= uint96(amount);
@@ -519,9 +493,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         _snapshotRewardVariables(position);
 
         // Transfer withdrawn amount and rewards to the user, and emit the associated event.
-        if (!rewardsToken.transfer(msg.sender, totalAmount)) {
-            revert FailedTransfer();
-        }
+        _transferToCaller(totalAmount);
         emit Withdrawn(positionId, amount, reward);
     }
 
@@ -541,6 +513,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
 
         // Get the position balance only, ignoring the accrued rewards.
         uint96 balance = positionValueVariables.balance;
+        if (balance == 0) revert NoEffect();
 
         // Decrement the state variables pertaining to total value calculation.
         totalValueVariables.balance -= balance;
@@ -549,9 +522,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         delete positions[positionId];
 
         // Transfer only the staked balance from the contract to user.
-        if (!rewardsToken.transfer(msg.sender, balance)) {
-            revert FailedTransfer();
-        }
+        _transferToCaller(balance);
         emit Withdrawn(positionId, balance, 0);
     }
 
@@ -653,9 +624,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         bool increment
     ) private view returns (RewardVariables memory) {
         // If position had no update to its reward variables yet, return zero.
-        if (position.lastUpdate == 0) {
-            return RewardVariables(0, 0);
-        }
+        if (position.lastUpdate == 0) return RewardVariables(0, 0);
 
         // Create storage pointer to the position’s reward variables.
         RewardVariables storage rewardVariablesPaid = position.rewardVariablesPaid;
@@ -743,16 +712,14 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     ) public override(ERC721) {
         // Ignore approvals for a period following a destructive action.
         uint256 approvalPauseUntil = positions[tokenId].lastDevaluation + approvalPauseDuration;
-        if (msg.sender != from && block.timestamp <= approvalPauseUntil) {
-            revert TooEarly();
-        }
+        if (msg.sender != from && block.timestamp <= approvalPauseUntil) revert TooEarly();
+
         super.transferFrom(from, to, tokenId);
     }
 
     function tokenURI(uint256 tokenId) public view override(ERC721) returns (string memory) {
-        if (_ownerOf[tokenId] == address(0)) {
-            revert NonExistentToken();
-        }
+        if (_ownerOf[tokenId] == address(0)) revert NonExistentToken();
+
         // Use external contract to handle token metadata.
         return tokenMetadata.tokenURI(this, tokenId);
     }

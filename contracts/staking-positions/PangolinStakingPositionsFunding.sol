@@ -51,14 +51,11 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
      */
     function setPeriodDuration(uint256 newDuration) external onlyRole(DEFAULT_ADMIN_ROLE) {
         // Ensure there is no ongoing period.
-        if (periodFinish > block.timestamp) {
-            revert TooEarly();
-        }
+        if (periodFinish > block.timestamp) revert TooEarly();
 
         // Ensure the new period is within the bounds.
-        if (newDuration < MIN_PERIOD_DURATION || newDuration > MAX_PERIOD_DURATION) {
-            revert OutOfBounds();
-        }
+        if (newDuration < MIN_PERIOD_DURATION) revert OutOfBounds();
+        if (newDuration > MAX_PERIOD_DURATION) revert OutOfBounds();
 
         // Assign the new duration to the state variable, and emit the associated event.
         periodDuration = newDuration;
@@ -68,9 +65,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
     /** @notice External restricted function to end the period and withdraw leftover rewards. */
     function endPeriod() external onlyRole(DEFAULT_ADMIN_ROLE) {
         // Ensure period has not already ended.
-        if (block.timestamp >= periodFinish) {
-            revert TooLate();
-        }
+        if (block.timestamp >= periodFinish) revert TooLate();
 
         unchecked {
             // Get the rewards remaining to be distributed.
@@ -83,9 +78,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
             periodFinish = uint40(block.timestamp);
 
             // Transfer leftover tokens from the contract to the caller.
-            if (!rewardsToken.transfer(msg.sender, leftover)) {
-                revert FailedTransfer();
-            }
+            _transferToCaller(leftover);
             emit PeriodEnded();
         }
     }
@@ -99,9 +92,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
         uint256 tmpPeriodDuration = periodDuration;
 
         // Ensure amount fits 96 bits.
-        if (amount > MAX_TOTAL_REWARD) {
-            revert Overflow();
-        }
+        if (amount > MAX_TOTAL_REWARD) revert Overflow();
 
         // Increment totalRewardAdded, reverting on overflow to ensure it fits 96 bits.
         totalRewardAdded += uint96(amount);
@@ -118,9 +109,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
         }
 
         // Ensure sufficient amount is supplied hence reward rate is non-zero.
-        if (tmpRewardRate == 0) {
-            revert NoEffect();
-        }
+        if (tmpRewardRate == 0) revert NoEffect();
 
         // Assign the tmpRewardRate back to storage.
         // MAX_TOTAL_REWARD / MIN_PERIOD_DURATION fits 80 bits.
@@ -131,9 +120,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
         periodFinish = uint40(block.timestamp + tmpPeriodDuration);
 
         // Transfer reward tokens from the caller to the contract.
-        if (!rewardsToken.transferFrom(msg.sender, address(this), amount)) {
-            revert FailedTransfer();
-        }
+        _transferFromCaller(amount);
         emit RewardAdded(amount);
     }
 
@@ -148,6 +135,22 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
 
         // Update last update time.
         lastUpdate = uint40(block.timestamp);
+    }
+
+    /**
+     * @notice Internal function to transfer `rewardsToken` from the contract to caller.
+     * @param amount The amount of tokens to transfer.
+     */
+    function _transferToCaller(uint256 amount) internal {
+        if (!rewardsToken.transfer(msg.sender, amount)) revert FailedTransfer();
+    }
+
+    /**
+     * @notice Internal function to transfer `rewardsToken` from caller to the contract.
+     * @param amount The amount of tokens to transfer.
+     */
+    function _transferFromCaller(uint256 amount) internal {
+        if (!rewardsToken.transferFrom(msg.sender, address(this), amount)) revert FailedTransfer();
     }
 
     /**
