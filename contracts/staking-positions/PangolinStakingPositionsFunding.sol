@@ -15,23 +15,43 @@ import "./GenericErrors.sol";
  * funding from the staking and reward distribution.
  */
 abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, GenericErrors {
+    /** @notice The rewards given out per second during a reward period. */
     uint80 public rewardRate;
+
+    /** @notice The timestamp when the last time the rewards were claimed by the child contract. */
     uint40 public lastUpdate;
+
+    /** @notice The timestamp when the current period will end or the latest period has ended. */
     uint40 public periodFinish;
+
+    /** @notice The amount of total rewards added. */
     uint96 public totalRewardAdded;
 
-    uint256 public periodDuration = 1 days;
+    /** @notice The duration of how long the rewards will last after `addReward` is called. */
+    uint256 public periodDuration = 14 days;
 
+    /** @notice The minimum duration a period can last. */
     uint256 private constant MIN_PERIOD_DURATION = 2**16 + 1;
+
+    /** @notice The maximum duration a period can last. */
     uint256 private constant MAX_PERIOD_DURATION = 2**32;
+
+    /** @notice The maximum amount of rewards that can ever be distributed. */
     uint256 private constant MAX_TOTAL_REWARD = type(uint96).max;
 
+    /** @notice The privileged role that can call `addReward` function */
     bytes32 private constant FUNDER_ROLE = keccak256("FUNDER_ROLE");
 
+    /** @notice The reward token that is distributed to stakers. */
     IERC20 public immutable rewardsToken;
 
+    /** @notice The event emitted when a period is manually cut short. */
     event PeriodEnded();
+
+    /** @notice The event emitted when a period is started or extended through funding. */
     event RewardAdded(uint256 reward);
+
+    /** @notice The event emitted when the period duration is changed. */
     event PeriodDurationUpdated(uint256 newDuration);
 
     /**
@@ -88,7 +108,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
      * @param amount The amount of reward tokens to add to the contract.
      */
     function addReward(uint256 amount) external onlyRole(FUNDER_ROLE) {
-        // For efficiency, stash the periodDuration in memory.
+        // For efficiency, move periodDuration to memory.
         uint256 tmpPeriodDuration = periodDuration;
 
         // Ensure amount fits 96 bits.
@@ -98,6 +118,12 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
         totalRewardAdded += uint96(amount);
 
         // Update the rewardRate, ensuring leftover rewards from the ongoing period are included.
+        // Note that we are using `lastUpdate` instead of `block.timestamp`, otherwise we would
+        // have to “stash” the rewards from `lastUpdate` to `block.timestamp` in storage. We
+        // do not want to stash the rewards to keep the cost low. However, using this method means
+        // that `_pendingRewards()` will change, hence a user might “lose” rewards earned since
+        // `lastUpdate`. It is not a very big deal as the `lastUpdate` is likely to be updated
+        // frequently, but just something to keep in mind.
         uint256 tmpRewardRate;
         if (lastUpdate >= periodFinish) {
             tmpRewardRate = amount / tmpPeriodDuration;
@@ -159,7 +185,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
      * @return The amount of reward tokens that has been accumulated since last update time.
      */
     function _pendingRewards() internal view returns (uint256) {
-        // For efficiency, stash periodFinish timestamp in memory.
+        // For efficiency, move periodFinish timestamp to memory.
         uint256 tmpPeriodFinish = periodFinish;
 
         // Get end of the reward distribution period or block timestamp, whichever is less.
@@ -169,7 +195,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
             ? tmpPeriodFinish
             : block.timestamp;
 
-        // For efficiency, stash lastUpdate timestamp in memory. `lastUpdate` is the beginning
+        // For efficiency, move lastUpdate timestamp to memory. `lastUpdate` is the beginning
         // timestamp of the period we are calculating the total rewards for.
         uint256 tmpLastUpdate = lastUpdate;
 

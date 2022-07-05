@@ -43,7 +43,7 @@ interface TokenMetadata {
  *
  * @dev Assumptions (not checked to be true):
  * - `rewardsToken` reverts or returns false on invalid transfers,
- * - `block.timestamp - initTime` fits 32 bits,
+ * - `block.timestamp * totalRewardAdded` fits 128 bits,
  * - `block.timestamp` fits 40 bits.
  *
  * @dev Limitations (checked to be true):
@@ -60,14 +60,20 @@ interface TokenMetadata {
  *   positions’ lost (due to `emergencyExit()`), harvested, and pending rewards.
  */
 contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
+    struct ValueVariables {
+        // The amount of tokens staked in the position or the contract.
+        uint96 balance;
+        // The sum of each staked token in the position or contract multiplied by its update time.
+        uint160 sumOfEntryTimes;
+    }
+
     struct RewardVariables {
-        // Imaginary rewards accrued by a position with
-        // `lastUpdate == initTime && balance == 1`. At the end of each interval, the ideal
-        // position has a staking duration of `block.timestamp - initTime`. Since its balance is
-        // one, its “value” equals its staking duration. So, its value is also `block.timestamp
-        // - initTime`, and for a given reward at an interval, the ideal position accrues
-        // `reward * (block.timestamp - initTime) / totalValue`. Refer to `Ideal Position` section
-        // of the Proofs on why we need this variable.
+        // Imaginary rewards accrued by a position with `lastUpdate == 0 && balance == 1`. At the
+        // end of each interval, the ideal position has a staking duration of `block.timestamp`.
+        // Since its balance is one, its “value” equals its staking duration. So, its value
+        // is also `block.timestamp` , and for a given reward at an interval, the ideal position
+        // accrues `reward * block.timestamp / totalValue`. Refer to `Ideal Position` section of
+        // the Proofs on why we need this variable.
         uint256 idealPosition;
         // The sum of `reward/totalValue` of each interval. `totalValue` is the sum of all staked
         // tokens multiplied by their respective staking durations.  On every update, the
@@ -77,16 +83,11 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         uint256 rewardPerValue;
     }
 
-    struct ValueVariables {
-        // The amount of tokens staked in the position or the contract.
-        uint96 balance;
-        // The sum of each staked token in the position or contract multiplied by its update time.
-        uint160 sumOfEntryTimes;
-    }
-
     struct Position {
         // Two variables that determine the share of rewards a position receives.
         ValueVariables positionValueVariables;
+        // Reward variables snapshotted on the last update of the position.
+        RewardVariables rewardVariablesPaid;
         // The sum of values (`balance * (block.timestamp - lastUpdate)`) of previous intervals. It
         // is only updated accordingly when more tokens are staked into an existing position. Other
         // calls than staking (i.e.: harvest and withdraw) must reset the value to zero. Correctly
@@ -98,10 +99,8 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         // The last time the position was updated.
         uint48 lastUpdate;
         // The last time the position’s staking duration was restarted (withdraw or harvest).
-        // This is used to prevent frontrunning when selling the NFT. It is not part of core algo.
+        // This is used to prevent frontrunning when buying the NFT. It is not part of core algo.
         uint48 lastDevaluation;
-        // Reward variables snapshotted on the last update of the position.
-        RewardVariables rewardVariablesPaid;
     }
 
     /** @notice The mapping of position identifiers to their properties. */
@@ -113,15 +112,8 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     /** @notice The struct holding the totalStaked and sumOfEntryTimes. */
     ValueVariables totalValueVariables;
 
-    /**
-     * @notice The time stamp of the first deposit.
-     * @dev `initTime` is used for calculating `_idealPosition`. Note that any deposit made when
-     * `totalStaked` is zero is considered the first deposit for the purposes of the algorithm. For
-     * example, if a period of staking is followed by a period where no one is staking, the next
-     * deposit made must update the `initTime` and the “reward variables”. This can be considered
-     * as a “fresh start”.
-     */
-    uint256 public initTime;
+    /** @notice The variables that govern the reward distribution. */
+    RewardVariables public rewardVariablesStored;
 
     /**
      * @notice The duration during NFT approvals are ignored after an update that devalues it.
@@ -141,12 +133,6 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      * @dev This is simply a counter for determining the next position identifier.
      */
     uint256 private _positionsLength;
-
-    /**
-     * @notice The variables that govern the reward distribution. They are incremented on every
-     * update.
-     */
-    RewardVariables public rewardVariablesStored;
 
     /** @notice The fixed denominator used for storing reward variables. */
     uint256 private constant PRECISION = 2**128;
@@ -185,14 +171,15 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      * @param amount The amount of tokens to transfer from the caller to the position.
      */
     function mint(uint256 amount) external {
-        // Only update reward variables when there is existing stake, else update initTime.
-        _updateRewardVariablesOrInitialize();
+        // Update reward variables. Note that rewards accumulated when there is no one staking will
+        // be lost. But this is only a small risk of value loss when the contract first goes live.
+        _updateRewardVariables();
 
         // Get the new positionId and mint the associated NFT.
         uint256 positionId = ++_positionsLength;
         _mint(msg.sender, positionId);
 
-        // Use a private function to handle the logic pertaining to opening a position.
+        // Use a private function to handle the logic pertaining to depositing into a position.
         _stake(positionId, amount);
     }
 
@@ -202,8 +189,9 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      * @param positionId The identifier of the position to deposit the funds into.
      */
     function stake(uint256 positionId, uint256 amount) external {
-        // Only update reward variables when there is existing stake, else update initTime.
-        _updateRewardVariablesOrInitialize();
+        // Update reward variables. Note that rewards accumulated when there is no one staking will
+        // be lost. But this is only a small risk of value loss when the contract first goes live.
+        _updateRewardVariables();
 
         // Use a private function to handle the logic pertaining to depositing into a position.
         _stake(positionId, amount);
@@ -231,6 +219,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         _updateRewardVariables();
 
         // Use a private function to handle the logic pertaining to compounding rewards.
+        // `_stake` with zero input amount works as compounding.
         _stake(positionId, 0);
     }
 
@@ -279,7 +268,9 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      * @param amounts An array of amount of tokens to stake to the corresponding positions.
      */
     function multiStake(uint256[] calldata positionIds, uint256[] calldata amounts) external {
-        // Update reward variables only once.
+        // Update reward variables only once. Note that rewards accumulated when there is no one
+        // staking will be lost. But this is only a small risk of value loss if a reward period
+        // during no one staking is followed by staking.
         _updateRewardVariables();
 
         // Ensure array lengths match.
@@ -507,9 +498,9 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      * - Ignore `reward` tokens, making them permanently irrecoverable.
      */
     function _emergencyExit(uint256 positionId) private onlyOwner(positionId) {
-        // Stash the queried position in memory.
-        Position memory position = positions[positionId];
-        ValueVariables memory positionValueVariables = position.positionValueVariables;
+        // Move the queried position to memory.
+        ValueVariables memory positionValueVariables = positions[positionId]
+            .positionValueVariables;
 
         // Get the position balance only, ignoring the accrued rewards.
         uint96 balance = positionValueVariables.balance;
@@ -524,26 +515,6 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         // Transfer only the staked balance from the contract to user.
         _transferToCaller(balance);
         emit Withdrawn(positionId, balance, 0);
-    }
-
-    /**
-     * @notice Private function to call `_updateRewardVariables`, if there already some stake
-     * exists. Else it updates the `initTime`, starting from fresh.
-     */
-    function _updateRewardVariablesOrInitialize() private {
-        if (totalValueVariables.balance == 0) {
-            // Update `initTime` on first stake. It is used for calculating `_idealPosition`.
-            initTime = block.timestamp;
-
-            // Reset reward variables to zero. This is in case in the unlikely scenario that reward
-            // variables are non-zero on first staking (i.e.: a period of staking is followed by a
-            // period of no one staking).
-            delete rewardVariablesStored;
-        } else {
-            // Update reward variables that govern the reward distribution. One can regard these
-            // variables as analogue of `rewardPerTokenStored` of Synthetix’ Staking rewards.
-            _updateRewardVariables();
-        }
     }
 
     /**
@@ -606,7 +577,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
             position.lastUpdate == 0
                 ? 0
                 : (((deltaRewardVariables.idealPosition -
-                    (deltaRewardVariables.rewardPerValue * (position.lastUpdate - initTime))) *
+                    (deltaRewardVariables.rewardPerValue * position.lastUpdate)) *
                     position.positionValueVariables.balance) +
                     (deltaRewardVariables.rewardPerValue * position.previousValues)) / PRECISION;
     }
@@ -619,10 +590,11 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      * rewards of the contract.
      * @return The difference between the `rewardVariablesStored` and `rewardVariablesPaid`.
      */
-    function _getDeltaRewardVariables(
-        Position storage position,
-        bool increment
-    ) private view returns (RewardVariables memory) {
+    function _getDeltaRewardVariables(Position storage position, bool increment)
+        private
+        view
+        returns (RewardVariables memory)
+    {
         // If position had no update to its reward variables yet, return zero.
         if (position.lastUpdate == 0) return RewardVariables(0, 0);
 
@@ -675,9 +647,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         // Calculate the totalValue, then get the incrementations only if value is non-zero.
         uint256 totalValue = _getValue(totalValueVariables);
         if (totalValue != 0) {
-            idealPositionIncrementation =
-                ((rewards * (block.timestamp - initTime)) * PRECISION) /
-                totalValue;
+            idealPositionIncrementation = (rewards * block.timestamp * PRECISION) / totalValue;
             rewardPerValueIncrementation = (rewards * PRECISION) / totalValue;
         }
     }
