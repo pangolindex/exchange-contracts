@@ -140,9 +140,16 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     /** @notice The maximum approvalPauseDuration that can be set by the admin. */
     uint256 private constant MAX_APPROVAL_PAUSE_DURATION = 2 days;
 
+    /** @notice The event emitted when withdrawing or harvesting from a position. */
     event Withdrawn(uint256 indexed positionId, uint256 amount, uint256 reward);
+
+    /** @notice The event emitted when staking to, minting, or compounding a position. */
     event Staked(uint256 indexed positionId, uint256 amount, uint256 reward);
+
+    /** @notice The event emitted when admin changes `approvalPauseDuration`. */
     event PauseDurationSet(uint256 newApprovalPauseDuration);
+
+    /** @notice The event emitted when admin changes `tokenMetadata`. */
     event TokenMetadataSet(TokenMetadata newTokenMetadata);
 
     modifier onlyOwner(uint256 positionId) {
@@ -562,27 +569,6 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     }
 
     /**
-     * @notice Low-level private view function to get the accrued rewards of a position.
-     * @param deltaRewardVariables The difference between the ‘stored’ and ‘paid’ reward variables.
-     * @param position The position to check the accrued rewards of.
-     * @return The accrued rewards of the position.
-     */
-    function _earned(RewardVariables memory deltaRewardVariables, Position storage position)
-        private
-        view
-        returns (uint256)
-    {
-        // Refer to the Combined Position section of the Proofs on why and how this formula works.
-        return
-            position.lastUpdate == 0
-                ? 0
-                : (((deltaRewardVariables.idealPosition -
-                    (deltaRewardVariables.rewardPerValue * position.lastUpdate)) *
-                    position.positionValueVariables.balance) +
-                    (deltaRewardVariables.rewardPerValue * position.previousValues)) / PRECISION;
-    }
-
-    /**
      * @notice Private view function to get the difference between a position’s reward variables
      * (‘paid’) and global reward variables (‘stored’).
      * @param position The position for which to calculate the delta of reward variables.
@@ -663,6 +649,27 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      */
     function _getValue(ValueVariables storage valueVariables) private view returns (uint256) {
         return block.timestamp * valueVariables.balance - valueVariables.sumOfEntryTimes;
+    }
+
+    /**
+     * @notice Low-level private view function to get the accrued rewards of a position.
+     * @param deltaRewardVariables The difference between the ‘stored’ and ‘paid’ reward variables.
+     * @param position The position to check the accrued rewards of.
+     * @return The accrued rewards of the position.
+     */
+    function _earned(RewardVariables memory deltaRewardVariables, Position storage position)
+        private
+        view
+        returns (uint256)
+    {
+        // Refer to the Combined Position section of the Proofs on why and how this formula works.
+        return
+            position.lastUpdate == 0
+                ? 0
+                : (((deltaRewardVariables.idealPosition -
+                    (deltaRewardVariables.rewardPerValue * position.lastUpdate)) *
+                    position.positionValueVariables.balance) +
+                    (deltaRewardVariables.rewardPerValue * position.previousValues)) / PRECISION;
     }
 
     /* ************* */
