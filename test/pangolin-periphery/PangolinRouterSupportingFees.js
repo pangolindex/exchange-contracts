@@ -63,29 +63,69 @@ describe('PangolinRouterSupportingFees', function() {
             nonOwner = user3;
         });
 
+        describe('Partner activation', async function() {
+            it('Defaults to not active', async function() {
+                const feeInfo = await router.feeInfos(partner.address);
+                expect(feeInfo.initialized).to.be.false;
+            });
+            it('Owner can activate partner', async function() {
+                await expect(router.connect(OWNER).activatePartner(
+                    partner.address,
+                )).to.emit(router, 'PartnerActivated');
+                const feeInfo = await router.feeInfos(partner.address);
+                expect(feeInfo.initialized).to.be.true;
+                expect(feeInfo.feeCut).to.equal(50_00);
+            });
+            it('Non-owner can activate partner', async function() {
+                await expect(router.connect(nonOwner).activatePartner(
+                    partner.address,
+                )).to.emit(router, 'PartnerActivated');
+                const feeInfo = await router.feeInfos(partner.address);
+                expect(feeInfo.initialized).to.be.true;
+                expect(feeInfo.feeCut).to.equal(50_00);
+            });
+            it('Fee floor is applied', async function() {
+                const feeFloor = 10;
+                await router.connect(OWNER).modifyFeeFloor(feeFloor);
+
+                await expect(router.connect(OWNER).activatePartner(
+                    partner.address,
+                )).to.emit(router, 'PartnerActivated');
+                const feeInfo = await router.feeInfos(partner.address);
+                expect(feeInfo.initialized).to.be.true;
+                expect(feeInfo.feeTotal).to.equal(feeFloor);
+                expect(feeInfo.feePartner).to.be.greaterThan(0);
+                expect(feeInfo.feeProtocol).to.be.greaterThan(0);
+            });
+        });
+
         describe('Managers', async function() {
+            beforeEach(async function() {
+                await router.connect(OWNER).activatePartner(partner.address);
+            });
+
             it('Owner can alter managers', async function() {
-                await expect(router.connect(OWNER).alterManagement(
+                await expect(router.connect(OWNER).modifyManagement(
                     partner.address,
                     manager.address,
                     true,
-                )).to.emit(router, 'AlterManager');
+                )).to.emit(router, 'ManagerChange');
                 expect(await router.managers(partner.address, manager.address)).to.be.true;
-                await expect(router.connect(OWNER).alterManagement(
+                await expect(router.connect(OWNER).modifyManagement(
                     partner.address,
                     manager.address,
                     false,
-                )).to.emit(router, 'AlterManager');
+                )).to.emit(router, 'ManagerChange');
                 expect(await router.managers(partner.address, manager.address)).to.be.false;
             });
             it('Non-owner can not alter managers', async function() {
-                await expect(router.connect(nonOwner).alterManagement(
+                await expect(router.connect(nonOwner).modifyManagement(
                     partner.address,
                     manager.address,
                     true,
                 )).to.be.revertedWith('Permission denied');
                 expect(await router.managers(partner.address, manager.address)).to.be.false;
-                await expect(router.connect(nonOwner).alterManagement(
+                await expect(router.connect(nonOwner).modifyManagement(
                     partner.address,
                     manager.address,
                     false,
@@ -93,13 +133,13 @@ describe('PangolinRouterSupportingFees', function() {
                 expect(await router.managers(partner.address, manager.address)).to.be.false;
             });
             it('Partner can alter own managers', async function() {
-                await expect(router.connect(partner).alterManagement(
+                await expect(router.connect(partner).modifyManagement(
                     partner.address,
                     manager.address,
                     true,
                 )).not.to.be.reverted;
                 expect(await router.managers(partner.address, manager.address)).to.be.true;
-                await expect(router.connect(partner).alterManagement(
+                await expect(router.connect(partner).modifyManagement(
                     partner.address,
                     manager.address,
                     false,
@@ -108,31 +148,40 @@ describe('PangolinRouterSupportingFees', function() {
             });
             it('Partner can not alter other managers', async function() {
                 const otherPartner = nonOwner;
-                await expect(router.connect(partner).alterManagement(
+                await expect(router.connect(partner).modifyManagement(
                     otherPartner.address,
                     manager.address,
                     true,
                 )).to.be.revertedWith('Permission denied');
                 expect(await router.managers(otherPartner.address, manager.address)).to.be.false;
-                await expect(router.connect(partner).alterManagement(
+                await expect(router.connect(partner).modifyManagement(
                     otherPartner.address,
                     manager.address,
                     false,
                 )).to.be.revertedWith('Permission denied');
                 expect(await router.managers(otherPartner.address, manager.address)).to.be.false;
             });
+            it('Cannot alter managers of un-initialized partner', async function() {
+                await expect(router.connect(OWNER).modifyManagement(
+                    nonOwner.address,
+                    manager.address,
+                    true,
+                )).to.be.revertedWith('Not initialized');
+            });
         });
 
         describe('Total fee changes', async function() {
             beforeEach(async function() {
+                // Activate partner
+                await router.connect(OWNER).activatePartner(partner.address);
+
                 // Enable manager
-                router.connect(OWNER).alterManagement(
+                router.connect(OWNER).modifyManagement(
                     partner.address,
                     manager.address,
                     true,
                 );
             });
-
             it('Total fee defaults to 0', async function() {
                 const feeInfo = await router.feeInfos(partner.address);
                 expect(feeInfo.feeTotal).to.equal(0);
@@ -178,12 +227,32 @@ describe('PangolinRouterSupportingFees', function() {
                     feeTotal,
                 )).to.be.revertedWith('Excessive total fee');
             });
+            it('Cannot change total fee of un-initialized partner', async function() {
+                const feeTotal = 1_00;
+                await expect(router.connect(OWNER).modifyTotalFee(
+                    nonOwner.address,
+                    feeTotal,
+                )).to.be.revertedWith('Not initialized');
+            });
+            it('Total fee must exceed fee floor', async function() {
+                const feeFloor = 10;
+                await router.connect(OWNER).modifyFeeFloor(feeFloor);
+
+                const feeTotal = feeFloor - 1;
+                await expect(router.connect(manager).modifyTotalFee(
+                    partner.address,
+                    feeTotal,
+                )).to.be.revertedWith('Insufficient total fee');
+            });
         });
 
         describe('Fee cut changes', async function() {
             beforeEach(async function() {
+                // Activate partner
+                await router.connect(OWNER).activatePartner(partner.address);
+
                 // Enable manager
-                router.connect(OWNER).alterManagement(
+                router.connect(OWNER).modifyManagement(
                     partner.address,
                     manager.address,
                     true,
@@ -253,11 +322,52 @@ describe('PangolinRouterSupportingFees', function() {
                     25_00,
                 )).to.be.revertedWith('Permission denied');
             });
+            it('Cannot change fee cut of un-initialized partner', async function() {
+                await expect(router.connect(OWNER).modifyFeeCut(
+                    nonOwner.address,
+                    25_00,
+                )).to.be.revertedWith('Not initialized');
+            });
+        });
+
+        describe('Fee floor changes', async function() {
+            it('Fee floor is 0% by default', async function() {
+                expect(await router.FEE_FLOOR()).to.equal(0);
+            });
+            it('Owner can modify fee floor to 0.30%', async function() {
+                const feeFloor = 30;
+                await expect(router.connect(OWNER).modifyFeeFloor(
+                    feeFloor,
+                )).to.emit(router, 'FeeFloorChange');
+                expect(await router.FEE_FLOOR()).to.equal(feeFloor);
+            });
+            it('Fee cut can not exceed 0.30%', async function() {
+                const feeFloor = 30 + 1;
+                await expect(router.connect(OWNER).modifyFeeFloor(
+                    feeFloor,
+                )).to.be.revertedWith('Excessive fee floor');
+            });
+            it('Owner can modify fee floor to 0%', async function() {
+                await expect(router.connect(OWNER).modifyFeeFloor(
+                    30,
+                )).to.emit(router, 'FeeFloorChange');
+                expect(await router.FEE_FLOOR()).to.equal(30);
+                await expect(router.connect(OWNER).modifyFeeFloor(
+                    0,
+                )).to.emit(router, 'FeeFloorChange');
+                expect(await router.FEE_FLOOR()).to.equal(0);
+            });
+            it('Non-owner cannot modify fee cut', async function() {
+                await expect(router.connect(nonOwner).modifyFeeFloor(
+                    10,
+                )).to.be.revertedWith('Permission denied');
+            });
         });
     });
 
     describe('Swapping', async function() {
-        const partner1 = '0x0000000000000000000000000000000000000001';
+        const partnerInitialized = '0x0000000000000000000000000000000000000001';
+        const partnerUnInitialized = '0x0000000000000000000000000000000000000002';
         let liquidityA = ethers.utils.parseEther('5000000');
         let liquidityB = ethers.utils.parseEther('1000000');
         let previousFeesB = ethers.utils.parseEther('4000');
@@ -268,10 +378,13 @@ describe('PangolinRouterSupportingFees', function() {
 
         describe('2% total fee and 50% cut', async function() {
             beforeEach(async function() {
+                // Activate partner
+                await router.connect(OWNER).activatePartner(partnerInitialized);
+
                 feeTotal = 2_00;
                 feeCut = 50_00;
                 await router.connect(OWNER).modifyTotalFee(
-                    partner1,
+                    partnerInitialized,
                     feeTotal,
                 );
                 deadline = Math.ceil(Date.now() / 1000) + 60;
@@ -282,14 +395,17 @@ describe('PangolinRouterSupportingFees', function() {
 
         describe('2% total fee and 25% cut', async function() {
             beforeEach(async function() {
+                // Activate partner
+                await router.connect(OWNER).activatePartner(partnerInitialized);
+
                 feeTotal = 2_00;
                 feeCut = 25_00;
                 await router.connect(OWNER).modifyTotalFee(
-                    partner1,
+                    partnerInitialized,
                     feeTotal,
                 );
                 await router.connect(OWNER).modifyFeeCut(
-                    partner1,
+                    partnerInitialized,
                     feeCut,
                 );
                 deadline = Math.ceil(Date.now() / 1000) + 60;
@@ -300,14 +416,17 @@ describe('PangolinRouterSupportingFees', function() {
 
         describe('2% total fee and 0% cut', async function() {
             beforeEach(async function() {
+                // Activate partner
+                await router.connect(OWNER).activatePartner(partnerInitialized);
+
                 feeTotal = 2_00;
                 feeCut = 0;
                 await router.connect(OWNER).modifyTotalFee(
-                    partner1,
+                    partnerInitialized,
                     feeTotal,
                 );
                 await router.connect(OWNER).modifyFeeCut(
-                    partner1,
+                    partnerInitialized,
                     feeCut,
                 );
                 deadline = Math.ceil(Date.now() / 1000) + 60;
@@ -318,6 +437,9 @@ describe('PangolinRouterSupportingFees', function() {
 
         describe('0% total fee and 50% cut (default)', async function() {
             beforeEach(async function() {
+                // Activate partner
+                await router.connect(OWNER).activatePartner(partnerInitialized);
+
                 feeTotal = 0;
                 feeCut = 50_00;
                 deadline = Math.ceil(Date.now() / 1000) + 60;
@@ -347,17 +469,27 @@ describe('PangolinRouterSupportingFees', function() {
                         path,
                         OWNER.address,
                         deadline,
-                        partner1,
+                        partnerInitialized,
                     )).not.to.be.reverted;
                 });
 
+                it('Cannot swap with un-initialized partner', async function() {
+                    await expect(router.swapExactTokensForTokens(
+                        ethers.utils.parseEther('1'),
+                        0,
+                        [tokenA.address, tokenB.address],
+                        OWNER.address,
+                        deadline,
+                        partnerUnInitialized,
+                    )).to.be.revertedWith('Invalid partner');
+                });
                 it('Transfers protocol fee', async function() {
                     const { protocolFee } = getFees(actualAmountOut, feeTotal, feeCut);
                     expect(await tokenB.balanceOf(router.address)).to.equal(protocolFee.add(previousFeesB));
                 });
                 it('Transfers partner fee', async function() {
                     const { partnerFee } = getFees(actualAmountOut, feeTotal, feeCut);
-                    expect(await tokenB.balanceOf(partner1)).to.equal(partnerFee);
+                    expect(await tokenB.balanceOf(partnerInitialized)).to.equal(partnerFee);
                 });
                 it('Transfers swap output', async function() {
                     const { totalFee, partnerFee } = getFees(actualAmountOut, feeTotal, feeCut);
@@ -393,17 +525,27 @@ describe('PangolinRouterSupportingFees', function() {
                         path,
                         OWNER.address,
                         deadline,
-                        partner1,
+                        partnerInitialized,
                     )).not.to.be.reverted;
                 });
 
+                it('Cannot swap with un-initialized partner', async function() {
+                    await expect(router.swapTokensForExactTokens(
+                        ethers.utils.parseEther('10'),
+                        0,
+                        [tokenA.address, tokenB.address],
+                        OWNER.address,
+                        deadline,
+                        partnerUnInitialized,
+                    )).to.be.revertedWith('Invalid partner');
+                });
                 it('Transfers protocol fee', async function() {
                     const { protocolFee } = getFees(desiredAmountOut, feeTotal, feeCut);
                     expect(await tokenB.balanceOf(router.address)).to.equal(protocolFee.add(previousFeesB));
                 });
                 it('Transfers partner fee', async function() {
                     const { partnerFee } = getFees(desiredAmountOut, feeTotal, feeCut);
-                    expect(await tokenB.balanceOf(partner1)).to.equal(partnerFee);
+                    expect(await tokenB.balanceOf(partnerInitialized)).to.equal(partnerFee);
                 });
                 it('Transfers swap output', async function() {
                     const { partnerFee } = getFees(actualAmountOut, feeTotal, feeCut);
@@ -438,20 +580,32 @@ describe('PangolinRouterSupportingFees', function() {
                         path,
                         OWNER.address,
                         deadline,
-                        partner1,
+                        partnerInitialized,
                         {
                             value: amountIn,
                         },
                     )).not.to.be.reverted;
                 });
 
+                it('Cannot swap with un-initialized partner', async function() {
+                    await expect(router.swapExactAVAXForTokens(
+                        0,
+                        [wavax.address, tokenB.address],
+                        OWNER.address,
+                        deadline,
+                        partnerUnInitialized,
+                        {
+                            value: ethers.utils.parseEther('10'),
+                        },
+                    )).to.be.revertedWith('Invalid partner');
+                });
                 it('Transfers protocol fee', async function() {
                     const { protocolFee } = getFees(actualAmountOut, feeTotal, feeCut);
                     expect(await tokenB.balanceOf(router.address)).to.equal(protocolFee.add(previousFeesB));
                 });
                 it('Transfers partner fee', async function() {
                     const { partnerFee } = getFees(actualAmountOut, feeTotal, feeCut);
-                    expect(await tokenB.balanceOf(partner1)).to.equal(partnerFee);
+                    expect(await tokenB.balanceOf(partnerInitialized)).to.equal(partnerFee);
                 });
                 it('Transfers swap output', async function() {
                     const { totalFee, partnerFee } = getFees(actualAmountOut, feeTotal, feeCut);
@@ -470,6 +624,7 @@ describe('PangolinRouterSupportingFees', function() {
 
             describe('swapTokensForExactAVAX', async function() {
                 let pair, desiredAmountOut, actualAmountOut;
+                let receipt, avaxBefore;
 
                 beforeEach(async function() {
                     pair = await createPair(tokenA, wavax, pangolinFactory);
@@ -482,31 +637,46 @@ describe('PangolinRouterSupportingFees', function() {
                     desiredAmountOut = ethers.utils.parseEther('100');
                     actualAmountOut = desiredAmountOut.mul(BIPS + feeTotal).div(BIPS);
                     const amounts = await router.getAmountsIn(actualAmountOut, path);
-                    await expect(router.swapTokensForExactAVAX(
+                    avaxBefore = await OWNER.getBalance();
+                    receipt = await expect(router.swapTokensForExactAVAX(
                         desiredAmountOut.toString(),
                         amounts[0].toString(),
                         path,
                         OWNER.address,
                         deadline,
-                        partner1,
+                        partnerInitialized,
                     )).not.to.be.reverted;
                 });
 
+                it('Cannot swap with un-initialized partner', async function() {
+                    await expect(router.swapTokensForExactAVAX(
+                        0,
+                        ethers.utils.parseEther('10'),
+                        [tokenA.address, wavax.address],
+                        OWNER.address,
+                        deadline,
+                        partnerUnInitialized,
+                    )).to.be.revertedWith('Invalid partner');
+                });
                 it('Transfers protocol fee', async function() {
                     const { protocolFee } = getFees(desiredAmountOut, feeTotal, feeCut);
                     expect(await wavax.balanceOf(router.address)).to.equal(protocolFee.add(previousFeesW));
                 });
                 it('Transfers partner fee', async function() {
                     const { partnerFee } = getFees(desiredAmountOut, feeTotal, feeCut);
-                    expect(await wavax.balanceOf(partner1)).to.equal(partnerFee);
+                    expect(await wavax.balanceOf(partnerInitialized)).to.equal(partnerFee);
                 });
-                xit('Transfers swap output', async function() {
-                    // TODO: Track AVAX transfer
+                it('Transfers swap output', async function() {
+                    const { gasUsed, effectiveGasPrice } = await receipt.wait();
+                    const avaxAfter = await OWNER.getBalance();
+                    const gasCost = gasUsed.mul(effectiveGasPrice);
+                    expect(avaxAfter).to.equal(avaxBefore.add(desiredAmountOut).sub(gasCost));
                 });
             });
 
             describe('swapExactTokensForAVAX', async function() {
                 let pair, actualAmountOut;
+                let receipt, avaxBefore;
 
                 beforeEach(async function() {
                     pair = await createPair(tokenA, wavax, pangolinFactory);
@@ -520,26 +690,41 @@ describe('PangolinRouterSupportingFees', function() {
                     const amounts = await router.getAmountsOut(amountIn, path);
                     actualAmountOut = amounts[1];
                     const amountOutAdjusted = actualAmountOut.mul(BIPS - feeTotal).div(BIPS);
-                    await expect(router.swapExactTokensForAVAX(
+                    avaxBefore = await OWNER.getBalance();
+                    receipt = await expect(router.swapExactTokensForAVAX(
                         amountIn.toString(),
                         amountOutAdjusted.toString(),
                         path,
                         OWNER.address,
                         deadline,
-                        partner1,
+                        partnerInitialized,
                     )).not.to.be.reverted;
                 });
 
+                it('Cannot swap with un-initialized partner', async function() {
+                    await expect(router.swapExactTokensForAVAX(
+                        ethers.utils.parseEther('10'),
+                        0,
+                        [tokenA.address, wavax.address],
+                        OWNER.address,
+                        deadline,
+                        partnerUnInitialized,
+                    )).to.be.revertedWith('Invalid partner');
+                });
                 it('Transfers protocol fee', async function() {
                     const { protocolFee } = getFees(actualAmountOut, feeTotal, feeCut);
                     expect(await wavax.balanceOf(router.address)).to.equal(protocolFee.add(previousFeesW));
                 });
                 it('Transfers partner fee', async function() {
                     const { partnerFee } = getFees(actualAmountOut, feeTotal, feeCut);
-                    expect(await wavax.balanceOf(partner1)).to.equal(partnerFee);
+                    expect(await wavax.balanceOf(partnerInitialized)).to.equal(partnerFee);
                 });
-                xit('Transfers swap output', async function() {
-                    // TODO: Track AVAX transfer
+                it('Transfers swap output', async function() {
+                    const { remainder } = getFees(actualAmountOut, feeTotal, feeCut);
+                    const { gasUsed, effectiveGasPrice } = await receipt.wait();
+                    const avaxAfter = await OWNER.getBalance();
+                    const gasCost = gasUsed.mul(effectiveGasPrice);
+                    expect(avaxAfter).to.equal(avaxBefore.add(remainder).sub(gasCost));
                 });
             });
 
@@ -561,20 +746,32 @@ describe('PangolinRouterSupportingFees', function() {
                         path,
                         OWNER.address,
                         deadline,
-                        partner1,
+                        partnerInitialized,
                         {
                             value: amounts[0].toString(),
                         },
                     )).not.to.be.reverted;
                 });
 
+                it('Cannot swap with un-initialized partner', async function() {
+                    await expect(router.swapAVAXForExactTokens(
+                        0,
+                        [wavax.address, tokenB.address],
+                        OWNER.address,
+                        deadline,
+                        partnerUnInitialized,
+                        {
+                            value: ethers.utils.parseEther('10'),
+                        },
+                    )).to.be.revertedWith('Invalid partner');
+                });
                 it('Transfers protocol fee', async function() {
                     const { protocolFee } = getFees(desiredAmountOut, feeTotal, feeCut);
                     expect(await tokenB.balanceOf(router.address)).to.equal(protocolFee.add(previousFeesB));
                 });
                 it('Transfers partner fee', async function() {
                     const { partnerFee } = getFees(desiredAmountOut, feeTotal, feeCut);
-                    expect(await tokenB.balanceOf(partner1)).to.equal(partnerFee);
+                    expect(await tokenB.balanceOf(partnerInitialized)).to.equal(partnerFee);
                 });
                 it('Transfers swap output', async function() {
                     const { partnerFee } = getFees(actualAmountOut, feeTotal, feeCut);
@@ -610,17 +807,27 @@ describe('PangolinRouterSupportingFees', function() {
                         path,
                         OWNER.address,
                         deadline,
-                        partner1,
+                        partnerInitialized,
                     )).not.to.be.reverted;
                 });
 
+                it('Cannot swap with un-initialized partner', async function() {
+                    await expect(router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+                        ethers.utils.parseEther('10'),
+                        0,
+                        [tokenA.address, tokenB.address],
+                        OWNER.address,
+                        deadline,
+                        partnerUnInitialized,
+                    )).to.be.revertedWith('Invalid partner');
+                });
                 it('Transfers protocol fee', async function() {
                     const { protocolFee } = getFees(actualAmountOut, feeTotal, feeCut);
                     expect(await tokenB.balanceOf(router.address)).to.equal(protocolFee.add(previousFeesB));
                 });
                 it('Transfers partner fee', async function() {
                     const { partnerFee } = getFees(actualAmountOut, feeTotal, feeCut);
-                    expect(await tokenB.balanceOf(partner1)).to.equal(partnerFee);
+                    expect(await tokenB.balanceOf(partnerInitialized)).to.equal(partnerFee);
                 });
                 it('Transfers swap output', async function() {
                     const { totalFee, partnerFee } = getFees(actualAmountOut, feeTotal, feeCut);
@@ -656,20 +863,32 @@ describe('PangolinRouterSupportingFees', function() {
                         path,
                         OWNER.address,
                         deadline,
-                        partner1,
+                        partnerInitialized,
                         {
                             value: amountIn,
                         },
                     )).not.to.be.reverted;
                 });
 
+                it('Cannot swap with un-initialized partner', async function() {
+                    await expect(router.swapExactAVAXForTokensSupportingFeeOnTransferTokens(
+                        0,
+                        [wavax.address, tokenB.address],
+                        OWNER.address,
+                        deadline,
+                        partnerUnInitialized,
+                        {
+                            value: ethers.utils.parseEther('10'),
+                        },
+                    )).to.be.revertedWith('Invalid partner');
+                });
                 it('Transfers protocol fee', async function() {
                     const { protocolFee } = getFees(actualAmountOut, feeTotal, feeCut);
                     expect(await tokenB.balanceOf(router.address)).to.equal(protocolFee.add(previousFeesB));
                 });
                 it('Transfers partner fee', async function() {
                     const { partnerFee } = getFees(actualAmountOut, feeTotal, feeCut);
-                    expect(await tokenB.balanceOf(partner1)).to.equal(partnerFee);
+                    expect(await tokenB.balanceOf(partnerInitialized)).to.equal(partnerFee);
                 });
                 it('Transfers swap output', async function() {
                     const { totalFee, partnerFee } = getFees(actualAmountOut, feeTotal, feeCut);
@@ -688,6 +907,7 @@ describe('PangolinRouterSupportingFees', function() {
 
             describe('swapExactTokensForAVAXSupportingFeeOnTransferTokens', async function() {
                 let pair, actualAmountOut;
+                let receipt, avaxBefore;
 
                 beforeEach(async function() {
                     pair = await createPair(tokenA, wavax, pangolinFactory);
@@ -701,26 +921,41 @@ describe('PangolinRouterSupportingFees', function() {
                     const amounts = await router.getAmountsOut(amountIn, path);
                     actualAmountOut = amounts[1];
                     const amountOutAdjusted = actualAmountOut.mul(BIPS - feeTotal).div(BIPS);
-                    await expect(router.swapExactTokensForAVAXSupportingFeeOnTransferTokens(
+                    avaxBefore = await OWNER.getBalance();
+                    receipt = await expect(router.swapExactTokensForAVAXSupportingFeeOnTransferTokens(
                         amountIn.toString(),
                         amountOutAdjusted.toString(),
                         path,
                         OWNER.address,
                         deadline,
-                        partner1,
+                        partnerInitialized,
                     )).not.to.be.reverted;
                 });
 
+                it('Cannot swap with un-initialized partner', async function() {
+                    await expect(router.swapExactTokensForAVAXSupportingFeeOnTransferTokens(
+                        ethers.utils.parseEther('10'),
+                        0,
+                        [tokenA.address, wavax.address],
+                        OWNER.address,
+                        deadline,
+                        partnerUnInitialized,
+                    )).to.be.revertedWith('Invalid partner');
+                });
                 it('Transfers protocol fee', async function() {
                     const { protocolFee } = getFees(actualAmountOut, feeTotal, feeCut);
                     expect(await wavax.balanceOf(router.address)).to.equal(protocolFee.add(previousFeesW));
                 });
                 it('Transfers partner fee', async function() {
                     const { partnerFee } = getFees(actualAmountOut, feeTotal, feeCut);
-                    expect(await wavax.balanceOf(partner1)).to.equal(partnerFee);
+                    expect(await wavax.balanceOf(partnerInitialized)).to.equal(partnerFee);
                 });
-                xit('Transfers swap output', async function() {
-                    // TODO: Track AVAX transfer
+                it('Transfers swap output', async function() {
+                    const { remainder } = getFees(actualAmountOut, feeTotal, feeCut);
+                    const { gasUsed, effectiveGasPrice } = await receipt.wait();
+                    const avaxAfter = await OWNER.getBalance();
+                    const gasCost = gasUsed.mul(effectiveGasPrice);
+                    expect(avaxAfter).to.equal(avaxBefore.add(remainder).sub(gasCost));
                 });
             });
         }
@@ -754,7 +989,7 @@ describe('PangolinRouterSupportingFees', function() {
                 [tokenA.address],
                 [feesA],
                 user1.address,
-            )).not.to.be.reverted;
+            )).to.emit(router, 'FeeWithdrawn');
             expect(await tokenA.balanceOf(user1.address)).to.equal(feesA);
         });
         it('Owner can withdraw multiple token fees', async function() {
@@ -762,7 +997,7 @@ describe('PangolinRouterSupportingFees', function() {
                 [tokenA.address, tokenB.address],
                 [feesA, feesB],
                 user1.address,
-            )).not.to.be.reverted;
+            )).to.emit(router, 'FeeWithdrawn');
             expect(await tokenA.balanceOf(user1.address)).to.equal(feesA);
             expect(await tokenB.balanceOf(user1.address)).to.equal(feesB);
         });
@@ -795,6 +1030,7 @@ describe('PangolinRouterSupportingFees', function() {
         const totalFee = amount.mul(feeTotal).div(BIPS);
         const protocolFee = totalFee.mul(feeCut).div(BIPS);
         const partnerFee = totalFee.sub(protocolFee);
-        return { totalFee, protocolFee, partnerFee };
+        const remainder = amount.sub(totalFee);
+        return { totalFee, protocolFee, partnerFee, remainder };
     }
 });
