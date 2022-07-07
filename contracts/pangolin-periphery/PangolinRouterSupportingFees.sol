@@ -15,8 +15,10 @@ contract PangolinRouterSupportingFees is Ownable {
     address public immutable WAVAX;
 
     uint24 constant private BIPS = 100_00;
-    uint24 constant public MAX_FEE = 2_00;
     uint24 constant private MAX_FEE_CUT = 50_00;
+    uint24 constant private MAX_FEE_FLOOR = 30;
+    uint24 constant public MAX_FEE = 2_00;
+    uint24 public FEE_FLOOR = 0;
 
     struct FeeInfo {
         uint24 feePartner;      // Range [ 0, 200 ]
@@ -36,14 +38,16 @@ contract PangolinRouterSupportingFees is Ownable {
         _;
     }
 
+    event PartnerActivated(address indexed partner, uint24 feePartner, uint24 feeProtocol, uint24 feeTotal, uint24 feeCut);
+    event FeeChange(address indexed partner, uint24 feePartner, uint24 feeProtocol, uint24 feeTotal, uint24 feeCut);
     event ProtocolFee(address indexed partner, address indexed token, uint256 amount);
     event PartnerFee(address indexed partner, address indexed token, uint256 amount);
     event FeeWithdrawn(address indexed token, uint256 amount, address to);
-    event FeeChange(address indexed partner, uint24 feePartner, uint24 feeProtocol, uint24 feeTotal, uint24 feeCut);
-    event AlterManager(address indexed partner, address manager, bool isAllowed);
+    event FeeFloorChange(uint24 feeFloor);
+    event ManagerChange(address indexed partner, address manager, bool isAllowed);
 
-    constructor(address _factory, address _WAVAX, address firstOwner) public {
-        FACTORY = _factory; // 0xefa94DE7a4656D787667C749f7E1223D71E9FD88
+    constructor(address _FACTORY, address _WAVAX, address firstOwner) public {
+        FACTORY = _FACTORY; // 0xefa94DE7a4656D787667C749f7E1223D71E9FD88
         WAVAX = _WAVAX; // 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7
         transferOwnership(firstOwner);
     }
@@ -116,6 +120,7 @@ contract PangolinRouterSupportingFees is Ownable {
         address feeTo
     ) external ensure(deadline) returns (uint256[] memory amounts) {
         FeeInfo storage feeInfo = feeInfos[feeTo];
+        require(feeInfo.initialized, "Invalid partner");
 
         amounts = PangolinLibrary.getAmountsOut(FACTORY, amountIn, path);
 
@@ -146,6 +151,7 @@ contract PangolinRouterSupportingFees is Ownable {
         address feeTo
     ) external ensure(deadline) returns (uint256[] memory amounts) {
         FeeInfo storage feeInfo = feeInfos[feeTo];
+        require(feeInfo.initialized, "Invalid partner");
 
         uint256 feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
 
@@ -171,6 +177,7 @@ contract PangolinRouterSupportingFees is Ownable {
         require(path[0] == WAVAX, "INVALID_PATH");
 
         FeeInfo storage feeInfo = feeInfos[feeTo];
+        require(feeInfo.initialized, "Invalid partner");
 
         amounts = PangolinLibrary.getAmountsOut(FACTORY, msg.value, path);
 
@@ -197,6 +204,7 @@ contract PangolinRouterSupportingFees is Ownable {
         require(path[path.length - 1] == WAVAX, "INVALID_PATH");
 
         FeeInfo storage feeInfo = feeInfos[feeTo];
+        require(feeInfo.initialized, "Invalid partner");
 
         uint256 feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
 
@@ -223,6 +231,7 @@ contract PangolinRouterSupportingFees is Ownable {
         require(path[path.length - 1] == WAVAX, "INVALID_PATH");
 
         FeeInfo storage feeInfo = feeInfos[feeTo];
+        require(feeInfo.initialized, "Invalid partner");
 
         amounts = PangolinLibrary.getAmountsOut(FACTORY, amountIn, path);
 
@@ -254,6 +263,7 @@ contract PangolinRouterSupportingFees is Ownable {
         require(path[0] == WAVAX, "INVALID_PATH");
 
         FeeInfo storage feeInfo = feeInfos[feeTo];
+        require(feeInfo.initialized, "Invalid partner");
 
         uint256 feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
 
@@ -311,6 +321,7 @@ contract PangolinRouterSupportingFees is Ownable {
         amountOut = IERC20(tokenOut).balanceOf(address(this)).sub(amountOut); // Ensures stored fees are safe
 
         FeeInfo storage feeInfo = feeInfos[feeTo];
+        require(feeInfo.initialized, "Invalid partner");
         uint256 feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
 
         _distribute(amountOut - feeTotalAmount, tokenOut, to, feeTo, feeInfo.feeCut, feeTotalAmount);
@@ -337,6 +348,7 @@ contract PangolinRouterSupportingFees is Ownable {
         amountOut = IERC20(tokenOut).balanceOf(address(this)).sub(amountOut); // Ensures stored fees are safe
 
         FeeInfo storage feeInfo = feeInfos[feeTo];
+        require(feeInfo.initialized, "Invalid partner");
         uint256 feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
 
         _distribute(amountOut - feeTotalAmount, tokenOut, to, feeTo, feeInfo.feeCut, feeTotalAmount);
@@ -363,6 +375,7 @@ contract PangolinRouterSupportingFees is Ownable {
         amountOut = IERC20(WAVAX).balanceOf(address(this)).sub(amountOut); // Ensures stored fees are safe
 
         FeeInfo storage feeInfo = feeInfos[feeTo];
+        require(feeInfo.initialized, "Invalid partner");
         uint256 feeTotalAmount = amountOut.mul(feeInfo.feeTotal) / BIPS;
         uint256 userAmountOut = amountOut - feeTotalAmount;
         require(userAmountOut >= amountOutMin, "INSUFFICIENT_OUTPUT_AMOUNT");
@@ -371,10 +384,51 @@ contract PangolinRouterSupportingFees is Ownable {
     }
 
     // **** FEE FUNCTIONS ****
-    function alterManagement(address partner, address manager, bool isAllowed) external {
-        require(msg.sender == owner() || msg.sender == partner, "Permission denied");
+    function activatePartner(address partner) external {
+        FeeInfo storage feeInfo = feeInfos[partner];
+        require(!feeInfo.initialized, "Already initialized");
+
+        uint24 feeFloor = FEE_FLOOR; // Gas savings
+
+        if (feeFloor > 0) {
+            (uint24 feeProtocol, uint24 feePartner) = _calculateFees(feeFloor, MAX_FEE_CUT);
+            feeInfo.feeTotal = feeFloor;
+            feeInfo.feePartner = feePartner;
+            feeInfo.feeProtocol = feeProtocol;
+        }
+
+        feeInfo.feeCut = MAX_FEE_CUT;
+        feeInfo.initialized = true;
+
+        emit PartnerActivated(partner, feeInfo.feePartner, feeInfo.feeProtocol, feeInfo.feeTotal, MAX_FEE_CUT);
+    }
+    function modifyManagement(address partner, address manager, bool isAllowed) external {
+        require(msg.sender == partner || msg.sender == owner(), "Permission denied");
+
+        require(feeInfos[partner].initialized, "Not initialized");
+        require(managers[partner][manager] != isAllowed, "No change required");
+
         managers[partner][manager] = isAllowed;
-        emit AlterManager(partner, manager, isAllowed);
+
+        emit ManagerChange(partner, manager, isAllowed);
+    }
+    function modifyTotalFee(address partner, uint24 feeTotal) external {
+        require(msg.sender == partner || msg.sender == owner() || managers[partner][msg.sender], "Permission denied");
+
+        require(feeTotal <= MAX_FEE, "Excessive total fee");
+        require(feeTotal >= FEE_FLOOR, "Insufficient total fee");
+
+        FeeInfo storage feeInfo = feeInfos[partner];
+        require(feeInfo.initialized, "Not initialized");
+        require(feeInfo.feeTotal != feeTotal, "No change required");
+
+        (uint24 feeProtocol, uint24 feePartner) = _calculateFees(feeTotal, feeInfo.feeCut);
+
+        feeInfo.feePartner = feePartner;
+        feeInfo.feeProtocol = feeProtocol;
+        feeInfo.feeTotal = feeTotal;
+
+        emit FeeChange(partner, feePartner, feeProtocol, feeTotal, feeInfo.feeCut);
     }
     function modifyFeeCut(address partner, uint24 feeCut) external {
         require(msg.sender == owner(), "Permission denied");
@@ -382,39 +436,22 @@ contract PangolinRouterSupportingFees is Ownable {
         require(feeCut <= MAX_FEE_CUT, "Excessive fee cut");
 
         FeeInfo storage feeInfo = feeInfos[partner];
+        require(feeInfo.initialized, "Not initialized");
         require(feeInfo.feeCut != feeCut, "No change required");
 
-        uint24 feeProtocol = feeInfo.feeTotal * feeCut / BIPS; // Range [ 0, MAX_FEE:200 ]
-        uint24 feePartner = feeInfo.feeTotal - feeProtocol; // Range [ 0, MAX_FEE:200 ]
+        (uint24 feeProtocol, uint24 feePartner) = _calculateFees(feeInfo.feeTotal, feeCut);
 
         feeInfo.feePartner = feePartner;
         feeInfo.feeProtocol = feeProtocol;
         feeInfo.feeCut = feeCut;
-        feeInfo.initialized = true;
 
         emit FeeChange(partner, feePartner, feeProtocol, feeInfo.feeTotal, feeCut);
     }
-    function modifyTotalFee(address partner, uint24 feeTotal) external {
-        require(msg.sender == partner || msg.sender == owner() || managers[partner][msg.sender], "Permission denied");
-
-        require(feeTotal <= MAX_FEE, "Excessive total fee");
-
-        FeeInfo storage feeInfo = feeInfos[partner];
-        require(feeInfo.feeTotal != feeTotal, "No change required");
-
-        if (!feeInfo.initialized) {
-            feeInfo.feeCut = MAX_FEE_CUT;
-            feeInfo.initialized = true;
-        }
-
-        uint24 feeProtocol = feeTotal * feeInfo.feeCut / BIPS; // Range [ 0, MAX_FEE:200 ]
-        uint24 feePartner = feeTotal - feeProtocol; // Range [ 0, MAX_FEE:200 ]
-
-        feeInfo.feePartner = feePartner;
-        feeInfo.feeProtocol = feeProtocol;
-        feeInfo.feeTotal = feeTotal;
-
-        emit FeeChange(partner, feePartner, feeProtocol, feeTotal, feeInfo.feeCut);
+    function modifyFeeFloor(uint24 feeFloor) external {
+        require(msg.sender == owner(), "Permission denied");
+        require(feeFloor <= MAX_FEE_FLOOR, "Excessive fee floor");
+        FEE_FLOOR = feeFloor;
+        emit FeeFloorChange(feeFloor);
     }
     function withdrawFees(address[] calldata tokens, uint256[] calldata amounts, address to) external {
         require(msg.sender == owner(), "Permission denied");
@@ -424,6 +461,14 @@ contract PangolinRouterSupportingFees is Ownable {
             TransferHelper.safeTransfer(tokens[i], to, amounts[i]);
             emit FeeWithdrawn(tokens[i], amounts[i], to);
         }
+    }
+
+    function _calculateFees(
+        uint24 feeTotal,
+        uint24 feeCut
+    ) private pure returns (uint24 feeProtocol, uint24 feePartner) {
+        feeProtocol = feeTotal * feeCut / BIPS; // Range [ 0, MAX_FEE:200 ]
+        feePartner = feeTotal - feeProtocol; // Range [ 0, MAX_FEE:200 ]
     }
 
     // **** LIBRARY FUNCTIONS ****
