@@ -85,7 +85,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
 
     struct Position {
         // Two variables that determine the share of rewards a position receives.
-        ValueVariables positionValueVariables;
+        ValueVariables valueVariables;
         // Reward variables snapshotted on the last update of the position.
         RewardVariables rewardVariablesPaid;
         // The sum of values (`balance * (block.timestamp - lastUpdate)`) of previous intervals. It
@@ -251,7 +251,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      */
     function burn(uint256 positionId) external {
         // To prevent mistakes, ensure only valueless positions can be burned.
-        if (positions[positionId].positionValueVariables.balance != 0) revert InvalidToken();
+        if (positions[positionId].valueVariables.balance != 0) revert InvalidToken();
 
         // Burn the associated NFT and delete all position properties.
         _burn(positionId);
@@ -358,7 +358,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     function positionRewardRate(uint256 positionId) external view returns (uint256) {
         // Get totalValue and positionValue.
         uint256 totalValue = _getValue(totalValueVariables);
-        uint256 positionValue = _getValue(positions[positionId].positionValueVariables);
+        uint256 positionValue = _getValue(positions[positionId].valueVariables);
 
         // Return the rewardRate of the position. Do not revert if totalValue is zero.
         return positionValue == 0 ? 0 : (rewardRate * positionValue) / totalValue;
@@ -415,7 +415,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         totalValueVariables.balance = uint96(newTotalStaked);
 
         // Increment the position properties pertaining to position value calculation.
-        ValueVariables storage positionValueVariables = position.positionValueVariables;
+        ValueVariables storage positionValueVariables = position.valueVariables;
         uint256 oldBalance = positionValueVariables.balance;
         unchecked {
             positionValueVariables.balance = uint96(oldBalance + totalAmount);
@@ -450,7 +450,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         Position storage position = positions[positionId];
 
         // Get position balance and ensure sufficient balance exists.
-        uint256 oldBalance = position.positionValueVariables.balance;
+        uint256 oldBalance = position.valueVariables.balance;
         if (amount > oldBalance) revert InsufficientBalance();
 
         // Get the remaining balance in the position.
@@ -470,7 +470,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         // Update sumOfEntryTimes. The new sumOfEntryTimes can be greater or less than the previous
         // sumOfEntryTimes depending on the withdrawn amount and the time passed since lastUpdate.
         uint256 newEntryTimes = block.timestamp * remaining;
-        ValueVariables storage positionValueVariables = position.positionValueVariables;
+        ValueVariables storage positionValueVariables = position.valueVariables;
         totalValueVariables.sumOfEntryTimes = uint160(
             totalValueVariables.sumOfEntryTimes +
                 newEntryTimes -
@@ -506,14 +506,10 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      */
     function _emergencyExit(uint256 positionId) private onlyOwner(positionId) {
         // Move the queried position to memory.
-        ValueVariables memory positionValueVariables = positions[positionId]
-            .positionValueVariables;
-
-        // Get the position balance only, ignoring the accrued rewards.
-        uint96 balance = positionValueVariables.balance;
-        if (balance == 0) revert NoEffect();
+        ValueVariables memory positionValueVariables = positions[positionId].valueVariables;
 
         // Decrement the state variables pertaining to total value calculation.
+        uint96 balance = positionValueVariables.balance;
         totalValueVariables.balance -= balance;
         totalValueVariables.sumOfEntryTimes -= positionValueVariables.sumOfEntryTimes;
 
@@ -668,7 +664,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
                 ? 0
                 : (((deltaRewardVariables.idealPosition -
                     (deltaRewardVariables.rewardPerValue * position.lastUpdate)) *
-                    position.positionValueVariables.balance) +
+                    position.valueVariables.balance) +
                     (deltaRewardVariables.rewardPerValue * position.previousValues)) / PRECISION;
     }
 

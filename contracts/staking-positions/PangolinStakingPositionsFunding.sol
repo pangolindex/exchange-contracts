@@ -60,6 +60,9 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
      * @param newAdmin The initial owner of the contract.
      */
     constructor(address newRewardsToken, address newAdmin) {
+        if (newAdmin == address(0)) revert NullInput();
+        if (newRewardsToken.code.length == 0) revert InvalidToken();
+
         rewardsToken = IERC20(newRewardsToken);
         _grantRole(DEFAULT_ADMIN_ROLE, newAdmin);
         _grantRole(FUNDER_ROLE, newAdmin);
