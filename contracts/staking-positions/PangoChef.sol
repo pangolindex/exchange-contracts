@@ -112,7 +112,7 @@ contract PangoChef is PangoChefFunding {
         mapping(address => User) users;
     }
 
-    uint256 private _poolsLength = 1; // Pool zero is PNG-WAVAX
+    uint256 private _poolsLength = 0;
 
     mapping(uint256 => Pool) public pools;
     mapping(address => uint256) public poolZeroLockCount;
