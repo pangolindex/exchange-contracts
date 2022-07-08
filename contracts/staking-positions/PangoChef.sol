@@ -435,8 +435,8 @@ contract PangoChef is PangoChefFunding {
         // Ensure only relayer itself can claim the rewards.
         if (msg.sender != pool.tokenOrRecipient) revert UnprivilegedCaller();
 
-        // Update pool reward variables that govern the reward distribution from pool to users.
-        reward = _updateRewardVariables(poolId, pool);
+        // Get the pool’s rewards.
+        reward = _claim(poolId);
 
         rewardsToken.safeTransfer(msg.sender, reward);
         emit Withdrawn(poolId, msg.sender, 0, reward);
