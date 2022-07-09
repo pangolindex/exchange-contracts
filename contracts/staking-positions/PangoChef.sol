@@ -214,7 +214,24 @@ contract PangoChef is PangoChefFunding {
     function compoundToPoolZero(uint256 poolId, uint256 maxPairAmount) external payable {
         uint256 reward = _harvestWithoutReset(poolId);
 
-        _stake(0, msg.sender, reward, StakeType.COMPOUND_TO_POOL_ZERO, 0);
+        _stake(0, msg.sender, reward, StakeType.COMPOUND_TO_POOL_ZERO, maxPairAmount);
+    }
+
+    function claim(uint256 poolId) external returns (uint256 reward) {
+        // Create a storage pointer for the pool.
+        Pool storage pool = pools[poolId];
+
+        // Ensure pool is RELAYER type.
+        _onlyRelayerPool(pool);
+
+        // Ensure only relayer itself can claim the rewards.
+        if (msg.sender != pool.tokenOrRecipient) revert UnprivilegedCaller();
+
+        // Get the pool’s rewards.
+        reward = _claim(poolId);
+
+        rewardsToken.safeTransfer(msg.sender, reward);
+        emit Withdrawn(poolId, msg.sender, 0, reward);
     }
 
     function _stake(
@@ -434,23 +451,6 @@ contract PangoChef is PangoChefFunding {
         if (address(rewarder) != address(0)) {
             rewarder.onReward(poolId, msg.sender, msg.sender, reward, userBalance);
         }
-    }
-
-    function claim(uint256 poolId) external returns (uint256 reward) {
-        // Create a storage pointer for the pool.
-        Pool storage pool = pools[poolId];
-
-        // Ensure pool is RELAYER type.
-        _onlyRelayerPool(pool);
-
-        // Ensure only relayer itself can claim the rewards.
-        if (msg.sender != pool.tokenOrRecipient) revert UnprivilegedCaller();
-
-        // Get the pool’s rewards.
-        reward = _claim(poolId);
-
-        rewardsToken.safeTransfer(msg.sender, reward);
-        emit Withdrawn(poolId, msg.sender, 0, reward);
     }
 
     /**

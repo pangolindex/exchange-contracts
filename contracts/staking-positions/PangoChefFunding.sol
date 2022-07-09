@@ -201,7 +201,10 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
         uint256 length = poolIds.length;
         if (length != weights.length) revert MismatchedArrayLengths();
 
+        // Get `poolsLength` to ensure in the loop that pools for a `poolId` exists.
         uint256 tmpPoolsLength = poolsLength();
+
+        // Loop through all the supplied pools, and calculate total weight change.
         int256 weightChange;
         for (uint256 i = 0; i < length; ) {
             uint256 poolId = poolIds[i];
@@ -210,27 +213,31 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
             // Ensure pool is initialized by the parent contract.
             if (poolId >= tmpPoolsLength) revert OutOfBounds();
 
+            // Create storage pointer for the pool.
             PoolRewardInfo storage pool = poolRewardInfos[poolId];
 
+            // Ensure weight is changed.
             uint256 oldWeight = pool.weight;
             if (weight == oldWeight) revert NoEffect();
 
-            pool.stashedRewards = uint96(_updateRewardPerWeightPaid(pool));
-            pool.weight = uint32(weight);
-
+            // Update the weightChange local variable.
             weightChange += (int256(weight) - int256(oldWeight));
 
+            // Stash the rewards of the pool since last update, and update the pool weight.
+            pool.stashedRewards = uint96(_updateRewardPerWeightPaid(pool));
+            pool.weight = uint32(weight);
             emit WeightSet(poolId, weight);
 
+            // Counter cannot realistically overflow.
             unchecked {
                 ++i;
             }
         }
 
+        // Ensure weight change is reasonable, then update the totalWeight state variable.
         int256 newTotalWeight = int256(uint256(totalWeight)) + weightChange;
         if (newTotalWeight < 0) revert OutOfBounds();
         if (uint256(newTotalWeight) > MAX_TOTAL_WEIGHT) revert OutOfBounds();
-
         totalWeight = uint32(uint256(newTotalWeight));
     }
 
