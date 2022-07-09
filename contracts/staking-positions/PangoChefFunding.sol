@@ -9,10 +9,11 @@ import "./GenericErrors.sol";
  * @title PangoChef Funding
  * @author Shung for Pangolin
  * @notice A contract that is only the reward funding part of `PangoChef`.
- * @dev The inheriting contract must call `_claim()` to check its reward since the last time the
- * same call was made. Then, based on the reward amount, the inheriting contract shall determine
- * the distribution to stakers. The purpose of this architecture is to separate the logic of
- * funding from the staking and the reward distribution.
+ * @dev The pools of the inheriting contract must call `_claim()` to check their rewards since the
+ * last time they made the same call. Then, based on the reward amount, the pool shall determine
+ * the distribution to stakers. It uses the same algorithm as Synthetix’ StakingRewards, but
+ * instead of distributing rewards to stakers based on their staked amount, it distributes rewards
+ * to pools based on arbitrary weights.
  */
 abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
     using SafeTransferLib for ERC20;
@@ -22,17 +23,17 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
         uint32 weight;
         // Pool’s previous non-claimed rewards, stashed when its weight changes.
         uint96 stashedRewards;
-        // `rewardPerWeightStored` snapshotted when pool gets updated.
+        // `rewardPerWeightStored` snapshot as `rewardPerWeightPaid` when the pool gets updated.
         uint128 rewardPerWeightPaid;
     }
 
     /**
-     * @notice The mapping from poolId to the struct that stores variables for determining how
-     * global rewards are distributed to the pools.
+     * @notice The mapping from poolId to the struct that stores variables for determining pools’
+     * shares of the global rewards.
      */
     mapping(uint256 => PoolRewardInfo) public poolRewardInfos;
 
-    /** @notice The variable representing how much rewards distributed per weight. */
+    /** @notice The variable representing how much rewards are distributed per weight. It stores in fixed denominator. */
     uint128 public rewardPerWeightStored;
 
     /** @notice The timestamp when the last time the rewards were claimed by a pool. */

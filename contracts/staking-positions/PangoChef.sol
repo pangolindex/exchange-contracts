@@ -53,7 +53,8 @@ contract PangoChef is PangoChefFunding {
 
     enum StakeType {
         REGULAR,
-        COMPOUND
+        COMPOUND,
+        COMPOUND_TO_POOL_ZERO
     }
 
     struct ValueVariables {
@@ -135,7 +136,12 @@ contract PangoChef is PangoChefFunding {
     );
 
     /** @notice The event emitted when staking to, minting, or compounding a position. */
-    event Staked(uint256 indexed positionId, address indexed userId, uint256 amount);
+    event Staked(
+        uint256 indexed positionId,
+        address indexed userId,
+        uint256 amount,
+        uint256 reward
+    );
 
     /** @notice The event emitted when a pool is created. */
     event PoolInitialized(uint256 indexed poolId, address indexed tokenOrRecipient);
@@ -164,8 +170,9 @@ contract PangoChef is PangoChefFunding {
     }
 
     function setRewarder(uint256 poolId, address rewarder) external onlyRole(POOL_MANAGER_ROLE) {
+        Pool storage pool = pools[poolId];
         _onlyERC20Pool(pool);
-        pools[poolId].rewarder = rewarder;
+        pool.rewarder = IRewarder(rewarder);
         emit RewarderSet(poolId, rewarder);
     }
 
@@ -251,27 +258,31 @@ contract PangoChef is PangoChefFunding {
 
         if (amount == 0) revert NoEffect();
 
-        // Get the new total staked amount and ensure it fits MAX_STAKED_AMOUNT_IN_POOL.
-        ValueVariables storage poolValueVariables = pool.valueVariables;
-        uint256 newTotalStaked = poolValueVariables.balance + amount;
-        if (newTotalStaked > MAX_STAKED_AMOUNT_IN_POOL) revert Overflow();
+        // Use new scope to prevent stack too deep.
+        uint256 newBalance;
+        {
+            // Get the new total staked amount and ensure it fits MAX_STAKED_AMOUNT_IN_POOL.
+            ValueVariables storage poolValueVariables = pool.valueVariables;
+            uint256 newTotalStaked = pool.valueVariables.balance + amount;
+            if (newTotalStaked > MAX_STAKED_AMOUNT_IN_POOL) revert Overflow();
 
-        // Increment the pool info pertaining to pool’s total value calculation.
-        uint152 addedEntryTimes = uint152(block.timestamp * amount);
-        poolValueVariables.sumOfEntryTimes += addedEntryTimes;
-        poolValueVariables.balance = uint96(newTotalStaked);
+            // Increment the pool info pertaining to pool’s total value calculation.
+            uint152 addedEntryTimes = uint152(block.timestamp * amount);
+            pool.valueVariables.sumOfEntryTimes += addedEntryTimes;
+            pool.valueVariables.balance = uint96(newTotalStaked);
 
-        // Increment the user info pertaining to user value calculation.
-        ValueVariables storage userValueVariables = user.valueVariables;
-        uint256 oldBalance = userValueVariables.balance;
-        uint256 newBalance = oldBalance + amount;
-        unchecked {
-            userValueVariables.balance = uint96(newBalance);
+            // Increment the user info pertaining to user value calculation.
+            ValueVariables storage userValueVariables = user.valueVariables;
+            uint256 oldBalance = user.valueVariables.balance;
+            unchecked {
+                newBalance = oldBalance + amount;
+            }
+            user.valueVariables.balance = uint96(newBalance);
+            user.valueVariables.sumOfEntryTimes += addedEntryTimes;
+
+            // Increment the previousValues.
+            user.previousValues += uint152(oldBalance * (block.timestamp - user.lastUpdate));
         }
-        userValueVariables.sumOfEntryTimes += addedEntryTimes;
-
-        // Increment the previousValues.
-        user.previousValues += uint152(oldBalance * (block.timestamp - user.lastUpdate));
 
         // Snapshot the lastUpdate and reward variables.
         _snapshotRewardVariables(pool, user);
@@ -373,11 +384,11 @@ contract PangoChef is PangoChefFunding {
         ValueVariables memory userValueVariables = user.valueVariables;
 
         // Decrement the state variables pertaining to total value calculation.
-        uint96 balance = userValueVariables.balance;
+        uint104 balance = userValueVariables.balance;
         poolValueVariables.balance -= balance;
         poolValueVariables.sumOfEntryTimes -= userValueVariables.sumOfEntryTimes;
 
-        delete pools[poolId].user[msg.sender];
+        delete pools[poolId].users[msg.sender];
 
         ERC20(pool.tokenOrRecipient).safeTransfer(msg.sender, balance);
         emit Withdrawn(poolId, msg.sender, balance, 0);
