@@ -27,7 +27,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
     /** @notice The amount of total rewards added. */
     uint96 public totalRewardAdded;
 
-    /** @notice The duration of how long the rewards will last after `addReward` is called. */
+    /** @notice The duration for how long the rewards will last after `addReward` is called. */
     uint256 public periodDuration = 14 days;
 
     /** @notice The minimum duration a period can last. */
@@ -126,7 +126,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
         // do not want to stash the rewards to keep the cost low. However, using this method means
         // that `_pendingRewards()` will change, hence a user might “lose” rewards earned since
         // `lastUpdate`. It is not a very big deal as the `lastUpdate` is likely to be updated
-        // frequently, but just something to keep in mind.
+        // frequently, but just something to acknowledge.
         uint256 tmpRewardRate;
         if (lastUpdate >= periodFinish) {
             tmpRewardRate = amount / tmpPeriodDuration;

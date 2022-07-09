@@ -39,10 +39,38 @@ interface IRewarder {
 }
 
 /**
+ * @title ReentrancyGuard
+ * @author Shung for Pangolin
+ * @author Modified from Solmate
+ * (https://github.com/Rari-Capital/solmate/blob/main/src/utils/ReentrancyGuard.sol)
+ */
+abstract contract ReentrancyGuard {
+    uint256 private locked = 1;
+
+    error Reentrancy();
+
+    function _notEntered() internal view {
+        if (locked == 2) revert Reentrancy();
+    }
+
+    modifier nonReentrant() {
+        _notEntered();
+        locked = 2;
+        _;
+        locked = 1;
+    }
+
+    modifier notEntered() {
+        _notEntered();
+        _;
+    }
+}
+
+/**
  * @title PangoChef
  * @author Shung for Pangolin
  */
-contract PangoChef is PangoChefFunding {
+contract PangoChef is PangoChefFunding, ReentrancyGuard {
     using SafeTransferLib for ERC20;
 
     enum PoolType {
@@ -116,12 +144,18 @@ contract PangoChef is PangoChefFunding {
     uint256 private _poolsLength = 0;
 
     mapping(uint256 => Pool) public pools;
+
     mapping(address => uint256) public poolZeroLockCount;
+
     mapping(uint256 => address) public rewardPairs;
 
+    /** @notice The AMM factory that creates pair tokens. */
     IPangolinFactory public immutable factory;
+
+    /** @notice The contract for wrapping and unwrapping the native gas token (e.g.: WETH). */
     address immutable wrappedNativeToken;
 
+    /** @notice The maximum amount of tokens that can be staked in a pool. */
     uint256 private constant MAX_STAKED_AMOUNT_IN_POOL = type(uint104).max;
 
     /** @notice The fixed denominator used for storing reward variables. */
@@ -146,6 +180,7 @@ contract PangoChef is PangoChefFunding {
     /** @notice The event emitted when a pool is created. */
     event PoolInitialized(uint256 indexed poolId, address indexed tokenOrRecipient);
 
+    /** @notice The event emitted when the rewarder of a pool is chagned. */
     event RewarderSet(uint256 indexed poolId, address indexed rewarder);
 
     /**
@@ -183,7 +218,7 @@ contract PangoChef is PangoChefFunding {
         _initializePool(tokenOrRecipient, poolType);
     }
 
-    function stake(uint256 poolId, uint256 amount) external {
+    function stake(uint256 poolId, uint256 amount) external notEntered {
         _stake(poolId, msg.sender, amount, StakeType.REGULAR, 0);
     }
 
@@ -191,33 +226,51 @@ contract PangoChef is PangoChefFunding {
         uint256 poolId,
         address userId,
         uint256 amount
-    ) external {
+    ) external notEntered {
         _stake(poolId, userId, amount, StakeType.REGULAR, 0);
     }
 
-    function compound(uint256 poolId, uint256 maxPairAmount) external payable {
+    function compound(uint256 poolId, uint256 maxPairAmount) external payable nonReentrant {
         _stake(poolId, msg.sender, 0, StakeType.COMPOUND, maxPairAmount);
     }
 
-    function withdraw(uint256 poolId, uint256 amount) external {
+    function withdraw(uint256 poolId, uint256 amount) external notEntered {
         _withdraw(poolId, amount);
     }
 
-    function harvest(uint256 poolId) external {
+    function harvest(uint256 poolId) external notEntered {
         _withdraw(poolId, 0);
     }
 
-    function emergencyExit(uint256 poolId) external {
-        _exit(poolId);
-    }
-
-    function compoundToPoolZero(uint256 poolId, uint256 maxPairAmount) external payable {
+    function compoundToPoolZero(uint256 poolId, uint256 maxPairAmount) external payable nonReentrant {
         uint256 reward = _harvestWithoutReset(poolId);
 
         _stake(0, msg.sender, reward, StakeType.COMPOUND_TO_POOL_ZERO, maxPairAmount);
     }
 
-    function claim(uint256 poolId) external returns (uint256 reward) {
+    function emergencyExit(uint256 poolId) external notEntered {
+        // Create a storage pointers for the pool and the user.
+        Pool storage pool = pools[poolId];
+        User storage user = pool.users[msg.sender];
+
+        // Ensure pool is ERC20 type.
+        _onlyERC20Pool(pool);
+
+        ValueVariables memory poolValueVariables = pool.valueVariables;
+        ValueVariables memory userValueVariables = user.valueVariables;
+
+        // Decrement the state variables pertaining to total value calculation.
+        uint104 balance = userValueVariables.balance;
+        poolValueVariables.balance -= balance;
+        poolValueVariables.sumOfEntryTimes -= userValueVariables.sumOfEntryTimes;
+
+        delete pools[poolId].users[msg.sender];
+
+        ERC20(pool.tokenOrRecipient).safeTransfer(msg.sender, balance);
+        emit Withdrawn(poolId, msg.sender, balance, 0);
+    }
+
+    function claim(uint256 poolId) external notEntered returns (uint256 reward) {
         // Create a storage pointer for the pool.
         Pool storage pool = pools[poolId];
 
@@ -232,6 +285,55 @@ contract PangoChef is PangoChefFunding {
 
         rewardsToken.safeTransfer(msg.sender, reward);
         emit Withdrawn(poolId, msg.sender, 0, reward);
+    }
+
+    /**
+     * @notice External view function to get the reward rate of a user of a pool.
+     * @dev In SAR, users have different APRs, unlike other staking algorithms. This external
+     * function clearly demonstrates how the SAR algorithm is supposed to distribute the rewards
+     * based on “value”, which is balance times staking duration. This external function can be
+     * considered as a specification.
+     * @param poolId The identifier of the pool the user is in.
+     * @param userId The identifier of the user in the pool.
+     * @return The rewards per second of the user.
+     */
+    function userRewardRate(uint256 poolId, address userId) external view returns (uint256) {
+        // Get totalValue and positionValue.
+        Pool storage pool = pools[poolId];
+        uint256 poolValue = _getValue(pool.valueVariables);
+        uint256 userValue = _getValue(pool.users[userId].valueVariables);
+
+        // Return the rewardRate of the user. Do not revert if poolValue is zero.
+        return userValue == 0 ? 0 : (globalRewardRate * userValue) / poolValue;
+    }
+
+    /**
+     * @notice External view function to get the accrued rewards of a user. It takes the
+     * pending rewards of the pool since lastUpdate into consideration.
+     * @param poolId The identifier of the pool the user is in.
+     * @param userId The identifier of the user in the pool.
+     * @return The amount of rewards that have been accrued in the position.
+     */
+    function userPendingRewards(uint256 poolId, address userId) external view returns (uint256) {
+        // Create a storage pointer for the position.
+        Pool storage pool = pools[poolId];
+        User storage user = pool.users[userId];
+
+        // Get the delta of reward variables. Use incremented `rewardVariablesStored` based on the
+        // pending rewards.
+        RewardVariables memory deltaRewardVariables = _getDeltaRewardVariables(
+            poolId,
+            pool,
+            user,
+            true
+        );
+
+        // Return the pending rewards of the user based on the difference in rewardVariables.
+        return _earned(deltaRewardVariables, user);
+    }
+
+    function poolsLength() public view override returns (uint256) {
+        return _poolsLength;
     }
 
     function _stake(
@@ -275,7 +377,7 @@ contract PangoChef is PangoChefFunding {
 
         if (amount == 0) revert NoEffect();
 
-        // Use new scope to prevent stack too deep.
+        // Use new scope to prevent stack too deep error.
         uint256 newBalance;
         {
             // Get the new total staked amount and ensure it fits MAX_STAKED_AMOUNT_IN_POOL.
@@ -331,12 +433,12 @@ contract PangoChef is PangoChefFunding {
         // Update pool reward variables that govern the reward distribution from pool to users.
         _updateRewardVariables(poolId, pool);
 
-        // Decrement lock count on pool zero if this pool was locking it.
         if (poolId == 0) {
+            // Ensure pool zero is not locked.
             if (poolZeroLockCount[msg.sender] != 0) revert Locked();
-        } else if (user.isLockingPoolZero) {
-            --poolZeroLockCount[msg.sender];
-            user.isLockingPoolZero = false;
+        } else {
+            // Decrement lock count on pool zero if this pool was locking it.
+            _decrementLockOnPoolZero(user);
         }
 
         // Get position balance and ensure sufficient balance exists.
@@ -389,28 +491,6 @@ contract PangoChef is PangoChefFunding {
         }
     }
 
-    function _exit(uint256 poolId) private {
-        // Create a storage pointers for the pool and the user.
-        Pool storage pool = pools[poolId];
-        User storage user = pool.users[msg.sender];
-
-        // Ensure pool is ERC20 type.
-        _onlyERC20Pool(pool);
-
-        ValueVariables memory poolValueVariables = pool.valueVariables;
-        ValueVariables memory userValueVariables = user.valueVariables;
-
-        // Decrement the state variables pertaining to total value calculation.
-        uint104 balance = userValueVariables.balance;
-        poolValueVariables.balance -= balance;
-        poolValueVariables.sumOfEntryTimes -= userValueVariables.sumOfEntryTimes;
-
-        delete pools[poolId].users[msg.sender];
-
-        ERC20(pool.tokenOrRecipient).safeTransfer(msg.sender, balance);
-        emit Withdrawn(poolId, msg.sender, balance, 0);
-    }
-
     function _harvestWithoutReset(uint256 poolId) private returns (uint256 reward) {
         // Create a storage pointer for the pool and the user.
         Pool storage pool = pools[poolId];
@@ -426,10 +506,7 @@ contract PangoChef is PangoChefFunding {
         if (poolId == 0) revert Locked();
 
         // Increment lock count on pool zero if this pool was not already locking it.
-        if (!user.isLockingPoolZero) {
-            ++poolZeroLockCount[msg.sender];
-            user.isLockingPoolZero = true;
-        }
+        _incrementLockOnPoolZero(user);
 
         // Get the rewards accrued by the user, then delete the user stash.
         reward = _userPendingRewards(poolId, pool, user);
@@ -453,53 +530,18 @@ contract PangoChef is PangoChefFunding {
         }
     }
 
-    /**
-     * @notice External view function to get the reward rate of a user of a pool.
-     * @dev In SAR, users have different APRs, unlike other staking algorithms. This external
-     * function clearly demonstrates how the SAR algorithm is supposed to distribute the rewards
-     * based on “value”, which is balance times staking duration. This external function can be
-     * considered as a specification.
-     * @param poolId The identifier of the pool the user is in.
-     * @param userId The identifier of the user in the pool.
-     * @return The rewards per second of the user.
-     */
-    function userRewardRate(uint256 poolId, address userId) external view returns (uint256) {
-        // Get totalValue and positionValue.
-        Pool storage pool = pools[poolId];
-        uint256 poolValue = _getValue(pool.valueVariables);
-        uint256 userValue = _getValue(pool.users[userId].valueVariables);
-
-        // Return the rewardRate of the user. Do not revert if poolValue is zero.
-        return userValue == 0 ? 0 : (globalRewardRate * userValue) / poolValue;
+    function _incrementLockOnPoolZero(User storage user) private {
+        if (!user.isLockingPoolZero) {
+            ++poolZeroLockCount[msg.sender];
+            user.isLockingPoolZero = true;
+        }
     }
 
-    /**
-     * @notice External view function to get the accrued rewards of a user. It takes the
-     * pending rewards of the pool since lastUpdate into consideration.
-     * @param poolId The identifier of the pool the user is in.
-     * @param userId The identifier of the user in the pool.
-     * @return The amount of rewards that have been accrued in the position.
-     */
-    function userPendingRewards(uint256 poolId, address userId) external view returns (uint256) {
-        // Create a storage pointer for the position.
-        Pool storage pool = pools[poolId];
-        User storage user = pool.users[userId];
-
-        // Get the delta of reward variables. Use incremented `rewardVariablesStored` based on the
-        // pending rewards.
-        RewardVariables memory deltaRewardVariables = _getDeltaRewardVariables(
-            poolId,
-            pool,
-            user,
-            true
-        );
-
-        // Return the pending rewards of the user based on the difference in rewardVariables.
-        return _earned(deltaRewardVariables, user);
-    }
-
-    function poolsLength() public view override returns (uint256) {
-        return _poolsLength;
+    function _decrementLockOnPoolZero(User storage user) private {
+        if (user.isLockingPoolZero) {
+            --poolZeroLockCount[msg.sender];
+            user.isLockingPoolZero = false;
+        }
     }
 
     function _initializePool(address tokenOrRecipient, PoolType poolType) private {
@@ -526,8 +568,6 @@ contract PangoChef is PangoChefFunding {
         address rewardPair,
         uint256 maxPairAmount
     ) private returns (uint256 poolTokenAmount) {
-        // SET REENTRANCY GUARD HERE
-
         // Get token amounts from the pool.
         (uint256 reserve0, uint256 reserve1, ) = IPangolinPair(poolToken).getReserves();
 
@@ -563,8 +603,6 @@ contract PangoChef is PangoChefFunding {
 
         // Mint liquidity tokens to the PangoChef and return the amount minted.
         poolTokenAmount = IPangolinPair(poolToken).mint(address(this));
-
-        // UNSET REENTRANCY GUARD HERE
     }
 
     /**
