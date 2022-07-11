@@ -4,7 +4,7 @@ pragma solidity 0.8.15;
 import "@rari-capital/solmate/src/tokens/ERC721.sol";
 import "./PangolinStakingPositionsFunding.sol";
 
-interface TokenMetadata {
+interface ITokenMetadata {
     function tokenURI(PangolinStakingPositions pangolinStakingPositions, uint256 tokenId)
         external
         view
@@ -15,49 +15,51 @@ interface TokenMetadata {
  * @title Pangolin Staking Positions
  * @author shung for Pangolin
  *
- * @notice
- * Pangolin Staking Positions is a unique staking solution. It utilizes the Sunshine and Rainbows
- * (SAR) algorithm, which distributes rewards as a function of balance and staking duration. See
- * README and the Proofs paper to see how SAR works. In this implementation, the staking token
- * is the same as the reward token, and staking information is recorded as positions where each
- * position is an NFT.
+ * @notice Pangolin Staking Positions is a unique staking solution. It utilizes the Sunshine and
+ *         Rainbows (SAR) algorithm, which distributes rewards as a function of balance and staking
+ *         duration. See README and the Proofs paper to see how SAR works. In this implementation,
+ *         the staking token is the same as the reward token, and staking information is recorded
+ *         as positions where each position is an NFT.
  *
  * @dev SAR Algorithm:
- * SAR allocates a user (or position) the following proportion of any given rewards:
+
+ *      SAR allocates a user (or position) the following proportion of any given rewards:
  *
- * `(balance_position / balance_total) * (stakingDuration_position / stakingDuration_average)`.
+ *      `(balance_position / balance_total) * (stakingDuration_position /
+ *      stakingDuration_average)`.
  *
- * Staking duration is how long a token has been staked. The staking duration of a token starts
- * when it is staked, restarts when its rewards are harvested, and ends when it is withdrawn.
+ *      Staking duration is how long a token has been staked. The staking duration of a token
+ *      starts when it is staked, restarts when its rewards are harvested, and ends when it is
+ *      withdrawn.
  *
- * We can refer to `balance * stakingDuration` as `value`. Based on this definition, the formula
- * above can be simplifed to `value_position / value_total`.
+ *      We can refer to `balance * stakingDuration` as `value`. Based on this definition, the
+ *      formula above can be simplifed to `value_position / value_total`.
  *
- * Although this looks similar to just `balance_position / balance_total`, unlike balance, the
- * value of every position is constantly changing as a function of time. Therefore, we cannot
- * simply use the standard staking algorithm (i.e.: Synthetix StakingRewards) for calculating
- * rewards of users in constant time. A new algorithm had to be invented for this reason.
+ *      Although this looks similar to just `balance_position / balance_total`, unlike balance, the
+ *      value of every position is constantly changing as a function of time. Therefore, we cannot
+ *      simply use the standard staking algorithm (i.e.: Synthetix StakingRewards) for calculating
+ *      rewards of users in constant time. A new algorithm had to be invented for this reason.
  *
- * To understand the algorithm, one must read the Proofs. Then
- * `_getRewardVariableIncrementations()` and `_earned()` functions will make sense.
+ *      To understand the algorithm, one must read the Proofs. Then
+ *      `_getRewardVariableIncrementations()` and `_earned()` functions will make sense.
  *
  * @dev Assumptions (not checked to be true):
- * - `rewardsToken` reverts or returns false on invalid transfers,
- * - `block.timestamp * totalRewardAdded` fits 128 bits,
- * - `block.timestamp` fits 40 bits.
+ *      - `rewardsToken` reverts or returns false on invalid transfers,
+ *      - `block.timestamp * totalRewardAdded` fits 128 bits,
+ *      - `block.timestamp` fits 40 bits.
  *
  * @dev Limitations (checked to be true):
- * - `totalStaked` fits 96 bits.
- * - `totalRewardAdded` fits 96 bits.
+ *      - `totalStaked` fits 96 bits.
+ *      - `totalRewardAdded` fits 96 bits.
  *
  * @dev Some invariants (must hold true at any given state):
- * - Sum of all positions’ ‘values’ equals to ‘total value’,
- * - Sum of all positions’ `balance` equals to `totalStaked`,
- * - Sum of all positions’ `entryTimes` equals to `sumOfEntryTimes`,
- * - `_idealPosition` is greater or equal to the `idealPosition` of any position,
- * - `_rewardPerValue` is greater or equal to the `rewardPerValue` of any position,
- * - The sum of total claimed and pending rewards from `RewardFunding`, must equal to sum of all
- *   positions’ lost (due to `emergencyExit()`), harvested, and pending rewards.
+ *      - Sum of all positions’ ‘values’ equals to ‘total value’,
+ *      - Sum of all positions’ `balance` equals to `totalStaked`,
+ *      - Sum of all positions’ `entryTimes` equals to `sumOfEntryTimes`,
+ *      - `_idealPosition` is greater or equal to the `idealPosition` of any position,
+ *      - `_rewardPerValue` is greater or equal to the `rewardPerValue` of any position,
+ *      - The sum of total claimed and pending rewards from `RewardFunding`, must equal to sum of
+ *        all positions’ lost (due to `emergencyExit()`), harvested, and pending rewards.
  */
 contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     struct ValueVariables {
@@ -107,7 +109,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     mapping(uint256 => Position) public positions;
 
     /** @notice The contract that constructs and returns tokenURIs for position tokens. */
-    TokenMetadata public tokenMetadata;
+    ITokenMetadata public tokenMetadata;
 
     /** @notice The struct holding the totalStaked and sumOfEntryTimes. */
     ValueVariables totalValueVariables;
@@ -118,13 +120,13 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     /**
      * @notice The duration during NFT approvals are ignored after an update that devalues it.
      * @dev This is a hacky solution to prevent frontrunning NFT sales. This is a general issue
-     * with all NFTs with mutable state, because NFT marketplaces do not have a standard method for
-     * “slippage control”. This allows a malicious actor utilizing MEV to devalue the NFT token in
-     * the same block as someone buying the NFT. For example, if a position has 5 PNG tokens, and
-     * someone makes a transaction to buy its NFT, the owner of the position can withdraw all PNG
-     * in the position, resulting in buyer to buy a position with 0 balance instead of 5. By using
-     * `approvalPauseDuration` we simply disable transfers made by non-owners (i.e.: marketplace
-     * contract) for a period.
+     *      with all NFTs with mutable state, because NFT marketplaces do not have a standard
+     *      method for “slippage control”. This allows a malicious actor utilizing MEV to
+     *      devalue the NFT token in the same block as someone buying the NFT. For example, if a
+     *      position has 5 PNG tokens, and someone makes a transaction to buy its NFT, the owner
+     *      of the position can withdraw all PNG in the position, resulting in buyer to buy a
+     *      position with 0 balance instead of 5. By using `approvalPauseDuration` we simply
+     *      disable transfers made by non-owners (i.e.: marketplace contract) for a period.
      */
     uint256 public approvalPauseDuration = 2 hours;
 
@@ -150,7 +152,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     event PauseDurationSet(uint256 newApprovalPauseDuration);
 
     /** @notice The event emitted when admin changes `tokenMetadata`. */
-    event TokenMetadataSet(TokenMetadata newTokenMetadata);
+    event TokenMetadataSet(ITokenMetadata newTokenMetadata);
 
     modifier onlyOwner(uint256 positionId) {
         if (ownerOf(positionId) != msg.sender) revert UnprivilegedCaller();
@@ -165,7 +167,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     constructor(
         address newRewardsToken,
         address newAdmin,
-        TokenMetadata newTokenMetadata
+        ITokenMetadata newTokenMetadata
     )
         ERC721("Pangolin Staking Positions", "PNG-POS")
         PangolinStakingPositionsFunding(newRewardsToken, newAdmin)
@@ -232,7 +234,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
 
     /**
      * @notice External function to withdraw given amount of staked balance, plus all the accrued
-     * rewards from the position.
+     *         rewards from the position.
      * @param positionId The identifier of the position to withdraw the balance.
      * @param amount The amount of staked tokens, excluding rewards, to withdraw from the position.
      */
@@ -246,7 +248,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
 
     /**
      * @notice External function to close a position by withdrawing the staked balance and claiming
-     * all the accrued rewards.
+     *         all the accrued rewards.
      * @param positionId The identifier of the position to close.
      */
     function burn(uint256 positionId) external {
@@ -338,7 +340,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      * @notice External only-owner function to change the contract that constructs tokenURIs.
      * @param newTokenMetadata The addresss of the new contract address that constructs tokenURIs.
      */
-    function setTokenMetadata(TokenMetadata newTokenMetadata)
+    function setTokenMetadata(ITokenMetadata newTokenMetadata)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
@@ -349,9 +351,9 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     /**
      * @notice External view function to get the reward rate of a position.
      * @dev In SAR, positions have different APRs, unlike other staking algorithms. This external
-     * function clearly demonstrates how the SAR algorithm is supposed to distribute the rewards
-     * based on “value”, which is balance times staking duration. This external function can be
-     * considered as a specification.
+     *      function clearly demonstrates how the SAR algorithm is supposed to distribute the
+     *      rewards based on “value”, which is balance times staking duration. This external
+     *      function can be considered as a specification.
      * @param positionId The identifier of the position to check the reward rate of.
      * @return The rewards per second of the position.
      */
@@ -366,7 +368,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
 
     /**
      * @notice External view function to get the accrued rewards of a position. It takes the
-     * pending rewards since lastUpdate into consideration.
+     *         pending rewards since lastUpdate into consideration.
      * @param positionId The identifier of the position to check the accrued rewards of.
      * @return The amount of rewards that have been accrued in the position.
      */
@@ -387,12 +389,12 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      * @param amount The amount of tokens to deposit into the position.
      * @param positionId The identifier of the position to deposit the funds into.
      * @dev Specifications:
-     * - Deposit `amount` tokens to the position associated with `positionId`,
-     * - Make the staking duration of `amount` restart,
-     * - Claim accrued `reward` tokens of the position,
-     * - Deposit `reward` tokens back into the position,
-     * - Make the staking duration of `reward` tokens start from zero.
-     * - Do not make the staking duration of the existing `balance` restart,
+     *      - Deposit `amount` tokens to the position associated with `positionId`,
+     *      - Make the staking duration of `amount` restart,
+     *      - Claim accrued `reward` tokens of the position,
+     *      - Deposit `reward` tokens back into the position,
+     *      - Make the staking duration of `reward` tokens start from zero.
+     *      - Do not make the staking duration of the existing `balance` restart,
      */
     function _stake(uint256 positionId, uint256 amount) private onlyOwner(positionId) {
         // Create a storage pointer for the position.
@@ -435,15 +437,15 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
 
     /**
      * @notice Private function to withdraw given amount of staked balance, plus all the accrued
-     * rewards from the position. Also acts as harvest when input amount is zero.
+     *         rewards from the position. Also acts as harvest when input amount is zero.
      * @param positionId The identifier of the position to withdraw the balance.
      * @param amount The amount of staked tokens, excluding rewards, to withdraw from the position.
      * @dev Specifications:
-     * - Claim accrued `reward` tokens of the position,
-     * - Send `reward` tokens from the contract to the position owner,
-     * - Send `amount` tokens from the contract to the position owner,
-     * - Make the staking duration of the remaining `balance` restart,
-     * - Ignore NFT spending approvals for a duration set by the admin.
+     *      - Claim accrued `reward` tokens of the position,
+     *      - Send `reward` tokens from the contract to the position owner,
+     *      - Send `amount` tokens from the contract to the position owner,
+     *      - Make the staking duration of the remaining `balance` restart,
+     *      - Ignore NFT spending approvals for a duration set by the admin.
      */
     function _withdraw(uint256 positionId, uint256 amount) private onlyOwner(positionId) {
         // Create a storage pointer for the position.
@@ -499,10 +501,10 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      * @notice External function to exit from a position by forgoing rewards.
      * @param positionId The identifier of the position to exit from.
      * @dev Specifications:
-     * - Burn the NFT associated with `positionId`,
-     * - Close the position associated with `positionId`,
-     * - Send `balance` tokens of the position to the user wallet,
-     * - Ignore `reward` tokens, making them permanently irrecoverable.
+     *      - Burn the NFT associated with `positionId`,
+     *      - Close the position associated with `positionId`,
+     *      - Send `balance` tokens of the position to the user wallet,
+     *      - Ignore `reward` tokens, making them permanently irrecoverable.
      */
     function _emergencyExit(uint256 positionId) private onlyOwner(positionId) {
         // Move the queried position to memory.
@@ -522,7 +524,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
 
     /**
      * @notice Private function to claim the total pending rewards, and based on the claimed amount
-     * update the two variables that govern the reward distribution.
+     *         update the two variables that govern the reward distribution.
      */
     function _updateRewardVariables() private {
         // Get rewards, in the process updating the last update time.
@@ -551,7 +553,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     /**
      * @notice Private view function to get the accrued rewards of a position.
      * @dev The call to this function must only be made after the reward variables are updated
-     * through `_updateRewardVariables()`.
+     *      through `_updateRewardVariables()`.
      * @param position The properties of the position.
      * @return The accrued rewards of the position.
      */
@@ -566,10 +568,10 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
 
     /**
      * @notice Private view function to get the difference between a position’s reward variables
-     * (‘paid’) and global reward variables (‘stored’).
+     *         (‘paid’) and global reward variables (‘stored’).
      * @param position The position for which to calculate the delta of reward variables.
      * @param increment Whether to the incremented `rewardVariablesStored` based on the pending
-     * rewards of the contract.
+     *                  rewards of the contract.
      * @return The difference between the `rewardVariablesStored` and `rewardVariablesPaid`.
      */
     function _getDeltaRewardVariables(Position storage position, bool increment)
@@ -616,7 +618,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
 
     /**
      * @notice Private view function to calculate the `rewardVariablesStored` incrementations based
-     * on the given reward amount.
+     *         on the given reward amount.
      * @param rewards The amount of rewards to use for calculating the incrementation.
      * @return idealPositionIncrementation The incrementation to make to the idealPosition.
      * @return rewardPerValueIncrementation The incrementation to make to the rewardPerValue.
@@ -637,10 +639,10 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     /**
      * @notice Private view function to get the position or contract value.
      * @dev Value refers to the sum of each `wei` of tokens’ staking durations. So if there are
-     * 10 tokens staked in the contract, and each one of them has been staked for 10 seconds, then
-     * the value is 100 (`10 * 10`). To calculate value we use sumOfEntryTimes, which is the sum of
-     * each `wei` of tokens’ staking-duration-starting timestamp. The formula below is intuitive
-     * and simple to derive. We will leave proving it to the reader.
+     *      10 tokens staked in the contract, and each one of them has been staked for 10 seconds,
+     *      then the value is 100 (`10 * 10`). To calculate value we use sumOfEntryTimes, which is
+     *      the sum of each `wei` of tokens’ staking-duration-starting timestamp. The formula
+     *      below is intuitive and simple to derive. We will leave proving it to the reader.
      * @return The total value of contract or a position.
      */
     function _getValue(ValueVariables storage valueVariables) private view returns (uint256) {

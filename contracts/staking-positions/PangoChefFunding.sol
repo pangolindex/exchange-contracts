@@ -10,10 +10,10 @@ import "./GenericErrors.sol";
  * @author Shung for Pangolin
  * @notice A contract that is only the reward funding part of `PangoChef`.
  * @dev The pools of the inheriting contract must call `_claim()` to check their rewards since the
- * last time they made the same call. Then, based on the reward amount, the pool shall determine
- * the distribution to stakers. It uses the same algorithm as Synthetix’ StakingRewards, but
- * instead of distributing rewards to stakers based on their staked amount, it distributes rewards
- * to pools based on arbitrary weights.
+ *      last time they made the same call. Then, based on the reward amount, the pool shall
+ *      determine the distribution to stakers. It uses the same algorithm as Synthetix’
+ *      StakingRewards, but instead of distributing rewards to stakers based on their staked
+ *      amount, it distributes rewards to pools based on arbitrary weights.
  */
 abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
     using SafeTransferLib for ERC20;
@@ -252,7 +252,7 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
 
     /**
      * @notice Internal function to get the amount of reward tokens to distribute to a pool since
-     * the last call for the same pool was made to this function.
+     *         the last call for the same pool was made to this function.
      * @param poolId The identifier of the pool to claim the rewards of.
      * @return reward The amount of reward tokens that is marked for distributing to the pool.
      */
@@ -311,7 +311,7 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
 
     /**
      * @notice Internal view function to get the amount of accumulated reward tokens since last
-     * update time.
+     *         update time.
      * @return The amount of reward tokens that has been accumulated since last update time.
      */
     function _globalPendingRewards() internal view returns (uint256) {

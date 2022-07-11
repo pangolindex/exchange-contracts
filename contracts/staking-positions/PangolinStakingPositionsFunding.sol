@@ -10,9 +10,9 @@ import "./GenericErrors.sol";
  * @author Shung for Pangolin
  * @notice A contract that is only the rewards part of `StakingRewards`.
  * @dev The inheriting contract must call `_claim()` to check its reward since the last time the
- * same call was made. Then, based on the reward amount, the inheriting contract shall determine
- * the distribution to stakers. The purpose of this architecture is to separate the logic of
- * funding from the staking and reward distribution.
+ *      same call was made. Then, based on the reward amount, the inheriting contract shall
+ *      determine the distribution to stakers. The purpose of this architecture is to separate the
+ *      logic of funding from the staking and reward distribution.
  */
 abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, GenericErrors {
     /** @notice The rewards given out per second during a reward period. */
@@ -30,20 +30,20 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
     /** @notice The duration for how long the rewards will last after `addReward` is called. */
     uint256 public periodDuration = 14 days;
 
-    /** @notice The minimum duration a period can last. */
-    uint256 private constant MIN_PERIOD_DURATION = 2**16 + 1;
-
-    /** @notice The maximum duration a period can last. */
-    uint256 private constant MAX_PERIOD_DURATION = 2**32;
-
-    /** @notice The maximum amount of rewards that can ever be distributed. */
-    uint256 private constant MAX_TOTAL_REWARD = type(uint96).max;
-
-    /** @notice The privileged role that can call `addReward` function */
-    bytes32 private constant FUNDER_ROLE = keccak256("FUNDER_ROLE");
-
     /** @notice The reward token that is distributed to stakers. */
     IERC20 public immutable rewardsToken;
+
+    /** @dev The minimum duration a period can last. */
+    uint256 private constant MIN_PERIOD_DURATION = 2**16 + 1;
+
+    /** @dev The maximum duration a period can last. */
+    uint256 private constant MAX_PERIOD_DURATION = 2**32;
+
+    /** @dev The maximum amount of rewards that can ever be distributed. */
+    uint256 private constant MAX_TOTAL_REWARD = type(uint96).max;
+
+    /** @dev The privileged role that can call `addReward` function */
+    bytes32 private constant FUNDER_ROLE = keccak256("FUNDER_ROLE");
 
     /** @notice The event emitted when a period is manually cut short. */
     event PeriodEnded();
@@ -155,7 +155,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
 
     /**
      * @notice Internal function to get the amount of reward tokens to distribute since last call
-     * to this function.
+     *         to this function.
      * @return reward The amount of reward tokens that is marked for distribution.
      */
     function _claim() internal returns (uint256 reward) {
@@ -184,7 +184,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
 
     /**
      * @notice Internal view function to get the amount of accumulated reward tokens since last
-     * update time.
+     *         update time.
      * @return The amount of reward tokens that has been accumulated since last update time.
      */
     function _pendingRewards() internal view returns (uint256) {
