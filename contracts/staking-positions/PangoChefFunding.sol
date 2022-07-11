@@ -242,6 +242,28 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
     }
 
     /**
+     * @notice External view function to get the reward rate of a pool
+     * @param poolId The identifier of the pool to check the reward rate of.
+     * @return The rewards per second of the pool.
+     */
+    function poolRewardRate(uint256 poolId) external view returns (uint256) {
+        // If reward period is over, simply return zero.
+        if (periodFinish < block.timestamp) return 0;
+
+        // Return the rewardRate of the pool.
+        uint256 poolWeight = poolRewardInfos[poolId].weight;
+        return poolWeight == 0 ? 0 : (globalRewardRate * poolWeight) / totalWeight;
+    }
+
+    /**
+     * @notice External view function to get the global reward rate.
+     * @return The rewards per second distributed to all pools combined.
+     */
+    function rewardRate() external view returns (uint256) {
+        return periodFinish < block.timestamp ? 0 : globalRewardRate;
+    }
+
+    /**
      * @notice Public view function to return the number of pools created by parent contract.
      * @dev This function must be overridden by the parent contract.
      * @return The number of pools created.
