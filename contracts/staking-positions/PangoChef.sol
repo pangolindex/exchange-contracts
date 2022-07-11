@@ -80,6 +80,9 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // the `compoundToPoolZero()` function to harvest rewards of a pool without resetting its
         // staking duration, which would defeat the purpose of using SAR algorithm.
         bool isLockingPoolZero;
+        // Emergency exit by-passes rewarder. Record last time emergency exited to allow rewarder
+        // to slash rewards.
+        uint48 lastTimeEmergencyExited;
         // Rewards of the user gets stashed when user’s reward variables are updated without
         // harvesting the rewards or without utilizing the rewards in compounding.
         uint96 stashedRewards;
@@ -488,7 +491,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // If rewarder exists, notify the reward amount.
         IRewarder rewarder = pool.rewarder;
         if (address(rewarder) != address(0)) {
-            rewarder.onReward(poolId, userId, userId, reward, newBalance);
+            rewarder.onReward(poolId, userId, reward, newBalance, user.lastTimeEmergencyExited);
         }
     }
 
@@ -558,9 +561,14 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         emit Withdrawn(poolId, msg.sender, amount, reward);
 
         // Get extra rewards from rewarder if it is not an emergency exit.
-        IRewarder rewarder = pool.rewarder;
-        if (address(rewarder) != address(0) && claimFromRewarder) {
-            rewarder.onReward(poolId, msg.sender, msg.sender, reward, remaining);
+        if (claimFromRewarder) {
+            IRewarder rewarder = pool.rewarder;
+            if (address(rewarder) != address(0)) {
+                rewarder.onReward(poolId, msg.sender, reward, remaining, user.lastTimeEmergencyExited);
+            }
+        } else {
+            // Record lastTimeEmergencyExited to allow a time-based rewarder to slash rewards.
+            user.lastTimeEmergencyExited = uint48(block.timestamp);
         }
     }
 
@@ -607,7 +615,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // Get extra rewards from rewarder.
         IRewarder rewarder = pool.rewarder;
         if (address(rewarder) != address(0)) {
-            rewarder.onReward(poolId, msg.sender, msg.sender, reward, userBalance);
+            rewarder.onReward(poolId, msg.sender, reward, userBalance, user.lastTimeEmergencyExited);
         }
     }
 
@@ -683,6 +691,9 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
 
         // Simply delete the user information.
         delete pools[poolId].users[msg.sender];
+
+        // Record lastTimeEmergencyExited to allow a time-based rewarder to slash rewards.
+        user.lastTimeEmergencyExited = uint48(block.timestamp);
 
         // Transfer stake from contract to user and emit the associated event.
         if (withdrawStake) {
