@@ -92,7 +92,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // The address of the token when poolType is ERC_20, or the recipient address when poolType
         // is RELAYER_POOL.
         address tokenOrRecipient;
-        // The type of the pool, which determines which action can be performed on it.
+        // The type of the pool, which determines which actions can be performed on it.
         PoolType poolType;
         // An external contract that distributes additional rewards.
         IRewarder rewarder;
@@ -619,6 +619,17 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         }
     }
 
+    /**
+     * @notice Private function to add liquidity to a Pangolin pair when compounding.
+     * @param pool The properties of the pool that has the liquidity token to add liquidity to.
+     * @param rewardAmount The amount of reward tokens that will be paired up. Requires that the
+     *                     reward amount is already set aside for adding liquidity. That means,
+     *                     user does not need to send the rewards, and it was set aside through
+     *                     harvesting.
+     * @param maxPairAmount The maximum amount of pair tokens that can be withdrawn from user to
+     *                      combine with PNG rewards when adding liquidity. It is slippage check.
+     * @return poolTokenAmount The amount of liquidity tokens that gets minted.
+     */
     function _addLiquidity(
         Pool storage pool,
         uint256 rewardAmount,
@@ -643,7 +654,10 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         tmpRewardsToken.safeTransfer(poolToken, rewardAmount);
 
         // Non-zero message value signals desire to pay with native token.
-        if (rewardPair == wrappedNativeToken && msg.value > 0) {
+        if (msg.value > 0) {
+            // Ensure reward pair is native token.
+            if (rewardPair != wrappedNativeToken) revert();
+
             // Ensure consistent slippage control.
             if (msg.value != maxPairAmount) revert();
 
@@ -652,9 +666,6 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
 
             // Refund user.
             SafeTransferLib.safeTransferETH(msg.sender, maxPairAmount - pairAmount);
-        } else if (msg.value > 0) {
-            // If rewardPair is not wrapped native token, do not allow non-zero message value.
-            revert();
         } else {
             // Transfer reward pair tokens from the user to the pair contract.
             ERC20(rewardPair).safeTransferFrom(msg.sender, poolToken, pairAmount);
@@ -736,6 +747,12 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
 
     }
 
+    /**
+     * @notice Private function to initialize a pool.
+     * @param tokenOrRecipient The address of the token when poolType is ERC_20, or the recipient
+     *                         address when poolType is RELAYER_POOL.
+     * @param poolType The type of the pool, which determines which actions can be performed on it.
+     */
     function _initializePool(address tokenOrRecipient, PoolType poolType) private {
         // Get the next `poolId` from `_poolsLength`, then increment `_poolsLength`.
         uint256 poolId = _poolsLength;
@@ -761,13 +778,22 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
      * @return rewardPair The address of the reward pair.
      */
     function _setRewardPair(Pool storage pool) private returns (address rewardPair) {
+        // Get the currently stored pair of the reward token.
         rewardPair = pool.rewardPair;
 
+        // Try to initialize the pair of the reward token if it is not already initialized.
         if (rewardPair == address(0)) {
+            // Move pool token to memory for efficiency.
             address poolToken = pool.tokenOrRecipient;
+
+            // Get the tokens of the liquidity pool.
             address token0 = IPangolinPair(poolToken).token0();
             address token1 = IPangolinPair(poolToken).token1();
 
+            // Ensure the pool token was created by the pair factory.
+            if (factory.getPair(token0, token1) != poolToken) revert InvalidType();
+
+            // Ensure one of the tokens in the pair is the rewards token. Revert otherwise.
             if (token0 == address(rewardsToken)) {
                 rewardPair = token1;
             } else if (token1 == address(rewardsToken)) {
@@ -776,17 +802,23 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
                 revert InvalidType();
             }
 
-            // Ensure the pool token was created by the pair factory.
-            if (factory.getPair(token0, token1) != poolToken) revert InvalidType();
-
+            // Store the pair of the rewards token in storage.
             pool.rewardPair = rewardPair;
         }
     }
 
+    /**
+     * @notice Private view function to ensure pool is of ERC20_POOL type.
+     * @param pool The properties of the pool.
+     */
     function _onlyERC20Pool(Pool storage pool) private view {
         if (pool.poolType != PoolType.ERC20_POOL) revert InvalidType();
     }
 
+    /**
+     * @notice Private view function to ensure pool is of RELAYER_POOL type.
+     * @param pool The properties of the pool.
+     */
     function _onlyRelayerPool(Pool storage pool) private view {
         if (pool.poolType != PoolType.RELAYER_POOL) revert InvalidType();
     }
@@ -813,6 +845,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         rewardVariablesStored.idealPosition += idealPositionIncrementation;
         rewardVariablesStored.rewardPerValue += rewardPerValueIncrementation;
 
+        // Return the pending rewards claimed by the pool.
         return rewards;
     }
 
