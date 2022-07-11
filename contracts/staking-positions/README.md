@@ -9,6 +9,9 @@ These files are in scope:
 
 * [`PangolinStakingPositions.sol`](./PangolinStakingPositions.sol)
 * [`PangolinStakingPositionsFunding.sol`](./PangolinStakingPositionsFunding.sol)
+* [`PangoChef.sol`](./PangoChef.sol)
+* [`PangoChefFunding.sol`](./PangoChefFunding.sol)
+* [`ReentrancyGuard.sol`](./ReentrancyGuard.sol)
 
 These files are NOT in scope:
 
@@ -93,7 +96,7 @@ will revert.
 In this implementation, there can be infinite amount of pools which separetely utilize the SAR algorithm.
 So each pool has its own total staked balance and average staking duration.
 
-To be added:
+Features:
 * Compounding WAVAX-PNG pool by supplying AVAX
 * Staking to WAVAX-PNG by supplying WAVAX and rewards from other pools
 * Rewarder support
