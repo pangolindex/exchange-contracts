@@ -105,7 +105,7 @@ contract SuperFarmRewarder is Ownable {
         address recipient,
         uint256 rewardAmount,
         uint256 newLpAmount
-    ) external {
+    ) external onlyChef {
         require(pid == PID, "PID mismatch");
 
         _updateRewards();
