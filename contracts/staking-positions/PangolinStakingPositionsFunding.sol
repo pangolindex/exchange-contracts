@@ -16,7 +16,7 @@ import "./GenericErrors.sol";
  */
 abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, GenericErrors {
     /** @notice The rewards given out per second during a reward period. */
-    uint80 public rewardRate;
+    uint80 private _rewardRate;
 
     /** @notice The timestamp when the last time the rewards were claimed by the child contract. */
     uint40 public lastUpdate;
@@ -92,7 +92,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
 
         unchecked {
             // Get the rewards remaining to be distributed.
-            uint256 leftover = (periodFinish - block.timestamp) * rewardRate;
+            uint256 leftover = (periodFinish - block.timestamp) * _rewardRate;
 
             // Decrement totalRewardAdded by the amount to be withdrawn.
             totalRewardAdded -= uint96(leftover);
@@ -120,7 +120,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
         // Increment totalRewardAdded, reverting on overflow to ensure it fits 96 bits.
         totalRewardAdded += uint96(amount);
 
-        // Update the rewardRate, ensuring leftover rewards from the ongoing period are included.
+        // Update the _rewardRate, ensuring leftover rewards from the ongoing period are included.
         // Note that we are using `lastUpdate` instead of `block.timestamp`, otherwise we would
         // have to “stash” the rewards from `lastUpdate` to `block.timestamp` in storage. We
         // do not want to stash the rewards to keep the cost low. However, using this method means
@@ -132,7 +132,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
             tmpRewardRate = amount / tmpPeriodDuration;
         } else {
             unchecked {
-                uint256 leftover = (periodFinish - lastUpdate) * rewardRate;
+                uint256 leftover = (periodFinish - lastUpdate) * _rewardRate;
                 tmpRewardRate = (amount + leftover) / tmpPeriodDuration;
             }
         }
@@ -142,7 +142,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
 
         // Assign the tmpRewardRate back to storage.
         // MAX_TOTAL_REWARD / MIN_PERIOD_DURATION fits 80 bits.
-        rewardRate = uint80(tmpRewardRate);
+        _rewardRate = uint80(tmpRewardRate);
 
         // Update lastUpdate and periodFinish.
         lastUpdate = uint40(block.timestamp);
@@ -151,6 +151,14 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
         // Transfer reward tokens from the caller to the contract.
         _transferFromCaller(amount);
         emit RewardAdded(amount);
+    }
+
+    /**
+     * @notice Public view function to return the total rewards distributed per second.
+     * @return The reward per second being distributed.
+     */
+    function rewardRate() public view returns (uint256) {
+        return periodFinish < block.timestamp ? 0 : _rewardRate;
     }
 
     /**
@@ -206,7 +214,7 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
         // by reward rate.
         if (lastTimeRewardApplicable > tmpLastUpdate) {
             unchecked {
-                return (lastTimeRewardApplicable - tmpLastUpdate) * rewardRate;
+                return (lastTimeRewardApplicable - tmpLastUpdate) * _rewardRate;
             }
         }
 

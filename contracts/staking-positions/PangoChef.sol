@@ -346,11 +346,8 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         uint256 poolValue = _getValue(pool.valueVariables);
         uint256 userValue = _getValue(pool.users[userId].valueVariables);
 
-        // If reward period is over, simply return zero.
-        if (periodFinish < block.timestamp) return 0;
-
         // Return the rewardRate of the user. Do not revert if poolValue is zero.
-        return userValue == 0 ? 0 : (globalRewardRate * userValue) / poolValue;
+        return userValue == 0 ? 0 : (rewardRate() * userValue) / poolValue;
     }
 
     /**

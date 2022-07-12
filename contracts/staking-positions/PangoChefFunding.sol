@@ -40,7 +40,7 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
     uint48 public lastUpdate;
 
     /** @notice The rewards given out per second during a rewarding period. */
-    uint80 public globalRewardRate;
+    uint80 private _rewardRate;
 
     /** @notice The timestamp when the current period will end or the latest period has ended. */
     uint48 public periodFinish;
@@ -129,7 +129,7 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
 
         unchecked {
             // Get the rewards remaining to be distributed.
-            uint256 leftover = (periodFinish - block.timestamp) * globalRewardRate;
+            uint256 leftover = (periodFinish - block.timestamp) * _rewardRate;
 
             // Decrement totalRewardAdded by the amount to be withdrawn.
             totalRewardAdded -= uint96(leftover);
@@ -159,13 +159,13 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
         // Increment totalRewardAdded, reverting on overflow to ensure it fits 96 bits.
         totalRewardAdded += uint96(amount);
 
-        // Update the rewardRate, ensuring leftover rewards from the ongoing period are included.
+        // Update the _rewardRate, ensuring leftover rewards from the ongoing period are included.
         uint256 tmpRewardRate;
         if (block.timestamp >= periodFinish) {
             tmpRewardRate = amount / tmpPeriodDuration;
         } else {
             unchecked {
-                uint256 leftover = (periodFinish - block.timestamp) * globalRewardRate;
+                uint256 leftover = (periodFinish - block.timestamp) * _rewardRate;
                 tmpRewardRate = (amount + leftover) / tmpPeriodDuration;
             }
         }
@@ -175,7 +175,7 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
 
         // Assign the tmpRewardRate back to storage.
         // MAX_TOTAL_REWARD / MIN_PERIOD_DURATION fits 80 bits.
-        globalRewardRate = uint80(tmpRewardRate);
+        _rewardRate = uint80(tmpRewardRate);
 
         // Update periodFinish.
         periodFinish = uint48(block.timestamp + tmpPeriodDuration);
@@ -247,20 +247,17 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
      * @return The rewards per second of the pool.
      */
     function poolRewardRate(uint256 poolId) external view returns (uint256) {
-        // If reward period is over, simply return zero.
-        if (periodFinish < block.timestamp) return 0;
-
         // Return the rewardRate of the pool.
         uint256 poolWeight = poolRewardInfos[poolId].weight;
-        return poolWeight == 0 ? 0 : (globalRewardRate * poolWeight) / totalWeight;
+        return poolWeight == 0 ? 0 : (rewardRate() * poolWeight) / totalWeight;
     }
 
     /**
-     * @notice External view function to get the global reward rate.
+     * @notice Public view function to get the global reward rate.
      * @return The rewards per second distributed to all pools combined.
      */
-    function rewardRate() external view returns (uint256) {
-        return periodFinish < block.timestamp ? 0 : globalRewardRate;
+    function rewardRate() public view returns (uint256) {
+        return periodFinish < block.timestamp ? 0 : _rewardRate;
     }
 
     /**
@@ -355,7 +352,7 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
         // by reward rate.
         if (lastTimeRewardApplicable > tmpLastUpdate) {
             unchecked {
-                return (lastTimeRewardApplicable - tmpLastUpdate) * globalRewardRate;
+                return (lastTimeRewardApplicable - tmpLastUpdate) * _rewardRate;
             }
         }
 

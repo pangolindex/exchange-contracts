@@ -163,6 +163,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      * @notice Constructor to create and initialize PangolinStakingPositions contract.
      * @param newRewardsToken The token used for both for staking and reward.
      * @param newAdmin The initial owner of the contract.
+     * @param newTokenMetadata The contract that constructs tokenURIs for position NFTs.
      */
     constructor(
         address newRewardsToken,
@@ -363,7 +364,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         uint256 positionValue = _getValue(positions[positionId].valueVariables);
 
         // Return the rewardRate of the position. Do not revert if totalValue is zero.
-        return positionValue == 0 ? 0 : (rewardRate * positionValue) / totalValue;
+        return positionValue == 0 ? 0 : (rewardRate() * positionValue) / totalValue;
     }
 
     /**
