@@ -104,9 +104,6 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         mapping(address => User) users;
     }
 
-    /** @notice The number of pools in the contract. */
-    uint256 private _poolsLength = 0;
-
     /** @notice The mapping from poolIds to the pool infos. */
     mapping(uint256 => Pool) public pools;
 
@@ -124,6 +121,9 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
 
     /** @notice The contract for wrapping and unwrapping the native gas token (e.g.: WETH). */
     address immutable wrappedNativeToken;
+
+    /** @notice The number of pools in the contract. */
+    uint256 private _poolsLength = 0;
 
     /** @notice The maximum amount of tokens that can be staked in a pool. */
     uint256 private constant MAX_STAKED_AMOUNT_IN_POOL = type(uint104).max;
@@ -270,7 +270,11 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
      * @param maxPairAmount The maximum amount of gas token that can be withdrawn from user to
      *                      combine with PNG rewards when adding liquidity. It is slippage check.
      */
-    function compoundToPoolZero(uint256 poolId, uint256 maxPairAmount) external payable nonReentrant {
+    function compoundToPoolZero(uint256 poolId, uint256 maxPairAmount)
+        external
+        payable
+        nonReentrant
+    {
         // Harvest rewards from the provided pool. This does not reset the staking duration, but
         // it will increment the lock on pool zero. The lock on pool zero will be deceremented
         // whenever the provided pool has its staking duration reset (e.g.: through `_withdraw()`).
@@ -412,7 +416,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
             // Rewards are not harvested. Therefore stash the rewards.
             user.stashedRewards = uint96(reward);
             reward = 0;
-        // Staking into pool zero using harvested rewards from another pool.
+            // Staking into pool zero using harvested rewards from another pool.
         } else if (stakeType == StakeType.COMPOUND_TO_POOL_ZERO) {
             assert(poolId == 0);
 
@@ -423,7 +427,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
             // this pool, which is neither harvested nor used in compounding.
             user.stashedRewards = uint96(reward);
             reward = 0;
-        // Compounding.
+            // Compounding.
         } else if (stakeType == StakeType.COMPOUND) {
             // Ensure the pool token is a Pangolin pair token containing PNG as one of the pairs.
             _setRewardPair(pool);
@@ -695,22 +699,21 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
             emit Withdrawn(poolId, msg.sender, balance, 0);
         }
 
-        // If rewarder exists, notify the reward amount.
-        address rewarder = address(pool.rewarder);
-        // Zero check is insufficient. Ensure code exists, in case self-destruct.
-        if (rewarder.code.length != 0) {
-            // Do a low level call. If external function reverts, only the external contract
-            // reverts. This function must never revert no matter what to prevent DOS.
-            (bool success, ) = rewarder.call(
-                abi.encodePacked(
-                    IRewarder.onReward.selector,
-                    abi.encode(poolId, msg.sender, msg.sender, 0, 0)
-                )
-            );
+        // Do a low-level call for rewarder. If external function reverts, only the external
+        // contract reverts. This function (emergency exit) must never revert no matter what, to
+        // prevent DOS. This can return true if rewarder is not a contract. Not a problem.
+        (bool success, ) = address(pool.rewarder).call(
+            abi.encodePacked(
+                IRewarder.onReward.selector,
+                abi.encode(poolId, msg.sender, msg.sender, 0, 0)
+            )
+        );
 
-            // Record last failed Rewarder calls. This can be used by Rewarder just in case.
-            if (!success) lastTimeRewarderCallFailed[poolId][msg.sender] = block.timestamp;
-        }
+        // Record last failed Rewarder calls. This can be used by a non-malicious Rewarder just in
+        // case it reverts due to some bug. We do not care if `success` is `true` due to rewarder
+        // not being a contract. A non-contract rewarder only means that it is unset. So we do not
+        // need to record the timestamp.
+        if (!success) lastTimeRewarderCallFailed[poolId][msg.sender] = block.timestamp;
     }
 
     /**
@@ -744,7 +747,6 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
             --poolZeroLockCount[msg.sender];
             user.isLockingPoolZero = false;
         }
-
     }
 
     /**
