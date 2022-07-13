@@ -12,6 +12,8 @@ interface GenericErrors {
     error InvalidType();
     error OutOfBounds();
     error InvalidToken();
+    error HighSlippage();
+    error InvalidAmount();
     error FailedTransfer();
     error NonExistentToken();
     error UnprivilegedCaller();

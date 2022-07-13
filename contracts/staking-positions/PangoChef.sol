@@ -168,6 +168,8 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
     ) PangoChefFunding(newRewardsToken, newAdmin) {
         // Get WAVAX-PNG (or WETH-PNG, etc.) liquidity token.
         address poolZeroPair = newFactory.getPair(newRewardsToken, newWrappedNativeToken);
+
+        // Check pair exists, which implies `newRewardsToken != 0 && newWrappedNativeToken != 0`.
         if (poolZeroPair == address(0)) revert NullInput();
 
         // Initialize pool zero with WAVAX-PNG liquidity token.
@@ -580,7 +582,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         _updateRewardVariables(poolId, pool);
 
         // Pool zero should instead use `compound()`.
-        if (poolId == 0) revert Locked();
+        if (poolId == 0) revert InvalidType();
 
         // Increment lock count on pool zero if this pool was not already locking it.
         _incrementLockOnPoolZero(user);
@@ -638,7 +640,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
             : (reserve0 * rewardAmount) / reserve1;
 
         // Ensure slippage is not above the limit.
-        if (pairAmount > maxPairAmount) revert();
+        if (pairAmount > maxPairAmount) revert HighSlippage();
 
         // Transfer reward tokens from the contract to the pair contract.
         tmpRewardsToken.safeTransfer(poolToken, rewardAmount);
@@ -646,10 +648,10 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // Non-zero message value signals desire to pay with native token.
         if (msg.value > 0) {
             // Ensure reward pair is native token.
-            if (rewardPair != wrappedNativeToken) revert();
+            if (rewardPair != wrappedNativeToken) revert InvalidToken();
 
             // Ensure consistent slippage control.
-            if (msg.value != maxPairAmount) revert();
+            if (msg.value != maxPairAmount) revert InvalidAmount();
 
             // Wrap the native token.
             IWAVAX(rewardPair).deposit{ value: pairAmount }();
@@ -764,7 +766,9 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         if (tokenOrRecipient == address(0) || poolType == PoolType.UNSET_POOL) revert NullInput();
 
         // Ensure token is a contract.
-        if (poolType == PoolType.ERC20_POOL && tokenOrRecipient.code.length == 0) revert();
+        if (poolType == PoolType.ERC20_POOL && tokenOrRecipient.code.length == 0) {
+            revert InvalidToken();
+        }
 
         // Assign the function arguments to the pool mapping then emit the associated event.
         Pool storage pool = pools[poolId];
@@ -793,7 +797,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
             address token1 = IPangolinPair(poolToken).token1();
 
             // Ensure the pool token was created by the pair factory.
-            if (factory.getPair(token0, token1) != poolToken) revert InvalidType();
+            if (factory.getPair(token0, token1) != poolToken) revert InvalidToken();
 
             // Ensure one of the tokens in the pair is the rewards token. Revert otherwise.
             if (token0 == address(rewardsToken)) {
