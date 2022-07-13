@@ -301,7 +301,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
      *      remaining locked if there is a DOS on the staking token.
      * @param poolId The identifier of the pool to exit from.
      */
-    function emergencyExitLevel3(uint256 poolId) external notEntered {
+    function emergencyExitLevel2(uint256 poolId) external notEntered {
         _emergencyExit(poolId, false);
     }
 
