@@ -80,9 +80,6 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // the `compoundToPoolZero()` function to harvest rewards of a pool without resetting its
         // staking duration, which would defeat the purpose of using SAR algorithm.
         bool isLockingPoolZero;
-        // Emergency exit by-passes rewarder. Record last time emergency exited to allow rewarder
-        // to slash rewards.
-        uint48 lastTimeEmergencyExited;
         // Rewards of the user gets stashed when user’s reward variables are updated without
         // harvesting the rewards or without utilizing the rewards in compounding.
         uint96 stashedRewards;
@@ -250,7 +247,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
      * @param amount The amount of pool tokens to withdraw.
      */
     function withdraw(uint256 poolId, uint256 amount) external notEntered {
-        _withdraw(poolId, amount, true);
+        _withdraw(poolId, amount);
     }
 
     /**
@@ -258,7 +255,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
      * @param poolId The identifier of the pool to harvest from.
      */
     function harvest(uint256 poolId) external notEntered {
-        _withdraw(poolId, 0, true);
+        _withdraw(poolId, 0);
     }
 
     /**
@@ -282,23 +279,15 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
     }
 
     /**
-     * @notice External function to exit from a pool by forgoing additional rewards from rewarder.
+     * @notice External function to exit from a pool by forgoing rewards.
      * @param poolId The identifier of the pool to exit from.
      */
     function emergencyExitLevel1(uint256 poolId) external notEntered {
-        _withdraw(poolId, pools[poolId].valueVariables.balance, false);
-    }
-
-    /**
-     * @notice External function to exit from a pool by forgoing all rewards.
-     * @param poolId The identifier of the pool to exit from.
-     */
-    function emergencyExitLevel2(uint256 poolId) external notEntered {
         _emergencyExit(poolId, true);
     }
 
     /**
-     * @notice External function to exit from a pool by forgoing all the stake and rewards.
+     * @notice External function to exit from a pool by forgoing the stake and rewards.
      * @dev This is an extreme emergency function, used only to save pool zero from perpetually
      *      remaining locked if there is a DOS on the staking token.
      * @param poolId The identifier of the pool to exit from.
@@ -491,7 +480,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // If rewarder exists, notify the reward amount.
         IRewarder rewarder = pool.rewarder;
         if (address(rewarder) != address(0)) {
-            rewarder.onReward(poolId, userId, reward, newBalance, user.lastTimeEmergencyExited);
+            rewarder.onReward(poolId, userId, userId, reward, newBalance);
         }
     }
 
@@ -499,9 +488,8 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
      * @notice Private function to withdraw and harvest from a pool.
      * @param poolId The identifier of the pool to withdraw from.
      * @param amount The amount of tokens to withdraw. Zero amount only harvests rewards.
-     * @param claimFromRewarder Whether to claim extra rewards from rewarder.
      */
-    function _withdraw(uint256 poolId, uint256 amount, bool claimFromRewarder) private {
+    function _withdraw(uint256 poolId, uint256 amount) private {
         // Create a storage pointer for the pool and the user.
         Pool storage pool = pools[poolId];
         User storage user = pool.users[msg.sender];
@@ -561,14 +549,9 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         emit Withdrawn(poolId, msg.sender, amount, reward);
 
         // Get extra rewards from rewarder if it is not an emergency exit.
-        if (claimFromRewarder) {
-            IRewarder rewarder = pool.rewarder;
-            if (address(rewarder) != address(0)) {
-                rewarder.onReward(poolId, msg.sender, reward, remaining, user.lastTimeEmergencyExited);
-            }
-        } else {
-            // Record lastTimeEmergencyExited to allow a time-based rewarder to slash rewards.
-            user.lastTimeEmergencyExited = uint48(block.timestamp);
+        IRewarder rewarder = pool.rewarder;
+        if (address(rewarder) != address(0)) {
+            rewarder.onReward(poolId, msg.sender, msg.sender, reward, remaining);
         }
     }
 
@@ -615,7 +598,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // Get extra rewards from rewarder.
         IRewarder rewarder = pool.rewarder;
         if (address(rewarder) != address(0)) {
-            rewarder.onReward(poolId, msg.sender, reward, userBalance, user.lastTimeEmergencyExited);
+            rewarder.onReward(poolId, msg.sender, msg.sender, reward, userBalance);
         }
     }
 
@@ -703,13 +686,24 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // Simply delete the user information.
         delete pools[poolId].users[msg.sender];
 
-        // Record lastTimeEmergencyExited to allow a time-based rewarder to slash rewards.
-        user.lastTimeEmergencyExited = uint48(block.timestamp);
-
         // Transfer stake from contract to user and emit the associated event.
         if (withdrawStake) {
             ERC20(pool.tokenOrRecipient).safeTransfer(msg.sender, balance);
             emit Withdrawn(poolId, msg.sender, balance, 0);
+        }
+
+        // If rewarder exists, notify the reward amount.
+        address rewarder = address(pool.rewarder);
+        // Zero check is insufficient. Ensure code exists, in case self-destruct.
+        if (rewarder.code.length != 0) {
+            // Do a low level call. If external function reverts, only the external contract
+            // reverts. This function must never revert no matter what to prevent DOS.
+            rewarder.call(
+                abi.encodePacked(
+                    IRewarder.onReward.selector,
+                    abi.encode(poolId, msg.sender, msg.sender, 0, 0)
+                )
+            );
         }
     }
 
