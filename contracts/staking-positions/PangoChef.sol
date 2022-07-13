@@ -116,6 +116,9 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
      */
     mapping(address => uint256) public poolZeroLockCount;
 
+    /** @notice Record latest timestamps of low-level call fails, so Rewarder can slash rewards. */
+    mapping(uint256 => mapping(address => uint256)) public lastTimeRewarderCallFailed;
+
     /** @notice The AMM factory that creates pair tokens. */
     IPangolinFactory public immutable factory;
 
@@ -698,12 +701,15 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         if (rewarder.code.length != 0) {
             // Do a low level call. If external function reverts, only the external contract
             // reverts. This function must never revert no matter what to prevent DOS.
-            rewarder.call(
+            (bool success, ) = rewarder.call(
                 abi.encodePacked(
                     IRewarder.onReward.selector,
                     abi.encode(poolId, msg.sender, msg.sender, 0, 0)
                 )
             );
+
+            // Record last failed Rewarder calls. This can be used by Rewarder just in case.
+            if (!success) lastTimeRewarderCallFailed[poolId][msg.sender] = block.timestamp;
         }
     }
 
