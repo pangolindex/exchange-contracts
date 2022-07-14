@@ -59,7 +59,6 @@ contract SuperFarmRewarder is Ownable {
 
     address public immutable CHEF;
     uint256 public immutable PID;
-    IERC20 public immutable PRINCIPLE;
 
     uint256 private constant PRECISION = 1e18;
     uint256 private constant MAX_REWARD = type(uint256).max / PRECISION;
@@ -79,7 +78,6 @@ contract SuperFarmRewarder is Ownable {
     ) {
         IERC20 lpToken = IChef(_CHEF).lpToken(_PID);
         require(address(lpToken) != address(0), "Invalid PID");
-        PRINCIPLE = lpToken;
         CHEF = _CHEF;
         PID = _PID;
         transferOwnership(owner);
@@ -117,7 +115,7 @@ contract SuperFarmRewarder is Ownable {
 
         uint256 _rewardCount = rewardCount;
         for (uint256 i; i < _rewardCount; ++i) {
-            RewardInfo memory rewardInfo = rewardInfos[i];
+            RewardInfo storage rewardInfo = rewardInfos[i];
             UserInfo storage userInfo = userInfos[user][i];
             if (userAmount > 0) {
                 uint256 owed = userInfo.credits + (userAmount * rewardInfo.accRewardPerShare / PRECISION) - userInfo.debts;
@@ -149,7 +147,7 @@ contract SuperFarmRewarder is Ownable {
         uint256 len = rewardIds.length;
         for (uint256 i; i < len; ++i) {
             uint256 rewardId = rewardIds[i];
-            RewardInfo memory rewardInfo = rewardInfos[rewardId];
+            RewardInfo storage rewardInfo = rewardInfos[rewardId];
             UserInfo storage userInfo = userInfos[msg.sender][rewardId];
             uint256 accumulated = userAmount * rewardInfo.accRewardPerShare / PRECISION;
             uint256 owed = userInfo.credits + accumulated - userInfo.debts;
