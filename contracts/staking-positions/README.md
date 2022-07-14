@@ -25,9 +25,11 @@ These files are NOT in scope:
 Sunshine and Rainbows is a novel staking algorithm. In SAR, rewards at a given interval are
 distributed based on the below formula.
 
-$\textit{reward proportion} = \frac{\textit{position staked balance}}{\textit{total staked balance}} \times \frac{\textit{position staking duration}}{\textit{average staking duration}}$
+$$
+\textit{reward proportion} = \frac{\textit{position staked balance}}{\textit{total staked balance}} \times \frac{\textit{position staking duration}}{\textit{average staking duration}}
+$$
 
-[SAR paper](./SunshineAndRainbows.pdf) describes how this formula is used to derive an algorithm
+[The proof section below](#sar-proof) describes how this formula is used to derive an algorithm
 that can calculate rewards in *O(1)*.
 
 ### Rationale
@@ -77,8 +79,7 @@ track positions instead of users, which allows leveraging the NFT technology.
 
 This implementation allows us to add an extra `compound()` (😎) function to the core SAR
 functions. This function makes no external calls because the reward and staking tokens are the
-same. Note that the compounding function is not just for convenience, it is also a way to bypass
-calling `harvest()` (😨) and restarting the staking duration.
+same. Note that the compounding function is not just for convenience, it is also a way to bypass restarting the staking duration by calling `harvest()` (😨).
 
 * 😎 `compound()`:
   * Harvests and restakes the accrued rewards without restarting the staking duration,
@@ -175,15 +176,77 @@ there should be no truncation. The same reasoning goes for the use of unchecked 
 
 ## SAR Proof
 
-Deriving the algorithm requires basic math operations.
-
 ### Definitions
 
-For a given interval, rewards are distributed based on the formula below.
+Let’s consider an interval to be the period between two consecutive updates (triggered via `stake`, `withdraw`, or `harvest` events). Given interval $i$, let $B_i$ be the sum of all staked balance, and let $D_i$ be the balance-weighted average staking duration of all staked balance at the end of the interval. When distributing rewards of the interval, $R_i$, a position (or participant) $a$, with staked balance of $b_a$, and an average staking duration of $d_{a,i}$ at the end of the interval, will earn the following reward amount.
 
 $$
-	\textit{reward}_\textit{position} = \textit{reward}_\textit{total} \times
-	\frac{\textit{staked balance}_\textit{position}}{\textit{staked balance}_{total}}
-	\times
-	\frac{\textit{staking duration}_\textit{position}}{\textit{staking duration}_{average}}
+	r_{a,i} = R_i \times \frac{b_a}{B_i} \times \frac{d_{a,i}}{D_i}
 $$
+
+For multiple intervals, during which the position $a$ has a constant staked balance, the position will earn the following total reward amount.
+
+$$
+	\sum_i{r_{a,i}} = b_a \times \sum_i{\frac{R_i d_{a,i}}{B_i D_i}}
+$$
+
+where $i$ iterates over all the intervals.
+
+### Derivation
+
+We define an interval range, from $j$ to $k$, where $k > j$. This is the range for which we want to compute the rewards of the position. We let the staking duration of the position start at the beginning of interval $j$ (which is also the end of interval $j-1$). Therefore, its staking duration at the end of the interval $i$ is $t_i - t_{j-1}$, where $t_i \geq t_{j-1}$ and $t$ is the duration from epoch to the end of the interval.
+
+$$
+	\sum_{i=j}^{k}{r_{a,i}} = b_a \times \sum_{i=j}^{k}{\frac{R_i (t_i - t_{j-1})}{B_i D_i}}
+$$
+
+
+Now we can begin the magic show. First, separate the summation into two parts by expanding $R_i (t_i - t_{j-1})$.
+
+$$
+	=  b_a \times \left( \sum_{i=j}^{k}{\frac{R_i t_i}{B_i D_i}} - \sum_{i=j}^{k}{\frac{R_i t_{j-1}}{B_i D_i}} \right)
+$$
+
+Second, move the constant $t_{j-1}$ outside the summation.
+
+$$
+	= b_a \times \left( \sum_{i=j}^{k}{\frac{R_i t_i}{B_i D_i}} - t_{j-1} \times \sum_{i=j}^{k}{\frac{R_i}{B_i D_i}} \right)
+$$
+
+Third, well there is no third. That is all regarding the core algorithm. Aside from timestamp $t_{j-1}$, we are left with two expressions that we can increment on each update, and snapshot for a position if the update was triggered by that position. Then we can get their delta from the snapshot to their current values. In the code, we will call the leftmost expression in the parantheses the `idealPosition`, and the rightmost expression the `rewardPerValue`.
+
+#### Combined Positions
+
+It is also possible to calculate the combined rewards of two positions. However, we can only consider the consecutive intervals during both positions are active. Let’s look at two position, $a$ and $b$. Position $a$ starts staking at interval $j$ (i.e.: the end of interval $j-1$). Position $b$ starts staking at interval $k$ (i.e.: the end of interval $k-1$). We will derive a formula to calculate the combined rewards from $k$ to $l$ (inclusive range), where $l > k > j$.
+
+$$
+	\sum_{i=k}^{l}{(r_{a,i} + r_{b,i})} = b_a \times \sum_{i=k}^{l}{\frac{R_i (t_i - t_{j-1})}{B_i D_i}} + b_b \times \sum_{i=k}^{l}{\frac{R_i (t_i - t_{k-1})}{B_i D_i}}
+$$
+
+First, rewrite the duration of position $a$ to include the duration of $b$.
+
+$$
+	= b_a \times \sum_{i=k}^{l}{\frac{R_i (t_i - t_{k-1} + t_{k-1} - t_{j-1})}{B_i D_i}} + b_b \times \sum_{i=k}^{l}{\frac{R_i (t_i - t_{k-1})}{B_i D_i}}
+$$
+
+Second, separate the position $a$ summation into two parts by expanding $R_i (t_i - t_{k-1} + t_{k-1} - t_{j-1})$.
+
+$$
+	= b_a \times \left( \sum_{i=k}^{l}{\frac{R_i (t_{k-1} - t_{j-1})}{B_i D_i}} + \sum_{i=k}^{l}{\frac{R_i (t_i - t_{k-1})}{B_i D_i}} \right) + b_b \times \sum_{i=k}^{l}{\frac{R_i (t_i - t_{k-1})}{B_i D_i}}
+$$
+
+Third, merge the rightmost expression inside the parantheses with the summation of position $b$ (notice that the summation is the same).
+
+$$
+	= b_a \times \sum_{i=k}^{l}{\frac{R_i (t_{k-1} - t_{j-1})}{B_i D_i}} + (b_a + b_b) \times \sum_{i=k}^{l}{\frac{R_i (t_i - t_{k-1})}{B_i D_i}}
+$$
+
+Fourth, move the constant $(t_{k-1} - t_{j-1})$ outside the summation.
+
+$$
+	= b_a \times (t_{k-1} - t_{j-1}) \times \sum_{i=k}^{l}{\frac{R_i }{B_i D_i}} + (b_a + b_b) \times \sum_{i=k}^{l}{\frac{R_i (t_i - t_{k-1})}{B_i D_i}}
+$$
+
+That is it. We can then expand the rightmost summation the way we [demonstrated previously](#derivation). And when we are merging positions, we can simply record $b_a \times (t_{k-1} - t_{j-1})$, which we will call `previousValues` in the code.
+
+Thanks for reading. I hope you had fun :3
