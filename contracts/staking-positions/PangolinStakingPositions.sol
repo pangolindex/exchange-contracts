@@ -425,7 +425,9 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
             positionValueVariables.sumOfEntryTimes += addedEntryTimes;
 
             // Increment the previousValues.
-            position.previousValues += uint160(oldBalance * (block.timestamp - position.lastUpdate));
+            position.previousValues += uint160(
+                oldBalance * (block.timestamp - position.lastUpdate)
+            );
         }
 
         // Snapshot the lastUpdate and reward variables.
