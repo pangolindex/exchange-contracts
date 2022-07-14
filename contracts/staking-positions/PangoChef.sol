@@ -687,8 +687,10 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
 
         // Decrement the state variables pertaining to total value calculation.
         uint104 balance = userValueVariables.balance;
-        poolValueVariables.balance -= balance;
-        poolValueVariables.sumOfEntryTimes -= userValueVariables.sumOfEntryTimes;
+        unchecked {
+            poolValueVariables.balance -= balance;
+            poolValueVariables.sumOfEntryTimes -= userValueVariables.sumOfEntryTimes;
+        }
 
         // Simply delete the user information.
         delete pools[poolId].users[msg.sender];

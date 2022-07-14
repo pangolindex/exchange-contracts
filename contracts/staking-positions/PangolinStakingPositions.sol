@@ -513,8 +513,10 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
 
         // Decrement the state variables pertaining to total value calculation.
         uint96 balance = positionValueVariables.balance;
-        totalValueVariables.balance -= balance;
-        totalValueVariables.sumOfEntryTimes -= positionValueVariables.sumOfEntryTimes;
+        unchecked {
+            totalValueVariables.balance -= balance;
+            totalValueVariables.sumOfEntryTimes -= positionValueVariables.sumOfEntryTimes;
+        }
 
         delete positions[positionId];
 
