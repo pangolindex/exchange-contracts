@@ -44,6 +44,7 @@ contract SuperFarmRewarder is Ownable {
     mapping(uint256 => RewardInfo) public rewardInfos;
 
     uint256 public lastUpdateTime;
+    uint256 private lpSupply;
 
     mapping(address => uint256) public userAmounts;
     mapping(address => mapping(uint256 => UserInfo)) public userInfos;
@@ -108,7 +109,9 @@ contract SuperFarmRewarder is Ownable {
     ) external onlyChef {
         require(pid == PID, "PID mismatch");
 
-        _updateRewards();
+        uint256 _lpSupply = lpSupply;
+
+        _updateRewards(_lpSupply);
 
         uint256 userAmount = userAmounts[user];
 
@@ -129,13 +132,17 @@ contract SuperFarmRewarder is Ownable {
             userInfo.debts = newLpAmount * rewardInfo.accRewardPerShare / PRECISION;
         }
 
+        if (newLpAmount != userAmount) {
+            lpSupply = _lpSupply - userAmount + newLpAmount;
+        }
+
         userAmounts[user] = newLpAmount;
     }
 
     // @dev Claim desired rewards.
     // @dev onReward() should cover most harvest calls but scenarios exist where rewardAmount is 0
     function forceClaimRewards(uint256[] calldata rewardIds, address to) external {
-        _updateRewards();
+        _updateRewards(lpSupply);
 
         uint256 userAmount = userAmounts[msg.sender];
 
@@ -178,7 +185,7 @@ contract SuperFarmRewarder is Ownable {
         uint256 _rewardCount = rewardCount;
         uint256 _lastUpdateTime = lastUpdateTime;
         uint256 userAmount = userAmounts[user];
-        uint256 lpSupply = PRINCIPLE.balanceOf(CHEF);
+        uint256 _lpSupply = lpSupply;
 
         rewardTokens = new IERC20[](_rewardCount);
         rewardAmounts = new uint256[](_rewardCount);
@@ -186,7 +193,7 @@ contract SuperFarmRewarder is Ownable {
         for (uint256 i; i < _rewardCount; ++i) {
             RewardInfo memory rewardInfo = rewardInfos[i];
             UserInfo memory userInfo = userInfos[user][i];
-            if (block.timestamp > _lastUpdateTime && block.timestamp > rewardInfo.beginning && lpSupply > 0) {
+            if (block.timestamp > _lastUpdateTime && block.timestamp > rewardInfo.beginning && _lpSupply > 0) {
                 uint256 time;
                 unchecked {
                     if (block.timestamp < rewardInfo.expiration) {
@@ -200,7 +207,7 @@ contract SuperFarmRewarder is Ownable {
                     }
                 }
                 uint256 pending = time * rewardInfo.rewardRatePerSecond; // range: [0, funding]
-                rewardInfo.accRewardPerShare += (pending * PRECISION / lpSupply).toUint176();
+                rewardInfo.accRewardPerShare += (pending * PRECISION / _lpSupply).toUint176();
             }
             rewardTokens[i] = rewardInfos[i].reward;
             rewardAmounts[i] = userInfo.credits + (userAmount * rewardInfo.accRewardPerShare / PRECISION) - userInfo.debts;
@@ -209,30 +216,27 @@ contract SuperFarmRewarder is Ownable {
         return (rewardTokens, rewardAmounts);
     }
 
-    function _updateRewards() internal {
+    function _updateRewards(uint256 _lpSupply) internal {
         uint256 _lastUpdateTime = lastUpdateTime;
-        if (block.timestamp > _lastUpdateTime) {
-            uint256 lpSupply = PRINCIPLE.balanceOf(CHEF);
-            if (lpSupply > 0) {
-                uint256 _rewardCount = rewardCount;
-                for (uint256 i; i < _rewardCount; ++i) {
-                    RewardInfo storage rewardInfo = rewardInfos[i];
-                    if (block.timestamp > rewardInfo.beginning && _lastUpdateTime < rewardInfo.expiration) {
-                        uint256 time; // range: [0, expiration - beginning]
-                        unchecked {
-                            if (block.timestamp < rewardInfo.expiration) {
-                                time = _lastUpdateTime > rewardInfo.beginning
-                                    ? block.timestamp - _lastUpdateTime // [last updated -> now]
-                                    : block.timestamp - rewardInfo.beginning; // [beginning -> now]
-                            } else if (_lastUpdateTime < rewardInfo.expiration) {
-                                time = _lastUpdateTime > rewardInfo.beginning
-                                    ? rewardInfo.expiration - _lastUpdateTime // [last updated -> expiration]
-                                    : rewardInfo.expiration - rewardInfo.beginning; // [beginning -> expiration]
-                            }
+        if (block.timestamp > _lastUpdateTime && _lpSupply > 0) {
+            uint256 _rewardCount = rewardCount;
+            for (uint256 i; i < _rewardCount; ++i) {
+                RewardInfo storage rewardInfo = rewardInfos[i];
+                if (block.timestamp > rewardInfo.beginning && _lastUpdateTime < rewardInfo.expiration) {
+                    uint256 time; // range: [0, expiration - beginning]
+                    unchecked {
+                        if (block.timestamp < rewardInfo.expiration) {
+                            time = _lastUpdateTime > rewardInfo.beginning
+                                ? block.timestamp - _lastUpdateTime // [last updated -> now]
+                                : block.timestamp - rewardInfo.beginning; // [beginning -> now]
+                        } else if (_lastUpdateTime < rewardInfo.expiration) {
+                            time = _lastUpdateTime > rewardInfo.beginning
+                                ? rewardInfo.expiration - _lastUpdateTime // [last updated -> expiration]
+                                : rewardInfo.expiration - rewardInfo.beginning; // [beginning -> expiration]
                         }
-                        uint256 pending = time * rewardInfo.rewardRatePerSecond; // range: [0, funding]
-                        rewardInfo.accRewardPerShare += (pending * PRECISION / lpSupply).toUint176();
                     }
+                    uint256 pending = time * rewardInfo.rewardRatePerSecond; // range: [0, funding]
+                    rewardInfo.accRewardPerShare += (pending * PRECISION / _lpSupply).toUint176();
                 }
             }
             lastUpdateTime = block.timestamp;
@@ -285,7 +289,7 @@ contract SuperFarmRewarder is Ownable {
         uint256 _rewardCount = rewardCount++;
         require(_rewardCount < MAX_REWARD_COUNT, "Reward limit reached");
 
-        _updateRewards();
+        _updateRewards(lpSupply);
 
         uint256 duration = expiration - beginning;
         uint256 rewardRatePerSecond = amount / duration;
@@ -333,7 +337,7 @@ contract SuperFarmRewarder is Ownable {
         uint256 rewardId,
         uint40 expiration
     ) external onlyPermitted(MODIFY_REWARD, rewardId) {
-        _updateRewards();
+        _updateRewards(lpSupply);
 
         RewardInfo storage rewardInfo = rewardInfos[rewardId];
 
@@ -380,7 +384,7 @@ contract SuperFarmRewarder is Ownable {
     ) external onlyPermitted(FUND_REWARD, rewardId) {
         require(amount > 0, "Invalid amount");
 
-        _updateRewards();
+        _updateRewards(lpSupply);
 
         RewardInfo storage rewardInfo = rewardInfos[rewardId];
 
@@ -452,7 +456,7 @@ contract SuperFarmRewarder is Ownable {
         require(beginning >= block.timestamp, "Invalid beginning");
         require(expiration > beginning, "Invalid duration");
 
-        _updateRewards();
+        _updateRewards(lpSupply);
 
         RewardInfo storage rewardInfo = rewardInfos[rewardId];
 
@@ -487,7 +491,7 @@ contract SuperFarmRewarder is Ownable {
         uint256 rewardId,
         address to
     ) public onlyPermitted(CANCEL_REWARD, rewardId) {
-        _updateRewards();
+        _updateRewards(lpSupply);
 
         RewardInfo storage rewardInfo = rewardInfos[rewardId];
 
