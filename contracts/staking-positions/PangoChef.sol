@@ -446,26 +446,23 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // Ensure either user is adding more stake, or compounding.
         if (amount == 0) revert NoEffect();
 
-        // Use new scope to prevent stack too deep error.
-        uint256 newBalance;
-        {
-            // Get the new total staked amount and ensure it fits MAX_STAKED_AMOUNT_IN_POOL.
-            ValueVariables storage poolValueVariables = pool.valueVariables;
-            uint256 newTotalStaked = pool.valueVariables.balance + amount;
-            if (newTotalStaked > MAX_STAKED_AMOUNT_IN_POOL) revert Overflow();
+        // Get the new total staked amount and ensure it fits MAX_STAKED_AMOUNT_IN_POOL.
+        ValueVariables storage poolValueVariables = pool.valueVariables;
+        uint256 newTotalStaked = pool.valueVariables.balance + amount;
+        if (newTotalStaked > MAX_STAKED_AMOUNT_IN_POOL) revert Overflow();
 
+        uint256 newBalance;
+        unchecked {
             // Increment the pool info pertaining to pool’s total value calculation.
             uint152 addedEntryTimes = uint152(block.timestamp * amount);
             pool.valueVariables.sumOfEntryTimes += addedEntryTimes;
-            pool.valueVariables.balance = uint96(newTotalStaked);
+            pool.valueVariables.balance = uint104(newTotalStaked);
 
             // Increment the user info pertaining to user value calculation.
             ValueVariables storage userValueVariables = user.valueVariables;
             uint256 oldBalance = user.valueVariables.balance;
-            unchecked {
-                newBalance = oldBalance + amount;
-            }
-            user.valueVariables.balance = uint96(newBalance);
+            newBalance = oldBalance + amount;
+            user.valueVariables.balance = uint104(newBalance);
             user.valueVariables.sumOfEntryTimes += addedEntryTimes;
 
             // Increment the previousValues. This allows staking duration to not reset when reward
@@ -525,26 +522,27 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // Ensure we are either withdrawing something or claiming rewards.
         if (amount == 0 && reward == 0) revert NoEffect();
 
-        // Get the remaining balance in the position.
         uint256 remaining;
         unchecked {
+            // Get the remaining balance in the position.
             remaining = oldBalance - amount;
+
+            // Decrement the withdrawn amount from totalStaked.
+            ValueVariables storage poolValueVariables = pool.valueVariables;
+            poolValueVariables.balance -= uint104(amount);
+
+            // Update sumOfEntryTimes.
+            uint256 newEntryTimes = block.timestamp * remaining;
+            poolValueVariables.sumOfEntryTimes = uint152(
+                poolValueVariables.sumOfEntryTimes +
+                    newEntryTimes -
+                    userValueVariables.sumOfEntryTimes
+            );
+
+            // Decrement the withdrawn amount from user balance, and update the user entry times.
+            userValueVariables.balance = uint104(remaining);
+            userValueVariables.sumOfEntryTimes = uint152(newEntryTimes);
         }
-
-        // Decrement the withdrawn amount from totalStaked.
-        ValueVariables storage poolValueVariables = pool.valueVariables;
-        poolValueVariables.balance -= uint96(amount);
-
-        // Update sumOfEntryTimes. The new sumOfEntryTimes can be greater or less than the previous
-        // sumOfEntryTimes depending on the withdrawn amount and the time passed since lastUpdate.
-        uint256 newEntryTimes = block.timestamp * remaining;
-        poolValueVariables.sumOfEntryTimes = uint152(
-            poolValueVariables.sumOfEntryTimes + newEntryTimes - userValueVariables.sumOfEntryTimes
-        );
-
-        // Decrement the withdrawn amount from user balance, and update the user entry times.
-        userValueVariables.balance = uint96(remaining);
-        userValueVariables.sumOfEntryTimes = uint152(newEntryTimes);
 
         // Reset the previous values, as we have restarted the staking duration.
         user.previousValues = 0;
