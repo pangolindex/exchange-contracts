@@ -1026,7 +1026,7 @@ describe('SuperFarm', function() {
             beforeEach(async function() {
                 reward = reward18a;
                 rewardDecimals = 18;
-                margin = ethers.utils.parseUnits('1', 5); // fraction of a token
+                margin = ethers.utils.parseUnits('1', 6); // fraction of a token
             });
 
             await itPassesAllocationTests();
@@ -1076,6 +1076,67 @@ describe('SuperFarm', function() {
                 expected = expected.add(rewardRatePerSecond);
                 expect(await reward.balanceOf(addr1.address)).to.be.within(expected.sub(margin), expected);
             });
+            it('User who deposited into farm before SuperFarm does not earn SuperFarm rewards', async function () {
+                const deposit = ethers.utils.parseUnits('100000', rewardDecimals);
+
+                // User deposits into vanilla chef before SuperFarm goes live
+                lp0.balanceOf.whenCalledWith(_miniChefV2.address).returns(deposit);
+
+                await mineBlock(beginning + MINUTE);
+
+                // SuperFarm not yet aware of deposit
+                const pendingTokens = await superFarmRewarder.pendingTokens(0, addr1.address, 0);
+                expect(pendingTokens.rewardAmounts[0]).to.equal(0);
+
+                // User harvests
+                await setTime(beginning + MINUTE + MINUTE);
+                await expect(superFarmRewarder.connect(chef).onReward(
+                    0,
+                    addr1.address,
+                    addr1.address,
+                    100, // harvest something
+                    deposit,
+                )).not.to.emit(superFarmRewarder, 'RewardPaid');
+            });
+            it('Postfixed SuperFarm does not dilute rewards', async function () {
+                const deposit1 = ethers.utils.parseUnits('100000', rewardDecimals);
+                const deposit2 = ethers.utils.parseUnits('200000', rewardDecimals);
+
+                // User 1 deposits into vanilla chef before SuperFarm goes live
+                totalDeposited = totalDeposited.add(deposit1);
+                lp0.balanceOf.whenCalledWith(_miniChefV2.address).returns(totalDeposited);
+
+                // User 2 deposits into SuperFarm on launch
+                totalDeposited = totalDeposited.add(deposit2);
+                await setTime(beginning);
+                await expect(superFarmRewarder.connect(chef).onReward(
+                    0,
+                    addr2.address,
+                    addr2.address,
+                    0,
+                    deposit2,
+                )).not.to.be.reverted;
+                lp0.balanceOf.whenCalledWith(_miniChefV2.address).returns(totalDeposited);
+
+                await mineBlock(beginning + MINUTE);
+
+                // User 1 pending (SuperFarm not yet aware deposit)
+                const pendingTokens1 = await superFarmRewarder.pendingTokens(0, addr1.address, 0);
+                expect(pendingTokens1.rewardAmounts[0]).to.equal(0);
+
+                // User 2 pending
+                const pendingTokens2 = await superFarmRewarder.pendingTokens(0, addr2.address, 0);
+                let expected2 = rewardRatePerSecond.mul(MINUTE);
+                expect(pendingTokens2.rewardAmounts[0]).to.be.within(expected2.sub(margin), expected2);
+
+                // User 2 claims
+                await expect(superFarmRewarder.connect(addr2).forceClaimRewards(
+                    [0],
+                    addr2.address,
+                )).not.to.be.reverted;
+                expected2 = expected2.add(rewardRatePerSecond);
+                expect(await reward.balanceOf(addr2.address)).to.be.within(expected2.sub(margin), expected2);
+            });
             it('User deposits once before period begins', async function () {
                 const deposit = ethers.utils.parseUnits('100', rewardDecimals);
                 await setTime(beginning - MINUTE);
@@ -1102,7 +1163,7 @@ describe('SuperFarm', function() {
                 await mineBlock(beginning + MINUTE + HOUR);
 
                 const pendingTokens = await superFarmRewarder.pendingTokens(0, addr1.address, 0);
-                let expected = rewardRatePerSecond.mul(HOUR);
+                let expected = rewardRatePerSecond.mul(MINUTE + HOUR);
                 expect(pendingTokens.rewardAmounts[0]).to.be.within(expected.sub(margin), expected);
 
                 await expect(superFarmRewarder.connect(addr1).forceClaimRewards(
@@ -1120,13 +1181,13 @@ describe('SuperFarm', function() {
                 await mineBlock(expiration + MINUTE + MINUTE);
 
                 const pendingTokens = await superFarmRewarder.pendingTokens(0, addr1.address, 0);
-                expect(pendingTokens.rewardAmounts[0]).to.equal(0);
+                expect(pendingTokens.rewardAmounts[0]).to.equal(initialFunding);
 
                 await expect(superFarmRewarder.connect(addr1).forceClaimRewards(
                     [0],
                     addr1.address,
-                )).not.to.emit(superFarmRewarder, 'RewardPaid');
-                expect(await reward.balanceOf(addr1.address)).to.equal(0);
+                )).to.emit(superFarmRewarder, 'RewardPaid');
+                expect(await reward.balanceOf(addr1.address)).to.equal(initialFunding);
             });
             it('User deposits twice with one reward', async function () {
                 const deposit1 = ethers.utils.parseUnits('2000', rewardDecimals);
