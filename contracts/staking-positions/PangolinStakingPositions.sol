@@ -412,21 +412,21 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         uint256 newTotalStaked = totalValueVariables.balance + totalAmount;
         if (newTotalStaked > type(uint96).max) revert Overflow();
 
-        // Increment the state variables pertaining to total value calculation.
-        uint160 addedEntryTimes = uint160(block.timestamp * totalAmount);
-        totalValueVariables.sumOfEntryTimes += addedEntryTimes;
-        totalValueVariables.balance = uint96(newTotalStaked);
-
-        // Increment the position properties pertaining to position value calculation.
-        ValueVariables storage positionValueVariables = position.valueVariables;
-        uint256 oldBalance = positionValueVariables.balance;
         unchecked {
-            positionValueVariables.balance = uint96(oldBalance + totalAmount);
-        }
-        positionValueVariables.sumOfEntryTimes += addedEntryTimes;
+            // Increment the state variables pertaining to total value calculation.
+            uint160 addedEntryTimes = uint160(block.timestamp * totalAmount);
+            totalValueVariables.sumOfEntryTimes += addedEntryTimes;
+            totalValueVariables.balance = uint96(newTotalStaked);
 
-        // Increment the previousValues.
-        position.previousValues += uint160(oldBalance * (block.timestamp - position.lastUpdate));
+            // Increment the position properties pertaining to position value calculation.
+            ValueVariables storage positionValueVariables = position.valueVariables;
+            uint256 oldBalance = positionValueVariables.balance;
+            positionValueVariables.balance = uint96(oldBalance + totalAmount);
+            positionValueVariables.sumOfEntryTimes += addedEntryTimes;
+
+            // Increment the previousValues.
+            position.previousValues += uint160(oldBalance * (block.timestamp - position.lastUpdate));
+        }
 
         // Snapshot the lastUpdate and reward variables.
         _snapshotRewardVariables(position);
@@ -456,33 +456,31 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         uint256 oldBalance = position.valueVariables.balance;
         if (amount > oldBalance) revert InsufficientBalance();
 
-        // Get the remaining balance in the position.
-        uint256 remaining;
-        unchecked {
-            remaining = oldBalance - amount;
-        }
-
-        // Get accrued rewards of the position, and get totalAmount to withdraw (incl. rewards).
+        // Get accrued rewards of the position and get totalAmount to withdraw (incl. rewards).
         uint256 reward = _positionPendingRewards(position);
         uint256 totalAmount = amount + reward;
         if (totalAmount == 0) revert NoEffect();
 
-        // Decrement the withdrawn amount from totalStaked.
-        totalValueVariables.balance -= uint96(amount);
+        unchecked {
+            // Get the remaining balance in the position.
+            uint256 remaining = oldBalance - amount;
 
-        // Update sumOfEntryTimes. The new sumOfEntryTimes can be greater or less than the previous
-        // sumOfEntryTimes depending on the withdrawn amount and the time passed since lastUpdate.
-        uint256 newEntryTimes = block.timestamp * remaining;
-        ValueVariables storage positionValueVariables = position.valueVariables;
-        totalValueVariables.sumOfEntryTimes = uint160(
-            totalValueVariables.sumOfEntryTimes +
-                newEntryTimes -
-                positionValueVariables.sumOfEntryTimes
-        );
+            // Decrement the withdrawn amount from totalStaked.
+            totalValueVariables.balance -= uint96(amount);
 
-        // Decrement the withdrawn amount from position balance, and update position entryTimes.
-        positionValueVariables.balance = uint96(remaining);
-        positionValueVariables.sumOfEntryTimes = uint160(newEntryTimes);
+            // Update sumOfEntryTimes.
+            uint256 newEntryTimes = block.timestamp * remaining;
+            ValueVariables storage positionValueVariables = position.valueVariables;
+            totalValueVariables.sumOfEntryTimes = uint160(
+                totalValueVariables.sumOfEntryTimes +
+                    newEntryTimes -
+                    positionValueVariables.sumOfEntryTimes
+            );
+
+            // Decrement the withdrawn amount from position balance and update position entryTimes.
+            positionValueVariables.balance = uint96(remaining);
+            positionValueVariables.sumOfEntryTimes = uint160(newEntryTimes);
+        }
 
         // Reset the previous values, as we have restarted the staking duration.
         position.previousValues = 0;
