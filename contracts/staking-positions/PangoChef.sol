@@ -12,8 +12,8 @@ import "./interfaces/IRewarder.sol";
 /**
  * @title PangoChef
  * @author Shung for Pangolin
- * @notice PangoChef is a MiniChef alternative that utilizes the Sunshine and Rainbows algorithm for
- *         distributing rewards from pools to stakers.
+ * @notice PangoChef is a MiniChef alternative that utilizes the Sunshine and Rainbows algorithm
+ *         for distributing rewards from pools to stakers.
  */
 contract PangoChef is PangoChefFunding, ReentrancyGuard {
     using SafeTransferLib for ERC20;
@@ -45,7 +45,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         uint152 sumOfEntryTimes;
     }
 
-    struct RewardVariables {
+    struct RewardSummations {
         // Imaginary rewards accrued by a position with `lastUpdate == 0 && balance == 1`. At the
         // end of each interval, the ideal position has a staking duration of `block.timestamp`.
         // Since its balance is one, its “value” equals its staking duration. So, its value
@@ -64,8 +64,8 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
     struct User {
         // Two variables that determine the share of rewards a user receives from the pool.
         ValueVariables valueVariables;
-        // Reward variables snapshotted on the last update of the user.
-        RewardVariables rewardVariablesPaid;
+        // Summations snapshotted on the last update of the user.
+        RewardSummations rewardSummationsPaid;
         // The sum of values (`balance * (block.timestamp - lastUpdate)`) of previous intervals.
         // It is only incremented accordingly when tokens are staked, and it is reset to zero
         // when tokens are withdrawn. Correctly updating this property allows for the staking
@@ -80,7 +80,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // the `compoundToPoolZero()` function to harvest rewards of a pool without resetting its
         // staking duration, which would defeat the purpose of using SAR algorithm.
         bool isLockingPoolZero;
-        // Rewards of the user gets stashed when user’s reward variables are updated without
+        // Rewards of the user gets stashed when user’s summations are updated without
         // harvesting the rewards or without utilizing the rewards in compounding.
         uint96 stashedRewards;
     }
@@ -98,8 +98,8 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         address rewardPair;
         // Two variables that determine the total shares (i.e.: “value”) in the pool.
         ValueVariables valueVariables;
-        // Reward variables incremented on every action on the pool.
-        RewardVariables rewardVariablesStored;
+        // Summations incremented on every action on the pool.
+        RewardSummations rewardSummationsStored;
         // The mapping from addresses of the users of the pool to their properties.
         mapping(address => User) users;
     }
@@ -128,7 +128,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
     /** @notice The maximum amount of tokens that can be staked in a pool. */
     uint256 private constant MAX_STAKED_AMOUNT_IN_POOL = type(uint104).max;
 
-    /** @notice The fixed denominator used for storing reward variables. */
+    /** @notice The fixed denominator used for storing summations. */
     uint256 private constant PRECISION = 2**128;
 
     /** @notice The event emitted when withdrawing or harvesting from a position. */
@@ -360,17 +360,17 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         Pool storage pool = pools[poolId];
         User storage user = pool.users[userId];
 
-        // Get the delta of reward variables. Use incremented in-memory `rewardVariablesStored`
+        // Get the delta of summations. Use incremented in-memory `rewardSummationsStored`
         // based on the pending rewards.
-        RewardVariables memory deltaRewardVariables = _getDeltaRewardVariables(
+        RewardSummations memory deltaRewardSummations = _getDeltaRewardSummations(
             poolId,
             pool,
             user,
             true
         );
 
-        // Return the pending rewards of the user based on the difference in rewardVariables.
-        return _earned(deltaRewardVariables, user);
+        // Return the pending rewards of the user based on the difference in rewardSummations.
+        return _earned(deltaRewardSummations, user);
     }
 
     /** @inheritdoc PangoChefFunding*/
@@ -402,8 +402,8 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // Ensure pool is ERC20 type.
         _onlyERC20Pool(pool);
 
-        // Update the reward variables that govern the distribution from a pool to its stakers.
-        _updateRewardVariables(poolId, pool);
+        // Update the summations that govern the distribution from a pool to its stakers.
+        _updateRewardSummations(poolId, pool);
 
         // Before everything else, get the rewards accrued by the user. Rewards are not transferred
         // to the user in this function. Therefore they need to be either stashed or compounded.
@@ -470,8 +470,8 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
             user.previousValues += uint152(oldBalance * (block.timestamp - user.lastUpdate));
         }
 
-        // Snapshot the lastUpdate and reward variables.
-        _snapshotRewardVariables(pool, user);
+        // Snapshot the lastUpdate and summations.
+        _snapshotRewardSummations(pool, user);
 
         // Transfer amount tokens from caller to the contract, and emit the staking event.
         if (transferAmount != 0) {
@@ -503,8 +503,8 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // Ensure pool is ERC20 type.
         _onlyERC20Pool(pool);
 
-        // Update pool reward variables that govern the reward distribution from pool to users.
-        _updateRewardVariables(poolId, pool);
+        // Update pool summations that govern the reward distribution from pool to users.
+        _updateRewardSummations(poolId, pool);
 
         // Ensure pool zero is not locked.
         // Decrement lock count on pool zero if this pool was locking it.
@@ -547,8 +547,8 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // Reset the previous values, as we have restarted the staking duration.
         user.previousValues = 0;
 
-        // Snapshot the lastUpdate and reward variables.
-        _snapshotRewardVariables(pool, user);
+        // Snapshot the lastUpdate and summations.
+        _snapshotRewardSummations(pool, user);
 
         // Transfer withdrawn tokens.
         rewardsToken.safeTransfer(msg.sender, reward);
@@ -576,8 +576,8 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // Ensure pool is ERC20 type.
         _onlyERC20Pool(pool);
 
-        // Update pool reward variables that govern the reward distribution from pool to users.
-        _updateRewardVariables(poolId, pool);
+        // Update pool summations that govern the reward distribution from pool to users.
+        _updateRewardSummations(poolId, pool);
 
         // Pool zero should instead use `compound()`.
         if (poolId == 0) revert InvalidType();
@@ -596,8 +596,8 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         uint256 userBalance = user.valueVariables.balance;
         user.previousValues += uint152(userBalance * (block.timestamp - user.lastUpdate));
 
-        // Snapshot the lastUpdate and reward variables.
-        _snapshotRewardVariables(pool, user);
+        // Snapshot the lastUpdate and summations.
+        _snapshotRewardSummations(pool, user);
 
         // Emit the harvest event, even though it will not be transferred to the user.
         emit Withdrawn(poolId, msg.sender, 0, reward);
@@ -836,7 +836,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
      * @param pool The properties of the pool to update the rewards of.
      * @return The amount of rewards claimed by the pool.
      */
-    function _updateRewardVariables(uint256 poolId, Pool storage pool) private returns (uint256) {
+    function _updateRewardSummations(uint256 poolId, Pool storage pool) private returns (uint256) {
         // Get rewards, in the process updating the last update time.
         uint256 rewards = _claim(poolId);
 
@@ -844,12 +844,12 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         (
             uint256 idealPositionIncrementation,
             uint256 rewardPerValueIncrementation
-        ) = _getRewardVariableIncrementations(pool, rewards);
+        ) = _getRewardSummationsIncrementations(pool, rewards);
 
-        // Increment the reward variables.
-        RewardVariables storage rewardVariablesStored = pool.rewardVariablesStored;
-        rewardVariablesStored.idealPosition += idealPositionIncrementation;
-        rewardVariablesStored.rewardPerValue += rewardPerValueIncrementation;
+        // Increment the summations.
+        RewardSummations storage rewardSummationsStored = pool.rewardSummationsStored;
+        rewardSummationsStored.idealPosition += idealPositionIncrementation;
+        rewardSummationsStored.rewardPerValue += rewardPerValueIncrementation;
 
         // Return the pending rewards claimed by the pool.
         return rewards;
@@ -860,15 +860,15 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
      * @param pool The storage pointer to the pool to record the snapshot from.
      * @param user The storage pointer to the user to record the snapshot to.
      */
-    function _snapshotRewardVariables(Pool storage pool, User storage user) private {
+    function _snapshotRewardSummations(Pool storage pool, User storage user) private {
         user.lastUpdate = uint48(block.timestamp);
-        user.rewardVariablesPaid = pool.rewardVariablesStored;
+        user.rewardSummationsPaid = pool.rewardSummationsStored;
     }
 
     /**
      * @notice Private view function to get the accrued rewards of a user in a pool.
-     * @dev The call to this function must only be made after the reward variables are updated
-     *      through `_updateRewardVariables()`.
+     * @dev The call to this function must only be made after the summations are updated
+     *      through `_updateRewardSummations()`.
      * @param poolId The identifier of the pool.
      * @param pool The properties of the pool.
      * @param user The properties of the user.
@@ -879,10 +879,10 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         Pool storage pool,
         User storage user
     ) private view returns (uint256) {
-        // Get the change in reward variables since the position was last updated. When calculating
-        // the delta, do not increment `rewardVariablesStored`, as they had to be updated right
+        // Get the change in summations since the position was last updated. When calculating
+        // the delta, do not increment `rewardSummationsStored`, as they had to be updated right
         // before the execution of this function.
-        RewardVariables memory deltaRewardVariables = _getDeltaRewardVariables(
+        RewardSummations memory deltaRewardSummations = _getDeltaRewardSummations(
             poolId,
             pool,
             user,
@@ -890,33 +890,33 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         );
 
         // Return the pending rewards of the user.
-        return _earned(deltaRewardVariables, user);
+        return _earned(deltaRewardSummations, user);
     }
 
     /**
-     * @notice Private view function to get the difference between a user’s reward variables
-     *         (‘paid’) and a pool’s reward variables (‘stored’).
+     * @notice Private view function to get the difference between a user’s summations
+     *         (‘paid’) and a pool’s summations (‘stored’).
      * @param poolId The identifier of the pool.
-     * @param pool The pool to take the basis for stored reward variables.
-     * @param user The user for which to calculate the delta of reward variables.
-     * @param increment Whether to the incremented `rewardVariablesStored` based on the pending
+     * @param pool The pool to take the basis for stored summations.
+     * @param user The user for which to calculate the delta of summations.
+     * @param increment Whether to the incremented `rewardSummationsStored` based on the pending
      *                  rewards of the pool.
-     * @return The difference between the `rewardVariablesStored` and `rewardVariablesPaid`.
+     * @return The difference between the `rewardSummationsStored` and `rewardSummationsPaid`.
      */
-    function _getDeltaRewardVariables(
+    function _getDeltaRewardSummations(
         uint256 poolId,
         Pool storage pool,
         User storage user,
         bool increment
-    ) private view returns (RewardVariables memory) {
-        // If user had no update to its reward variables yet, return zero.
-        if (user.lastUpdate == 0) return RewardVariables(0, 0);
+    ) private view returns (RewardSummations memory) {
+        // If user had no update to its summations yet, return zero.
+        if (user.lastUpdate == 0) return RewardSummations(0, 0);
 
-        // Create storage pointers to the user’s and pool’s reward variables.
-        RewardVariables storage rewardVariablesPaid = user.rewardVariablesPaid;
-        RewardVariables storage rewardVariablesStored = pool.rewardVariablesStored;
+        // Create storage pointers to the user’s and pool’s summations.
+        RewardSummations storage rewardSummationsPaid = user.rewardSummationsPaid;
+        RewardSummations storage rewardSummationsStored = pool.rewardSummationsStored;
 
-        // If requested, return the incremented `rewardVariablesStored`.
+        // If requested, return the incremented `rewardSummationsStored`.
         if (increment) {
             // Get pending rewards of the pool, without updating any state variables.
             uint256 rewards = _poolPendingRewards(poolRewardInfos[poolId], increment);
@@ -925,37 +925,37 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
             (
                 uint256 idealPositionIncrementation,
                 uint256 rewardPerValueIncrementation
-            ) = _getRewardVariableIncrementations(pool, rewards);
+            ) = _getRewardSummationsIncrementations(pool, rewards);
 
-            // Increment and return the incremented the reward variables.
+            // Increment and return the incremented the summations.
             return
-                RewardVariables(
-                    rewardVariablesStored.idealPosition +
+                RewardSummations(
+                    rewardSummationsStored.idealPosition +
                         idealPositionIncrementation -
-                        rewardVariablesPaid.idealPosition,
-                    rewardVariablesStored.rewardPerValue +
+                        rewardSummationsPaid.idealPosition,
+                    rewardSummationsStored.rewardPerValue +
                         rewardPerValueIncrementation -
-                        rewardVariablesPaid.rewardPerValue
+                        rewardSummationsPaid.rewardPerValue
                 );
         }
 
         // Otherwise just return the the delta, ignoring any incrementation from pending rewards.
         return
-            RewardVariables(
-                rewardVariablesStored.idealPosition - rewardVariablesPaid.idealPosition,
-                rewardVariablesStored.rewardPerValue - rewardVariablesPaid.rewardPerValue
+            RewardSummations(
+                rewardSummationsStored.idealPosition - rewardSummationsPaid.idealPosition,
+                rewardSummationsStored.rewardPerValue - rewardSummationsPaid.rewardPerValue
             );
     }
 
     /**
-     * @notice Private view function to calculate the `rewardVariablesStored` incrementations based
+     * @notice Private view function to calculate the `rewardSummationsStored` incrementations based
      *         on the given reward amount.
      * @param pool The pool to get the incrementations for.
      * @param rewards The amount of rewards to use for calculating the incrementation.
      * @return idealPositionIncrementation The incrementation to make to the idealPosition.
      * @return rewardPerValueIncrementation The incrementation to make to the rewardPerValue.
      */
-    function _getRewardVariableIncrementations(Pool storage pool, uint256 rewards)
+    function _getRewardSummationsIncrementations(Pool storage pool, uint256 rewards)
         private
         view
         returns (uint256 idealPositionIncrementation, uint256 rewardPerValueIncrementation)
@@ -983,11 +983,11 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
 
     /**
      * @notice Low-level private view function to get the accrued rewards of a user.
-     * @param deltaRewardVariables The difference between the ‘stored’ and ‘paid’ reward variables.
+     * @param deltaRewardSummations The difference between the ‘stored’ and ‘paid’ summations.
      * @param user The user of a pool to check the accrued rewards of.
      * @return The accrued rewards of the position.
      */
-    function _earned(RewardVariables memory deltaRewardVariables, User storage user)
+    function _earned(RewardSummations memory deltaRewardSummations, User storage user)
         private
         view
         returns (uint256)
@@ -997,9 +997,9 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
             user.lastUpdate == 0
                 ? 0
                 : user.stashedRewards +
-                    ((((deltaRewardVariables.idealPosition -
-                        (deltaRewardVariables.rewardPerValue * user.lastUpdate)) *
+                    ((((deltaRewardSummations.idealPosition -
+                        (deltaRewardSummations.rewardPerValue * user.lastUpdate)) *
                         user.valueVariables.balance) +
-                        (deltaRewardVariables.rewardPerValue * user.previousValues)) / PRECISION);
+                        (deltaRewardSummations.rewardPerValue * user.previousValues)) / PRECISION);
     }
 }

@@ -41,7 +41,7 @@ interface ITokenMetadata {
  *      rewards of users in constant time. A new algorithm had to be invented for this reason.
  *
  *      To understand the algorithm, one must read the Proofs. Then
- *      `_getRewardVariableIncrementations()` and `_earned()` functions will make sense.
+ *      `_getRewardSummationsIncrementations()` and `_earned()` functions will make sense.
  *
  * @dev Assumptions (not checked to be true):
  *      - `rewardsToken` reverts or returns false on invalid transfers,
@@ -69,7 +69,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         uint160 sumOfEntryTimes;
     }
 
-    struct RewardVariables {
+    struct RewardSummations {
         // Imaginary rewards accrued by a position with `lastUpdate == 0 && balance == 1`. At the
         // end of each interval, the ideal position has a staking duration of `block.timestamp`.
         // Since its balance is one, its “value” equals its staking duration. So, its value
@@ -88,8 +88,8 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     struct Position {
         // Two variables that determine the share of rewards a position receives.
         ValueVariables valueVariables;
-        // Reward variables snapshotted on the last update of the position.
-        RewardVariables rewardVariablesPaid;
+        // Summations snapshotted on the last update of the position.
+        RewardSummations rewardSummationsPaid;
         // The sum of values (`balance * (block.timestamp - lastUpdate)`) of previous intervals. It
         // is only updated accordingly when more tokens are staked into an existing position. Other
         // calls than staking (i.e.: harvest and withdraw) must reset the value to zero. Correctly
@@ -115,7 +115,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     ValueVariables totalValueVariables;
 
     /** @notice The variables that govern the reward distribution. */
-    RewardVariables public rewardVariablesStored;
+    RewardSummations public rewardSummationsStored;
 
     /**
      * @notice The duration during NFT approvals are ignored after an update that devalues it.
@@ -136,7 +136,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      */
     uint256 private _positionsLength;
 
-    /** @notice The fixed denominator used for storing reward variables. */
+    /** @notice The fixed denominator used for storing summations. */
     uint256 private constant PRECISION = 2**128;
 
     /** @notice The maximum approvalPauseDuration that can be set by the admin. */
@@ -181,9 +181,9 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      * @param amount The amount of tokens to transfer from the caller to the position.
      */
     function mint(uint256 amount) external {
-        // Update reward variables. Note that rewards accumulated when there is no one staking will
+        // Update summations. Note that rewards accumulated when there is no one staking will
         // be lost. But this is only a small risk of value loss when the contract first goes live.
-        _updateRewardVariables();
+        _updateRewardSummations();
 
         // Get the new positionId and mint the associated NFT.
         uint256 positionId = ++_positionsLength;
@@ -199,9 +199,9 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      * @param positionId The identifier of the position to deposit the funds into.
      */
     function stake(uint256 positionId, uint256 amount) external {
-        // Update reward variables. Note that rewards accumulated when there is no one staking will
+        // Update summations. Note that rewards accumulated when there is no one staking will
         // be lost. But this is only a small risk of value loss when the contract first goes live.
-        _updateRewardVariables();
+        _updateRewardSummations();
 
         // Use a private function to handle the logic pertaining to depositing into a position.
         _stake(positionId, amount);
@@ -212,8 +212,8 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      * @param positionId The identifier of the position to claim the rewards of.
      */
     function harvest(uint256 positionId) external {
-        // Update reward variables that govern the reward distribution.
-        _updateRewardVariables();
+        // Update summations that govern the reward distribution.
+        _updateRewardSummations();
 
         // Use a private function to handle the logic pertaining to harvesting rewards.
         // `_withdraw` with zero input amount works as harvesting.
@@ -225,8 +225,8 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      * @param positionId The identifier of the position to compound the rewards of.
      */
     function compound(uint256 positionId) external {
-        // Update reward variables that govern the reward distribution.
-        _updateRewardVariables();
+        // Update summations that govern the reward distribution.
+        _updateRewardSummations();
 
         // Use a private function to handle the logic pertaining to compounding rewards.
         // `_stake` with zero input amount works as compounding.
@@ -240,8 +240,8 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      * @param amount The amount of staked tokens, excluding rewards, to withdraw from the position.
      */
     function withdraw(uint256 positionId, uint256 amount) external {
-        // Update reward variables that govern the reward distribution.
-        _updateRewardVariables();
+        // Update summations that govern the reward distribution.
+        _updateRewardSummations();
 
         // Use a private function to handle the logic pertaining to withdrawing the staked balance.
         _withdraw(positionId, amount);
@@ -265,7 +265,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      * @param positionId The identifier of the position to exit.
      */
     function emergencyExit(uint256 positionId) external {
-        // Do not update reward variables, because a faulty rewarding algorithm might be the
+        // Do not update summations, because a faulty rewarding algorithm might be the
         // culprit locking the staked balance in the contract. Nonetheless, for consistency, use a
         // private function to handle the logic pertaining to emergency exit.
         _emergencyExit(positionId);
@@ -273,15 +273,15 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
 
     /**
      * @notice External function to stake to or compound multiple positions.
-     * @dev This saves gas by updating reward variables only once.
+     * @dev This saves gas by updating summations only once.
      * @param positionIds An array of identifiers of positions to stake to.
      * @param amounts An array of amount of tokens to stake to the corresponding positions.
      */
     function multiStake(uint256[] calldata positionIds, uint256[] calldata amounts) external {
-        // Update reward variables only once. Note that rewards accumulated when there is no one
+        // Update summations only once. Note that rewards accumulated when there is no one
         // staking will be lost. But this is only a small risk of value loss if a reward period
         // during no one staking is followed by staking.
-        _updateRewardVariables();
+        _updateRewardSummations();
 
         // Ensure array lengths match.
         uint256 length = positionIds.length;
@@ -299,13 +299,13 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
 
     /**
      * @notice External function to withdraw or harvest from multiple positions.
-     * @dev This saves gas by updating reward variables only once.
+     * @dev This saves gas by updating summations only once.
      * @param positionIds An array of identifiers of positions to withdraw from.
      * @param amounts An array of amount of tokens to withdraw from corresponding positions.
      */
     function multiWithdraw(uint256[] calldata positionIds, uint256[] calldata amounts) external {
-        // Update reward variables only once.
-        _updateRewardVariables();
+        // Update summations only once.
+        _updateRewardSummations();
 
         // Ensure array lengths match.
         uint256 length = positionIds.length;
@@ -377,12 +377,12 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         // Create a storage pointer for the position.
         Position storage position = positions[positionId];
 
-        // Get the delta of reward variables. Use incremented `rewardVariablesStored` based on the
+        // Get the delta of summations. Use incremented `rewardSummationsStored` based on the
         // pending rewards.
-        RewardVariables memory deltaRewardVariables = _getDeltaRewardVariables(position, true);
+        RewardSummations memory deltaRewardSummations = _getDeltaRewardSummations(position, true);
 
-        // Return the pending rewards of the position based on the difference in rewardVariables.
-        return _earned(deltaRewardVariables, position);
+        // Return the pending rewards of the position based on the difference in rewardSummations.
+        return _earned(deltaRewardSummations, position);
     }
 
     /**
@@ -430,8 +430,8 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
             );
         }
 
-        // Snapshot the lastUpdate and reward variables.
-        _snapshotRewardVariables(position);
+        // Snapshot the lastUpdate and summations.
+        _snapshotRewardSummations(position);
 
         // Transfer amount tokens from user to the contract, and emit the associated event.
         if (amount != 0) _transferFromCaller(amount);
@@ -490,8 +490,8 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         // Update lastDevaluation, as resetting the staking duration devalues the position.
         position.lastDevaluation = uint48(block.timestamp);
 
-        // Snapshot the lastUpdate and reward variables.
-        _snapshotRewardVariables(position);
+        // Snapshot the lastUpdate and summations.
+        _snapshotRewardSummations(position);
 
         // Transfer withdrawn amount and rewards to the user, and emit the associated event.
         _transferToCaller(totalAmount);
@@ -529,7 +529,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
      * @notice Private function to claim the total pending rewards, and based on the claimed amount
      *         update the two variables that govern the reward distribution.
      */
-    function _updateRewardVariables() private {
+    function _updateRewardSummations() private {
         // Get rewards, in the process updating the last update time.
         uint256 rewards = _claim();
 
@@ -537,58 +537,58 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         (
             uint256 idealPositionIncrementation,
             uint256 rewardPerValueIncrementation
-        ) = _getRewardVariableIncrementations(rewards);
+        ) = _getRewardSummationsIncrementations(rewards);
 
-        // Increment the reward variables.
-        rewardVariablesStored.idealPosition += idealPositionIncrementation;
-        rewardVariablesStored.rewardPerValue += rewardPerValueIncrementation;
+        // Increment the summations.
+        rewardSummationsStored.idealPosition += idealPositionIncrementation;
+        rewardSummationsStored.rewardPerValue += rewardPerValueIncrementation;
     }
 
     /**
      * @notice Private function to snapshot two rewards variables and record the timestamp.
      * @param position The storage pointer to the position to record the snapshot for.
      */
-    function _snapshotRewardVariables(Position storage position) private {
+    function _snapshotRewardSummations(Position storage position) private {
         position.lastUpdate = uint48(block.timestamp);
-        position.rewardVariablesPaid = rewardVariablesStored;
+        position.rewardSummationsPaid = rewardSummationsStored;
     }
 
     /**
      * @notice Private view function to get the accrued rewards of a position.
-     * @dev The call to this function must only be made after the reward variables are updated
-     *      through `_updateRewardVariables()`.
+     * @dev The call to this function must only be made after the summations are updated
+     *      through `_updateRewardSummations()`.
      * @param position The properties of the position.
      * @return The accrued rewards of the position.
      */
     function _positionPendingRewards(Position storage position) private view returns (uint256) {
-        // Get the change in reward variables since the position was last updated. When calculating
-        // the delta, do not increment `rewardVariablesStored`, as they had to be updated anyways.
-        RewardVariables memory deltaRewardVariables = _getDeltaRewardVariables(position, false);
+        // Get the change in summations since the position was last updated. When calculating
+        // the delta, do not increment `rewardSummationsStored`, as they had to be updated anyways.
+        RewardSummations memory deltaRewardSummations = _getDeltaRewardSummations(position, false);
 
         // Return the pending rewards of the position.
-        return _earned(deltaRewardVariables, position);
+        return _earned(deltaRewardSummations, position);
     }
 
     /**
-     * @notice Private view function to get the difference between a position’s reward variables
-     *         (‘paid’) and global reward variables (‘stored’).
-     * @param position The position for which to calculate the delta of reward variables.
-     * @param increment Whether to the incremented `rewardVariablesStored` based on the pending
+     * @notice Private view function to get the difference between a position’s summations
+     *         (‘paid’) and global summations (‘stored’).
+     * @param position The position for which to calculate the delta of summations.
+     * @param increment Whether to the incremented `rewardSummationsStored` based on the pending
      *                  rewards of the contract.
-     * @return The difference between the `rewardVariablesStored` and `rewardVariablesPaid`.
+     * @return The difference between the `rewardSummationsStored` and `rewardSummationsPaid`.
      */
-    function _getDeltaRewardVariables(Position storage position, bool increment)
+    function _getDeltaRewardSummations(Position storage position, bool increment)
         private
         view
-        returns (RewardVariables memory)
+        returns (RewardSummations memory)
     {
-        // If position had no update to its reward variables yet, return zero.
-        if (position.lastUpdate == 0) return RewardVariables(0, 0);
+        // If position had no update to its summations yet, return zero.
+        if (position.lastUpdate == 0) return RewardSummations(0, 0);
 
-        // Create storage pointer to the position’s reward variables.
-        RewardVariables storage rewardVariablesPaid = position.rewardVariablesPaid;
+        // Create storage pointer to the position’s summations.
+        RewardSummations storage rewardSummationsPaid = position.rewardSummationsPaid;
 
-        // If requested, return the incremented `rewardVariablesStored`.
+        // If requested, return the incremented `rewardSummationsStored`.
         if (increment) {
             // Get pending rewards, without updating the `lastUpdate`.
             uint256 rewards = _pendingRewards();
@@ -597,36 +597,36 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
             (
                 uint256 idealPositionIncrementation,
                 uint256 rewardPerValueIncrementation
-            ) = _getRewardVariableIncrementations(rewards);
+            ) = _getRewardSummationsIncrementations(rewards);
 
-            // Increment and return the incremented the reward variables.
+            // Increment and return the incremented the summations.
             return
-                RewardVariables(
-                    rewardVariablesStored.idealPosition +
+                RewardSummations(
+                    rewardSummationsStored.idealPosition +
                         idealPositionIncrementation -
-                        rewardVariablesPaid.idealPosition,
-                    rewardVariablesStored.rewardPerValue +
+                        rewardSummationsPaid.idealPosition,
+                    rewardSummationsStored.rewardPerValue +
                         rewardPerValueIncrementation -
-                        rewardVariablesPaid.rewardPerValue
+                        rewardSummationsPaid.rewardPerValue
                 );
         }
 
         // Otherwise just return the the delta, ignoring any incrementation from pending rewards.
         return
-            RewardVariables(
-                rewardVariablesStored.idealPosition - rewardVariablesPaid.idealPosition,
-                rewardVariablesStored.rewardPerValue - rewardVariablesPaid.rewardPerValue
+            RewardSummations(
+                rewardSummationsStored.idealPosition - rewardSummationsPaid.idealPosition,
+                rewardSummationsStored.rewardPerValue - rewardSummationsPaid.rewardPerValue
             );
     }
 
     /**
-     * @notice Private view function to calculate the `rewardVariablesStored` incrementations based
-     *         on the given reward amount.
+     * @notice Private view function to calculate the `rewardSummationsStored` incrementations
+     *         based on the given reward amount.
      * @param rewards The amount of rewards to use for calculating the incrementation.
      * @return idealPositionIncrementation The incrementation to make to the idealPosition.
      * @return rewardPerValueIncrementation The incrementation to make to the rewardPerValue.
      */
-    function _getRewardVariableIncrementations(uint256 rewards)
+    function _getRewardSummationsIncrementations(uint256 rewards)
         private
         view
         returns (uint256 idealPositionIncrementation, uint256 rewardPerValueIncrementation)
@@ -654,11 +654,11 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
 
     /**
      * @notice Low-level private view function to get the accrued rewards of a position.
-     * @param deltaRewardVariables The difference between the ‘stored’ and ‘paid’ reward variables.
+     * @param deltaRewardSummations The difference between the ‘stored’ and ‘paid’ summations.
      * @param position The position to check the accrued rewards of.
      * @return The accrued rewards of the position.
      */
-    function _earned(RewardVariables memory deltaRewardVariables, Position storage position)
+    function _earned(RewardSummations memory deltaRewardSummations, Position storage position)
         private
         view
         returns (uint256)
@@ -667,10 +667,10 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         return
             position.lastUpdate == 0
                 ? 0
-                : (((deltaRewardVariables.idealPosition -
-                    (deltaRewardVariables.rewardPerValue * position.lastUpdate)) *
+                : (((deltaRewardSummations.idealPosition -
+                    (deltaRewardSummations.rewardPerValue * position.lastUpdate)) *
                     position.valueVariables.balance) +
-                    (deltaRewardVariables.rewardPerValue * position.previousValues)) / PRECISION;
+                    (deltaRewardSummations.rewardPerValue * position.previousValues)) / PRECISION;
     }
 
     /* ************* */
