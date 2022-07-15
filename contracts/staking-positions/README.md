@@ -1,6 +1,6 @@
 # Pangolin Staking Positions and Pango Chef
 
-Pangolin Staking Positions and Pango Chef are unique staking and farming solution. They utilize
+Pangolin Staking Positions and Pango Chef are unique staking and farming solutions. They utilize
 the Sunshine and Rainbows (SAR) algorithm, which distributes rewards as a function of balance and
 staking duration.
 
@@ -23,7 +23,7 @@ These files are NOT in scope:
 ## Sunshine And Rainbows (🌞,🌈)
 
 Sunshine and Rainbows is a novel staking algorithm. In SAR, rewards at a given interval are
-distributed based on the below formula.
+distributed based on the formula below.
 
 $$
 \textit{reward proportion} = \frac{\textit{position staked balance}}{\textit{total staked balance}} \times \frac{\textit{position staking duration}}{\textit{average staking duration}}
@@ -36,7 +36,7 @@ that can calculate rewards in *O(1)*.
 
 SAR aims to reduce the selling pressure on the reward token, reward loyal users, allow leveraging
 of loyalty, and discourage dumping. And do all of that without having to lock staked tokens, and
-without requiring predatory middlemen protocols (e.g.: Curve wars protocols).
+without enabling predatory middlemen protocols (e.g.: Curve wars protocols).
 
 ## Staking Duration
 
@@ -67,7 +67,7 @@ function to the staking duration are described below.
 
 ## Implementations
 
-In this repository, there are two implementations that utilize SAR algorithm.
+In this repository, there are two implementations of SAR algorithm.
 
 ### `PangolinStakingPositions`
 
@@ -97,7 +97,7 @@ marketplaces from executing `transferFrom()` function of NFTs to process the tra
 tries to frontrun a buyer by withdrawing the staked balance from the NFT position, the transaction
 will revert.
 
-### `Pango Chef`
+### `PangoChef`
 
 [`PangoChef`](./PangoChef.sol) is a MiniChef analogue that uses SAR algorithm.
 
@@ -105,16 +105,16 @@ In this implementation, there can be infinite amount of pools which separetely u
 algorithm. So each pool has its own total staked balance and average staking duration.
 
 PangoChef distributes global rewards to pools based on Synthetix’s staking algorithm, such that
-pool operations and updating rewards is in constant time as the number of pools increase. Then each
+pool operations and updating rewards stays in constant time as the number of pools increase. Then each
 pool separately utilizes the SAR algorithm to distribute its reward allocation to users.
 
 PangoChef requires a Uniswap V2 factory and a wrapped native token address to be defined in
-PangoChef constructor. Although accepts any ERC20 token to be staked, it is mainly intended for
+the constructor. Although it accepts any ERC20 token to be staked, it is mainly intended for
 PangoChef liquidity pool tokens.
 
 PangolinStakingPosition had a simple compounding mechanism. In PangoChef, compounding requires
 that (1) pool’s staking token is a liquidity pool pair token of the factory defined in the
-constructor, and (2) one of the tokens in the pair is `rewardsToken`. Given these requirements,
+constructor, and (2) one of the tokens in the pair is `rewardsToken`. Given these requirements are satisfied for a pool,
 compounding works as follows.
 
 * 😎 `compound()`:
@@ -127,7 +127,7 @@ compounding works as follows.
 Another version of compounding is also possible for any pool. In this version, harvested rewards
 from any pool are paired with wrapped version of the native gas token, and staked to pool zero. In
 PangoChef, pool zero (`poolId == 0`) is reserved for `WRAPPED_NATIVE_TOKEN-REWARDS_TOKEN` liquidity
-pool token, and it is created in constructor.
+pool token, and it is created during construction.
 
 * 😎 `compoundToPoolZero()`:
   * Harvests rewards without resetting the staking duration of the user of the pool,
@@ -139,14 +139,14 @@ pool token, and it is created in constructor.
 
 Compounding to pool zero requires a locking mechanism to prevent gaming of the system. Without locking, a user could
 compound to pool zero, then withdraw their principal from pool zero right away. This means that rewards of a pool is
-harvested and transferred to user’s wallet without the staking duration getting reset. This defeats the purpose of SAR.
+harvested and transferred to user’s wallet without the user’s staking duration getting reset. This defeats the purpose of SAR.
 Locking works in the following manner to prevent this issues.
 
-When pool A rewards are compounded to pool zero, the user’s lock count on pool zero is
+To elaborate the locking mechanism, when pool A rewards are compounded to pool zero, the user’s lock count on pool zero is
 incremented by one, only if pool A did not already have a lock on pool zero. When user harvests or
 withdraws from pool A, the user’s lock count on pool zero is decremented by one, only if pool A
 was locking it. For a user to harvest or withdraw from pool zero, the user’s lock count on pool
-zero should be zero. If a user compounds the rewards of pool A, B, and C to pool zero, the user’s
+zero should be zero. In another example, if a user compounds the rewards of pool A, B, and C to pool zero, the user’s
 lock count will be three. The user will only be able to withdraw or harvest from pool zero after
 they withdraw or harvest at least once from all of those three pools. This mechanism ensures the principle of
 **rewards of a pool must not leave the contract without the pool’s staking duration getting reset**.
@@ -213,7 +213,7 @@ $$
 	= b_a \times \left( \sum_{i=j}^{k}{\frac{R_i t_i}{B_i D_i}} - t_{j-1} \times \sum_{i=j}^{k}{\frac{R_i}{B_i D_i}} \right)
 $$
 
-Third, well there is no third. That is all regarding the core algorithm. Aside from timestamp $t_{j-1}$, we are left with two expressions that we can increment on each update, and snapshot for a position if the update was triggered by that position. Then we can get their delta from the snapshot to their current values. In the code, we will call the leftmost expression in the parantheses the `idealPosition`, and the rightmost expression the `rewardPerValue`.
+Third, well there is no third. That is all regarding the core algorithm. We are left with two summations that we can increment with each interval. When we want to record the rewards of a position, we can simply record the $t_{j-1}$ time stamp, and take the snapshot of the two summations. Then we can get their delta from the snapshot to the current values of the summations. In the code, we will call the summation on the left the `idealPosition`, and the summation on the right the `rewardPerValue`.
 
 #### Combined Positions
 
