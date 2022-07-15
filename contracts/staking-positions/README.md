@@ -249,4 +249,6 @@ $$
 
 That is it. We can then expand the rightmost summation the way we [demonstrated previously](#derivation). And when we are merging positions, we can simply record $b_a \times (t_{k-1} - t_{j-1})$, which we will call `previousValues` in the code.
 
+We can continue combining more positions this way. It only requires incrementing `previousValues`. We will leave proving that as an exercise for the reader.
+
 Thanks for reading. I hope you had fun :3
