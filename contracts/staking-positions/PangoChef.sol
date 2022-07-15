@@ -592,7 +592,10 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // Ensure there are sufficient rewards to use in compounding.
         if (reward == 0) revert NoEffect();
 
-        // Increment the previousValues to not reset the staking duration.
+        // Increment the previousValues to not reset the staking duration. In the proofs,
+        // previousValues was regarding combining positions, however we are not combining positions
+        // here. Consider this trick as combining with a null position. This allows us to continue
+        // having the same staking duration but excluding any rewards before this interval.
         uint256 userBalance = user.valueVariables.balance;
         user.previousValues += uint152(userBalance * (block.timestamp - user.lastUpdate));
 
