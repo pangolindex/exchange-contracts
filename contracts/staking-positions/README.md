@@ -46,20 +46,20 @@ duration (1) starts with staking, (2) restarts with harvesting, and (3) ends wit
 
 In core SAR, there are three important mutative user functions: `stake`, `harvest`,
  and `withdraw`. Depending on their effect to the staking duration, these functions can be
-considered as destructive/devaluing 😨 or constructive 😎. The effects of calling these
+considered as destructive/devaluing 🔴 or constructive 🟢. The effects of calling these
 function to the staking duration are described below.
 
-* 😎 `stake(amount)`:
+* 🟢 `stake(amount)`:
   * The existing staked balance of the position preserves its staking duration.
   * The staking duration of the newly staked tokens starts from zero.
-* 😨 `harvest()`:
+* 🔴 `harvest()`:
   * The staking duration for all the staked tokens of the position restarts.
   This is because `harvest` call claims all the accrued rewards of a position. It is not possible
   to claim only the rewards of a portion of one's staked balance. One can either claim it all
   or none. Note that one can have an implementation where this can be circumvented, but in all
   the implementations we wrote, partial harvesting is not possible, so we will go with this
   specification.
-* 😨 `withdraw(amount)`:
+* 🔴 `withdraw(amount)`:
   * The staking duration for all the staked balance of the position restarts.
   This is because when withdrawing, all the accrued rewards are harvested. So, even if not the
   whole balance is withdrawn, all the rewards are harvested, which in turn restarts the staking
@@ -77,11 +77,11 @@ revenue. The revenue tokens get converted to PNG through `FeeCollector` (`SushiM
 and then PNG is added to `PangolinStakingPositions` as reward. In this implementation of SAR, we also
 track positions instead of users, which allows leveraging the NFT technology.
 
-This implementation allows us to add an extra `compound()` (😎) function to the core SAR
+This implementation allows us to add an extra `compound()` (🟢) function to the core SAR
 functions. This function makes no external calls because the reward and staking tokens are the
-same. Note that the compounding function is not just for convenience, it is also a way to bypass restarting the staking duration by calling `harvest()` (😨).
+same. Note that the compounding function is not just for convenience, it is also a way to bypass restarting the staking duration by calling `harvest()` (🔴).
 
-* 😎 `compound()`:
+* 🟢 `compound()`:
   * Harvests and restakes the accrued rewards without restarting the staking duration,
   * The staking duration of the newly staked tokens starts from zero.
 
@@ -117,7 +117,7 @@ that (1) pool’s staking token is a liquidity pool pair token of the factory de
 constructor, and (2) one of the tokens in the pair is `rewardsToken`. Given these requirements are satisfied for a pool,
 compounding works as follows.
 
-* 😎 `compound()`:
+* 🟢 `compound()`:
   * Harvests rewards without resetting the staking duration of the user of the pool,
   * Transfers equivalent amount of the pair of the rewards token from user’s wallet to the contract,
   * Pairs the rewards token and the token supplied by the user to create the staking token by adding liquidity to pair,
@@ -129,7 +129,7 @@ from any pool are paired with wrapped version of the native gas token, and stake
 PangoChef, pool zero (`poolId == 0`) is reserved for `WRAPPED_NATIVE_TOKEN-REWARDS_TOKEN` liquidity
 pool token, and it is created during construction.
 
-* 😎 `compoundToPoolZero()`:
+* 🟢 `compoundToPoolZero()`:
   * Harvests rewards without resetting the staking duration of the user of the pool,
   * Transfers equivalent amount of native gas token from user’s wallet to the contract,
   * Pairs the rewards token and the wrapped version of the native gas token to create the staking token of pool zero,
