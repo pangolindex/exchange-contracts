@@ -452,27 +452,29 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // Ensure either user is adding more stake, or compounding.
         if (amount == 0) revert NoEffect();
 
-        // Get the new total staked amount and ensure it fits MAX_STAKED_AMOUNT_IN_POOL.
-        uint256 newTotalStaked = poolBalance + amount;
-        if (newTotalStaked > MAX_STAKED_AMOUNT_IN_POOL) revert Overflow();
-
+        // Scope to prevent stack to deep errors.
         uint256 newBalance;
-        unchecked {
-            // Increment the pool info pertaining to pool’s total value calculation.
-            uint152 addedEntryTimes = uint152(block.timestamp * amount);
-            poolValueVariables.sumOfEntryTimes += addedEntryTimes;
-            poolValueVariables.balance = uint104(newTotalStaked);
+        {
+            // Get the new total staked amount and ensure it fits MAX_STAKED_AMOUNT_IN_POOL.
+            uint256 newTotalStaked = poolBalance + amount;
+            if (newTotalStaked > MAX_STAKED_AMOUNT_IN_POOL) revert Overflow();
+            unchecked {
+                // Increment the pool info pertaining to pool’s total value calculation.
+                uint152 addedEntryTimes = uint152(block.timestamp * amount);
+                poolValueVariables.sumOfEntryTimes += addedEntryTimes;
+                poolValueVariables.balance = uint104(newTotalStaked);
 
-            // Increment the user info pertaining to user value calculation.
-            ValueVariables storage userValueVariables = user.valueVariables;
-            uint256 oldBalance = userValueVariables.balance;
-            newBalance = oldBalance + amount;
-            userValueVariables.balance = uint104(newBalance);
-            userValueVariables.sumOfEntryTimes += addedEntryTimes;
+                // Increment the user info pertaining to user value calculation.
+                ValueVariables storage userValueVariables = user.valueVariables;
+                uint256 oldBalance = userValueVariables.balance;
+                newBalance = oldBalance + amount;
+                userValueVariables.balance = uint104(newBalance);
+                userValueVariables.sumOfEntryTimes += addedEntryTimes;
 
-            // Increment the previousValues. This allows staking duration to not reset when reward
-            // variables are snapshotted.
-            user.previousValues += uint152(oldBalance * (block.timestamp - user.lastUpdate));
+                // Increment the previousValues. This allows staking duration to not reset when
+                // reward variables are snapshotted.
+                user.previousValues += uint152(oldBalance * (block.timestamp - user.lastUpdate));
+            }
         }
 
         // Snapshot the lastUpdate and summations.
