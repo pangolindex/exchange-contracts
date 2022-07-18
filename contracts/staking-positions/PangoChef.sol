@@ -120,7 +120,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
     IPangolinFactory public immutable factory;
 
     /** @notice The contract for wrapping and unwrapping the native gas token (e.g.: WETH). */
-    address immutable wrappedNativeToken;
+    address public immutable wrappedNativeToken;
 
     /** @notice The number of pools in the contract. */
     uint256 private _poolsLength = 0;
@@ -175,6 +175,10 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // Initialize pool zero with WAVAX-PNG liquidity token.
         _initializePool(poolZeroPair, PoolType.ERC20_POOL);
         pools[0].rewardPair = newWrappedNativeToken;
+
+        // Give 10x (arbitrary scale) weight to pool. totalWeight must never be zero from now on.
+        poolRewardInfos[0].weight = 1000;
+        totalWeight = 1000;
 
         // Initialize the immutable state variables.
         factory = newFactory;
@@ -291,7 +295,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
      * @notice External function to exit from a pool by forgoing rewards.
      * @param poolId The identifier of the pool to exit from.
      */
-    function emergencyExitLevel1(uint256 poolId) external notEntered {
+    function emergencyExitLevel1(uint256 poolId) external nonReentrant {
         _emergencyExit(poolId, true);
     }
 
@@ -301,7 +305,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
      *      remaining locked if there is a DOS on the staking token.
      * @param poolId The identifier of the pool to exit from.
      */
-    function emergencyExitLevel2(uint256 poolId) external notEntered {
+    function emergencyExitLevel2(uint256 poolId) external nonReentrant {
         _emergencyExit(poolId, false);
     }
 
@@ -403,7 +407,9 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         _onlyERC20Pool(pool);
 
         // Update the summations that govern the distribution from a pool to its stakers.
-        _updateRewardSummations(poolId, pool);
+        ValueVariables storage poolValueVariables = pool.valueVariables;
+        uint256 poolBalance = poolValueVariables.balance;
+        if (poolBalance != 0) _updateRewardSummations(poolId, pool);
 
         // Before everything else, get the rewards accrued by the user. Rewards are not transferred
         // to the user in this function. Therefore they need to be either stashed or compounded.
@@ -447,23 +453,22 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         if (amount == 0) revert NoEffect();
 
         // Get the new total staked amount and ensure it fits MAX_STAKED_AMOUNT_IN_POOL.
-        ValueVariables storage poolValueVariables = pool.valueVariables;
-        uint256 newTotalStaked = pool.valueVariables.balance + amount;
+        uint256 newTotalStaked = poolBalance + amount;
         if (newTotalStaked > MAX_STAKED_AMOUNT_IN_POOL) revert Overflow();
 
         uint256 newBalance;
         unchecked {
             // Increment the pool info pertaining to pool’s total value calculation.
             uint152 addedEntryTimes = uint152(block.timestamp * amount);
-            pool.valueVariables.sumOfEntryTimes += addedEntryTimes;
-            pool.valueVariables.balance = uint104(newTotalStaked);
+            poolValueVariables.sumOfEntryTimes += addedEntryTimes;
+            poolValueVariables.balance = uint104(newTotalStaked);
 
             // Increment the user info pertaining to user value calculation.
             ValueVariables storage userValueVariables = user.valueVariables;
-            uint256 oldBalance = user.valueVariables.balance;
+            uint256 oldBalance = userValueVariables.balance;
             newBalance = oldBalance + amount;
-            user.valueVariables.balance = uint104(newBalance);
-            user.valueVariables.sumOfEntryTimes += addedEntryTimes;
+            userValueVariables.balance = uint104(newBalance);
+            userValueVariables.sumOfEntryTimes += addedEntryTimes;
 
             // Increment the previousValues. This allows staking duration to not reset when reward
             // variables are snapshotted.
@@ -690,6 +695,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
 
         // Decrement the state variables pertaining to total value calculation.
         uint104 balance = userValueVariables.balance;
+        if (balance == 0) revert NoEffect();
         unchecked {
             poolValueVariables.balance -= balance;
             poolValueVariables.sumOfEntryTimes -= userValueVariables.sumOfEntryTimes;
@@ -705,8 +711,8 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         }
 
         // Do a low-level call for rewarder. If external function reverts, only the external
-        // contract reverts. This function (emergency exit) must never revert no matter what, to
-        // prevent DOS. This can return true if rewarder is not a contract. Not a problem.
+        // contract reverts. To prevent DOS, this function (_emergencyExit) must never revert
+        // unless `balance == 0`. This can return true if rewarder is not a contract. No problem.
         (bool success, ) = address(pool.rewarder).call(
             abi.encodePacked(
                 IRewarder.onReward.selector,
@@ -714,10 +720,11 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
             )
         );
 
-        // Record last failed Rewarder calls. This can be used by a non-malicious Rewarder just in
-        // case it reverts due to some bug. We do not care if `success` is `true` due to rewarder
-        // not being a contract. A non-contract rewarder only means that it is unset. So we do not
-        // need to record the timestamp.
+        // Record last failed Rewarder calls. This can be used for slashing rewards by a
+        // non-malicious Rewarder just in case it reverts due to some bug. If rewarder is correctly
+        // written, this statement should never execute. We also do not care if `success` is `true`
+        // due to rewarder not being a contract. A non-contract rewarder only means that it is
+        // unset. So we do not need to record the timestamp.
         if (!success) lastTimeRewarderCallFailed[poolId][msg.sender] = block.timestamp;
     }
 

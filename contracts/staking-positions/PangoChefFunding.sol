@@ -236,7 +236,7 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
 
         // Ensure weight change is reasonable, then update the totalWeight state variable.
         int256 newTotalWeight = int256(uint256(totalWeight)) + weightChange;
-        if (newTotalWeight < 0) revert OutOfBounds();
+        if (newTotalWeight <= 0) revert OutOfBounds();
         if (uint256(newTotalWeight) > MAX_TOTAL_WEIGHT) revert OutOfBounds();
         totalWeight = uint32(uint256(newTotalWeight));
     }
