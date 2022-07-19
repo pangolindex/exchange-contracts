@@ -432,7 +432,9 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
             user.stashedRewards = uint96(reward);
             reward = 0;
             // Compounding.
-        } else if (stakeType == StakeType.COMPOUND) {
+        } else {
+            assert(stakeType == StakeType.COMPOUND);
+
             // Ensure the pool token is a Pangolin pair token containing PNG as one of the pairs.
             _setRewardPair(pool);
 
@@ -441,8 +443,6 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
 
             // Rewards used in compounding comes from this pool. So clear stashed rewards.
             user.stashedRewards = 0;
-        } else {
-            assert(false); // Panic.
         }
 
         // Ensure either user is adding more stake, or compounding.
@@ -662,10 +662,10 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
 
             // Refund user.
             SafeTransferLib.safeTransferETH(msg.sender, maxPairAmount - pairAmount);
-        } else {
-            // Transfer reward pair tokens from the user to the pair contract.
-            ERC20(rewardPair).safeTransferFrom(msg.sender, poolToken, pairAmount);
         }
+
+        // Transfer reward pair tokens from the user to the pair contract.
+        ERC20(rewardPair).safeTransferFrom(msg.sender, poolToken, pairAmount);
 
         // Mint liquidity tokens to the PangoChef and return the amount minted.
         poolTokenAmount = IPangolinPair(poolToken).mint(address(this));
