@@ -87,7 +87,7 @@ same. Note that the compounding function is not just for convenience, it is also
 
 Since all positions are NFTs, this implementation opens the door for derivatives. This would allow
 stakers to “leverage their loyalty”. Because a position which has double the staking duration than
-average would also have twice the APR. This would render such a position more valuable than the
+average would also have double the APR. This would render such a position more valuable than the
 amount of PNG it holds.
 
 However, due to lack of standardized slippage control for NFTs, mutable NFTs can be frontrun on
@@ -96,6 +96,9 @@ for a short period following a destructive action (e.g.: `withdraw()`). This pre
 marketplaces from executing `transferFrom()` function of NFTs to process the trade. So if a seller
 tries to frontrun a buyer by withdrawing the staked balance from the NFT position, the transaction
 will revert.
+
+`PangolinStakingPositions` is written for specifically for PNG, which has a total supply of
+`230_000_000e18`, and reverts on failed transactions.
 
 ### `PangoChef`
 
@@ -110,7 +113,7 @@ pool separately utilizes the SAR algorithm to distribute its reward allocation t
 
 PangoChef requires a Uniswap V2 factory and a wrapped native token address to be defined in
 the constructor. Although it accepts any ERC20 token to be staked, it is mainly intended for
-PangoChef liquidity pool tokens.
+Pangolin liquidity pool tokens.
 
 PangolinStakingPosition had a simple compounding mechanism. In PangoChef, compounding requires
 that (1) pool’s staking token is a liquidity pool pair token of the factory defined in the
@@ -124,7 +127,7 @@ compounding works as follows.
   * Stakes the newly minted liquidity pool receipt tokens to the pool,
   * The staking duration of the newly staked tokens starts from zero.
 
-Another version of compounding is also possible for any pool. In this version, harvested rewards
+Another version of compounding is also possible for any ERC20 pool. In this version, harvested rewards
 from any pool are paired with wrapped version of the native gas token, and staked to pool zero. In
 PangoChef, pool zero (`poolId == 0`) is reserved for `WRAPPED_NATIVE_TOKEN-REWARDS_TOKEN` liquidity
 pool token, and it is created during construction.
@@ -168,11 +171,28 @@ Yet another feature of PangoChef is relayer pools. That is an alternative type o
 and the only purpose of the pool is to divert its share of rewards to a single address. This can
 allow us to divert emissions to partners, or have a separate contract that manages ERC721 staking.
 
-## Notes on Code Style
+`PangoChef` is mainly written for PangolinPair tokens. The total staked amount limit of
+`type(uint104).max` is likely to be sufficient for most pair tokens. Weird tokens (rebasing tokens,
+fee-on-transfer tokens, and quintillion-supply meme tokens) are not supported.
 
-We are aware that solc do not check for truncation when type casting. The code is deliberately
+## Notes on Unchecked Math and Overflow/Underflow
+
+We are aware that solc does not check for truncation when type casting. The code is deliberately
 written such that either by input sanitization, or by basic assumptions about current timestamp,
 there should be no truncation. The same reasoning goes for the use of unchecked blocks.
+
+As an example regarding input sanitization, there is a limit of `type(uint96).max` on total
+rewards that can be added. This limit is *unlikely* to be reached (*unlikely*, because even
+though PNG supply fits 96 bits, the limit can theoretically be reached by rewards getting cycled
+back to the contract), but it allows us to determine for certain or only with assumptions about
+`block.timestamp`, that calculations cannot overflow.
+
+Note that when using unchecked math, we only make assumptions about `block.timestamp`, the
+remaining values used in calculations must have a hard limit checked through input sanitization,
+hence they become limitations, and should no longer be considered as assumptions. With that, we can
+have a single assumption that `block.timestamp` fits 32 bits (until `Sun 07 Feb 2106 06:28:15 AM UTC`).
+However, given normal operations of the contract, we should be fine for many thousand years to
+come without any major risk of overflow.
 
 ## SAR Proof
 
