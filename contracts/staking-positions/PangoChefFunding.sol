@@ -111,6 +111,9 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
         // Give 10x (arbitrary scale) weight to pool zero. totalWeight must never be zero.
         poolRewardInfos[0].weight = INITIAL_WEIGHT;
         totalWeight = INITIAL_WEIGHT;
+
+        // Initialize. This is probably not needed. But just in case.
+        lastUpdate = uint48(block.timestamp);
     }
 
     /**
@@ -327,13 +330,16 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
 
     /**
      * @notice Internal view function to get how much to increment `rewardPerWeightStored`.
-     * @return The incrementation amount for the `rewardPerWeightStored`.
+     * @return incrementation The incrementation amount for the `rewardPerWeightStored`.
      */
-    function _getRewardPerWeightIncrementation() internal view returns (uint128) {
+    function _getRewardPerWeightIncrementation() internal view returns (uint128 incrementation) {
+        uint256 globalPendingRewards = _globalPendingRewards();
         uint256 tmpTotalWeight = totalWeight;
-        if (tmpTotalWeight == 0) return 0;
 
-        return uint128((_globalPendingRewards() * WEIGHT_PRECISION) / tmpTotalWeight);
+        // totalWeight should not be null. But in the case it is, use assembly to return zero.
+        assembly {
+            incrementation := div(mul(globalPendingRewards, WEIGHT_PRECISION), tmpTotalWeight)
+        }
     }
 
     /**
