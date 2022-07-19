@@ -69,6 +69,9 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
     /** @notice The maximum amount of rewards that can ever be distributed. */
     uint256 private constant MAX_TOTAL_REWARD = type(uint96).max;
 
+    /** @notice The initial weight of pool zero, hence the initial total weight. */
+    uint32 private constant INITIAL_WEIGHT = 1_000;
+
     /** @notice The privileged role that can call `addReward` function */
     bytes32 private constant FUNDER_ROLE = keccak256("FUNDER_ROLE");
 
@@ -99,10 +102,15 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
         if (newAdmin == address(0)) revert NullInput();
         if (newRewardsToken.code.length == 0) revert InvalidToken();
 
+        // Give roles to newAdmin.
         rewardsToken = ERC20(newRewardsToken);
         _grantRole(DEFAULT_ADMIN_ROLE, newAdmin);
         _grantRole(FUNDER_ROLE, newAdmin);
         _grantRole(POOL_MANAGER_ROLE, newAdmin);
+
+        // Give 10x (arbitrary scale) weight to pool zero totalWeight must not be zero from now on.
+        poolRewardInfos[0].weight = INITIAL_WEIGHT;
+        totalWeight = INITIAL_WEIGHT;
     }
 
     /**

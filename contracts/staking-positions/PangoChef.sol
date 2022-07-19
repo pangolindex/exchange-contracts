@@ -131,9 +131,6 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
     /** @notice The fixed denominator used for storing summations. */
     uint256 private constant PRECISION = 2**128;
 
-    /** @notice The initial weight of pool zero, hence the initial total weight. */
-    uint256 private constant INITIAL_WEIGHT = 1_000;
-
     /** @notice The event emitted when withdrawing or harvesting from a position. */
     event Withdrawn(
         uint256 indexed positionId,
@@ -178,10 +175,6 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // Initialize pool zero with WAVAX-PNG liquidity token.
         _initializePool(poolZeroPair, PoolType.ERC20_POOL);
         pools[0].rewardPair = newWrappedNativeToken;
-
-        // Give 10x (arbitrary scale) weight to pool. totalWeight must never be zero from now on.
-        poolRewardInfos[0].weight = INITIAL_WEIGHT;
-        totalWeight = INITIAL_WEIGHT;
 
         // Initialize the immutable state variables.
         factory = newFactory;
