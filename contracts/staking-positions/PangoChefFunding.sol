@@ -108,7 +108,7 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
         _grantRole(FUNDER_ROLE, newAdmin);
         _grantRole(POOL_MANAGER_ROLE, newAdmin);
 
-        // Give 10x (arbitrary scale) weight to pool zero totalWeight must not be zero from now on.
+        // Give 10x (arbitrary scale) weight to pool zero. totalWeight must never be zero.
         poolRewardInfos[0].weight = INITIAL_WEIGHT;
         totalWeight = INITIAL_WEIGHT;
     }
