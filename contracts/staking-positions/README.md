@@ -29,7 +29,7 @@ $$
 \textit{reward proportion} = \frac{\textit{position staked balance}}{\textit{total staked balance}} \times \frac{\textit{position staking duration}}{\textit{average staking duration}}
 $$
 
-[The proof section below](#sar-proof) describes how this formula is used to derive an algorithm
+[The proof section at the end](#sar-proof) describes how this formula is used to derive an algorithm
 that can calculate rewards in *O(1)*.
 
 ### Rationale
