@@ -51,15 +51,6 @@ interface ITokenMetadata {
  * @dev Limitations (checked to be true):
  *      - `totalStaked` fits 96 bits.
  *      - `totalRewardAdded` fits 96 bits.
- *
- * @dev Some invariants (must hold true at any given state):
- *      - Sum of all positions’ ‘values’ equals to ‘total value’,
- *      - Sum of all positions’ `balance` equals to `totalStaked`,
- *      - Sum of all positions’ `entryTimes` equals to `sumOfEntryTimes`,
- *      - `_idealPosition` is greater or equal to the `idealPosition` of any position,
- *      - `_rewardPerValue` is greater or equal to the `rewardPerValue` of any position,
- *      - The sum of total claimed and pending rewards from `RewardFunding`, must equal to sum of
- *        all positions’ lost (due to `emergencyExit()`), harvested, and pending rewards.
  */
 contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     struct ValueVariables {
