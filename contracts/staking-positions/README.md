@@ -97,7 +97,7 @@ marketplaces from executing `transferFrom()` function of NFTs to process the tra
 tries to frontrun a buyer by withdrawing the staked balance from the NFT position, the transaction
 will revert.
 
-`PangolinStakingPositions` is written for specifically for PNG, which has a total supply of
+`PangolinStakingPositions` is written specifically for PNG, which has a total supply of
 `230_000_000e18`, and reverts on failed transactions.
 
 ### `PangoChef`
@@ -175,7 +175,7 @@ allow us to divert emissions to partners, or have a separate contract that manag
 `type(uint104).max` is likely to be sufficient for most pair tokens. Weird tokens (rebasing tokens,
 fee-on-transfer tokens, and quintillion-supply meme tokens) are not supported.
 
-## Notes on Unchecked Math and Overflow/Underflow
+## Notes on Unchecked Math, Truncation, and Overflow
 
 We are aware that solc does not check for truncation when type casting. The code is deliberately
 written such that either by input sanitization, or by basic assumptions about current timestamp,
@@ -194,17 +194,25 @@ have a single assumption that `block.timestamp` fits 32 bits (until `Sun 07 Feb 
 However, given normal operations of the contract, we should be fine for many thousand years to
 come without any major risk of overflow.
 
+We also use an uncommonly high precision / multiplier / fixed denominator (i.e: `2**128`) for
+storing “reward summations” used in the SAR algorithm. The reason for this is that loss of
+precision can cause handing out dust amounts of extra rewards to stakers. This is in contrast to
+Synthetix’ staking algorithm, where loss of precision would simply result in dust amounts of
+less rewards getting distributed. When extra rewards are distributed, that can result in the last
+participant unable to withdraw unless extra reward tokens are transferred to the contract. This is
+perhaps something to be investigated to determine the optimal precision multiplier.
+
 ## SAR Proof
 
 ### Definitions
 
-Let’s consider an interval to be the period between two consecutive updates (triggered via `stake`, `withdraw`, or `harvest` events). Given interval $i$, let $B_i$ be the sum of all staked balance, and let $D_i$ be the balance-weighted average staking duration of all staked balance at the end of the interval. When distributing rewards of the interval, $R_i$, a position (or participant) $a$, with staked balance of $b_a$, and an average staking duration of $d_{a,i}$ at the end of the interval, will earn the following reward amount.
+Let’s consider an interval to be the period between two consecutive updates (triggered via `stake`, `withdraw`, or `harvest` events). Given interval $i$, let $B_i$ be the sum of all staked balance, and let $D_i$ be the balance-weighted average staking duration of all staked balance at the end of the interval. When distributing rewards of the interval, $R_i$, a position (or participant) $a$, with staked balance of $b_{a,i}$, and an average staking duration of $d_{a,i}$ at the end of the interval, will earn the following reward amount.
 
 $$
-	r_{a,i} = R_i \times \frac{b_a}{B_i} \times \frac{d_{a,i}}{D_i}
+	r_{a,i} = R_i \times \frac{b_{a,i}}{B_i} \times \frac{d_{a,i}}{D_i}
 $$
 
-For multiple intervals, during which the position $a$ has a constant staked balance, the position will earn the following total reward amount.
+For multiple intervals, during which the position $a$ has a constant staked balance, $b_a$, the position will earn the following total reward amount.
 
 $$
 	\sum_i{r_{a,i}} = b_a \times \sum_i{\frac{R_i d_{a,i}}{B_i D_i}}
