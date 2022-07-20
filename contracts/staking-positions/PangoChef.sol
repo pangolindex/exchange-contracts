@@ -676,7 +676,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
      * @param poolId The identifier of the pool to exit from.
      * @param withdrawStake An option to forgo stake along with the rewards.
      */
-    function _emergencyExit(uint256 poolId, bool withdrawStake) private notEntered {
+    function _emergencyExit(uint256 poolId, bool withdrawStake) private {
         // Create storage pointers for the pool and the user.
         Pool storage pool = pools[poolId];
         User storage user = pool.users[msg.sender];
