@@ -100,7 +100,6 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
      */
     constructor(address newRewardsToken, address newAdmin) {
         if (newAdmin == address(0)) revert NullInput();
-        if (newRewardsToken.code.length == 0) revert InvalidToken();
 
         // Give roles to newAdmin.
         rewardsToken = ERC20(newRewardsToken);
@@ -111,9 +110,6 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
         // Give 10x (arbitrary scale) weight to pool zero. totalWeight must never be zero.
         poolRewardInfos[0].weight = INITIAL_WEIGHT;
         totalWeight = INITIAL_WEIGHT;
-
-        // Initialize. This is probably not needed. But just in case.
-        lastUpdate = uint48(block.timestamp);
     }
 
     /**
