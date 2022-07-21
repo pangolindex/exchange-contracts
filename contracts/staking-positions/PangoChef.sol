@@ -314,11 +314,11 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // Create a storage pointer for the pool.
         Pool storage pool = pools[poolId];
 
-        // Ensure only relayer itself can claim the rewards.
-        if (msg.sender != pool.tokenOrRecipient) revert UnprivilegedCaller();
-
         // Ensure pool is RELAYER type.
         _onlyRelayerPool(pool);
+
+        // Ensure only relayer itself can claim the rewards.
+        if (msg.sender != pool.tokenOrRecipient) revert UnprivilegedCaller();
 
         // Get the pool’s rewards.
         reward = _claim(poolId);
