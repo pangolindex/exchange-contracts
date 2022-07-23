@@ -58,7 +58,7 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
     uint256 private constant MIN_PERIOD_DURATION = 2**16 + 1;
 
     /** @notice The maximum duration a period can last. */
-    uint256 private constant MAX_PERIOD_DURATION = 2**32;
+    uint256 private constant MAX_PERIOD_DURATION = type(uint32).max;
 
     /** @notice The fixed denominator used when storing `rewardPerWeight` variables. */
     uint256 private constant WEIGHT_PRECISION = 2**32;
