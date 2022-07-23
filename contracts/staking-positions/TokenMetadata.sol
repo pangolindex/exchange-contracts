@@ -136,9 +136,9 @@ contract TokenMetadata is AccessControlEnumerable {
                     '},{"display_type":"date","trait_type":"Entry Time","value":',
                     entryTime.toString(),
                     '},{"display_type":"number","max_value":"10","trait_type":"Stars","value":',
-                    balanceLevel.toString(),
+                    (balanceLevel + 1).toString(),
                     '},{"display_type":"number","max_value":"10","trait_type":"Emblem","value":',
-                    durationLevel.toString(),
+                    (durationLevel + 1).toString(),
                     '}],"image":"data:image/svg+xml;base64,',
                     svg,
                     '"}\n'
