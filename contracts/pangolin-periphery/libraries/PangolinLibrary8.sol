@@ -3,6 +3,10 @@ pragma solidity >=0.8.0;
 import '../../pangolin-core/interfaces/IPangolinFactory.sol';
 import '../../pangolin-core/interfaces/IPangolinPair.sol';
 
+// SPDX-License-Identifier: MIT
+
+// @dev PangolinLibrary compliant with solidity v0.8.0+
+// @dev Specific changes were made to remove SafeMath, type-cast pair addresses, and optimize gas use
 library PangolinLibrary8 {
     // returns sorted token addresses, used to handle return values from pairs sorted in this order
     function sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
@@ -58,22 +62,26 @@ library PangolinLibrary8 {
     // performs chained getAmountOut calculations on any number of pairs
     function getAmountsOut(address factory, uint256 amountIn, address[] memory path) internal view returns (uint[] memory amounts) {
         require(path.length >= 2, 'PangolinLibrary: INVALID_PATH');
-        amounts = new uint[](path.length);
-        amounts[0] = amountIn;
-        for (uint256 i; i < path.length - 1; ++i) {
-            (uint256 reserveIn, uint256 reserveOut) = getReserves(factory, path[i], path[i + 1]);
-            amounts[i + 1] = getAmountOut(amounts[i], reserveIn, reserveOut);
+        unchecked {
+            amounts = new uint[](path.length);
+            amounts[0] = amountIn;
+            for (uint256 i; i < path.length - 1; ++i) {
+                (uint256 reserveIn, uint256 reserveOut) = getReserves(factory, path[i], path[i + 1]);
+                amounts[i + 1] = getAmountOut(amounts[i], reserveIn, reserveOut);
+            }
         }
     }
 
     // performs chained getAmountIn calculations on any number of pairs
     function getAmountsIn(address factory, uint256 amountOut, address[] memory path) internal view returns (uint[] memory amounts) {
         require(path.length >= 2, 'PangolinLibrary: INVALID_PATH');
-        amounts = new uint[](path.length);
-        amounts[amounts.length - 1] = amountOut;
-        for (uint256 i = path.length - 1; i > 0; i--) {
-            (uint256 reserveIn, uint256 reserveOut) = getReserves(factory, path[i - 1], path[i]);
-            amounts[i - 1] = getAmountIn(amounts[i], reserveIn, reserveOut);
+        unchecked {
+            amounts = new uint[](path.length);
+            amounts[amounts.length - 1] = amountOut;
+            for (uint256 i = path.length - 1; i > 0; --i) {
+                (uint256 reserveIn, uint256 reserveOut) = getReserves(factory, path[i - 1], path[i]);
+                amounts[i - 1] = getAmountIn(amounts[i], reserveIn, reserveOut);
+            }
         }
     }
 }
