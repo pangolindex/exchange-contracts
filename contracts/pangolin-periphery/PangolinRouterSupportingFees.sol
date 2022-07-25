@@ -43,9 +43,12 @@ contract PangolinRouterSupportingFees is Ownable {
     event FeeFloorChange(uint24 feeFloor);
     event ManagerChange(address indexed partner, address manager, bool isAllowed);
 
-    constructor(address _FACTORY, address _WAVAX, address firstOwner) public {
-        FACTORY = _FACTORY; // 0xefa94DE7a4656D787667C749f7E1223D71E9FD88
-        WAVAX = _WAVAX; // 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7
+    constructor(address _FACTORY, address _WAVAX, address firstOwner) {
+        require(_FACTORY != address(0), "Invalid factory");
+        require(_WAVAX != address(0), "Invalid wrapped currency");
+        require(firstOwner != address(0), "Invalid first owner");
+        FACTORY = _FACTORY;
+        WAVAX = _WAVAX;
         transferOwnership(firstOwner);
     }
 
