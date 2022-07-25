@@ -100,23 +100,24 @@ contract TokenMetadata is AccessControlEnumerable {
 
         string memory svg;
         {
-            svg = Base64.encode(
-                abi.encodePacked(
-                    '<svg width="663" height="1080" viewbox="0 0 663 1080" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"> <style type="text/css"> @font-face { font-family: "Poppins"; src: url(',
-                    regularFontUri,
-                    ') format("woff2"); } @font-face { font-family: "Poppins"; font-weight: bold; src: url(',
-                    boldFontUri,
-                    ') format("woff2"); } text { color:#1a1a1a; font-family:Poppins, sans-serif; font-size:24.73px; } .data_span { font-weight:bold; font-size:37.09px } .text_bottom .info_span { font-size: 28.81px } .text_bottom .data_span { font-size: 43.21px } </style> <image preserveAspectRatio="xMidYMid slice" width="100%" height="100%" xlink:href="',
-                    getImageUri(balanceLevel, durationLevel),
-                    '"></image> <text x="27.3" y="54.9" text-anchor="start" class="text_top"><tspan class="info_span">$PNG: </tspan><tspan class="data_span">',
-                    addThousandSeperator(balance),
-                    '</tspan></text> <text x="635.7" y="54.9" text-anchor="end" class="text_top"><tspan class="info_span">APR: </tspan><tspan class="data_span">',
-                    addThousandSeperator(apr),
-                    '%</tspan></text> <text x="331.5" y="1001.97" text-anchor="middle" class="text_bottom"><tspan class="info_span">EARNED: </tspan><tspan class="data_span" x="331.5" dy="51.85">$PNG ',
-                    addThousandSeperator(earned),
-                    '</tspan></text> </svg>'
-                )
+            bytes memory svgPart1 = abi.encodePacked(
+                '<svg width="663" height="1080" viewbox="0 0 663 1080" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"> <style type="text/css"> @font-face { font-family: "Poppins"; src: url(',
+                regularFontUri,
+                ') format("woff2"); } @font-face { font-family: "Poppins"; font-weight: bold; src: url(',
+                boldFontUri,
+                ') format("woff2"); } text { color:#1a1a1a; font-family:Poppins, sans-serif; font-size:24.73px; } .data_span { font-weight:bold; font-size:37.09px } .text_bottom .info_span { font-size: 28.81px } .text_bottom .data_span { font-size: 43.21px } </style> <image preserveAspectRatio="xMidYMid slice" width="100%" height="100%" xlink:href="'
             );
+            bytes memory svgPart2 = abi.encodePacked(
+                getImageUri(balanceLevel, durationLevel),
+                '"></image> <text x="27.3" y="54.9" text-anchor="start" class="text_top"><tspan class="info_span">$PNG: </tspan><tspan class="data_span">',
+                addThousandSeperator(balance),
+                '</tspan></text> <text x="635.7" y="54.9" text-anchor="end" class="text_top"><tspan class="info_span">APR: </tspan><tspan class="data_span">',
+                addThousandSeperator(apr),
+                '%</tspan></text> <text x="331.5" y="1001.97" text-anchor="middle" class="text_bottom"><tspan class="info_span">EARNED: </tspan><tspan class="data_span" x="331.5" dy="51.85">$PNG ',
+                addThousandSeperator(earned),
+                '</tspan></text> </svg>'
+            );
+            svg = Base64.encode(abi.encodePacked(svgPart1, svgPart2));
         }
 
         string memory json;
