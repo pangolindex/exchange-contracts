@@ -65,14 +65,14 @@ describe('PangolinRouterSupportingFees', function() {
 
         describe('Partner activation', async function() {
             it('Defaults to not active', async function() {
-                const feeInfo = await router.feeInfos(partner.address);
+                const feeInfo = await getFeeInfo(partner.address);
                 expect(feeInfo.initialized).to.be.false;
             });
             it('Owner can activate partner', async function() {
                 await expect(router.connect(OWNER).activatePartner(
                     partner.address,
                 )).to.emit(router, 'PartnerActivated');
-                const feeInfo = await router.feeInfos(partner.address);
+                const feeInfo = await getFeeInfo(partner.address);
                 expect(feeInfo.initialized).to.be.true;
                 expect(feeInfo.feeCut).to.equal(50_00);
             });
@@ -80,7 +80,7 @@ describe('PangolinRouterSupportingFees', function() {
                 await expect(router.connect(nonOwner).activatePartner(
                     partner.address,
                 )).to.emit(router, 'PartnerActivated');
-                const feeInfo = await router.feeInfos(partner.address);
+                const feeInfo = await getFeeInfo(partner.address);
                 expect(feeInfo.initialized).to.be.true;
                 expect(feeInfo.feeCut).to.equal(50_00);
             });
@@ -91,7 +91,7 @@ describe('PangolinRouterSupportingFees', function() {
                 await expect(router.connect(OWNER).activatePartner(
                     partner.address,
                 )).to.emit(router, 'PartnerActivated');
-                const feeInfo = await router.feeInfos(partner.address);
+                const feeInfo = await getFeeInfo(partner.address);
                 expect(feeInfo.initialized).to.be.true;
                 expect(feeInfo.feeTotal).to.equal(feeFloor);
                 expect(feeInfo.feePartner).to.be.greaterThan(0);
@@ -183,7 +183,7 @@ describe('PangolinRouterSupportingFees', function() {
                 );
             });
             it('Total fee defaults to 0', async function() {
-                const feeInfo = await router.feeInfos(partner.address);
+                const feeInfo = await getFeeInfo(partner.address);
                 expect(feeInfo.feeTotal).to.equal(0);
             });
             it('Owner can change total fee', async function() {
@@ -192,7 +192,7 @@ describe('PangolinRouterSupportingFees', function() {
                     partner.address,
                     feeTotal,
                 )).to.emit(router, 'FeeChange');
-                const feeInfo = await router.feeInfos(partner.address);
+                const feeInfo = await getFeeInfo(partner.address);
                 expect(feeInfo.feeTotal).to.equal(1_00);
             });
             it('Partner can change total fee', async function() {
@@ -201,7 +201,7 @@ describe('PangolinRouterSupportingFees', function() {
                     partner.address,
                     feeTotal,
                 )).to.emit(router, 'FeeChange');
-                const feeInfo = await router.feeInfos(partner.address);
+                const feeInfo = await getFeeInfo(partner.address);
                 expect(feeInfo.feeTotal).to.equal(1_00);
             });
             it('Manager can change total fee', async function() {
@@ -210,7 +210,7 @@ describe('PangolinRouterSupportingFees', function() {
                     partner.address,
                     feeTotal,
                 )).to.emit(router, 'FeeChange');
-                const feeInfo = await router.feeInfos(partner.address);
+                const feeInfo = await getFeeInfo(partner.address);
                 expect(feeInfo.feeTotal).to.equal(1_00);
             });
             it('Random user can not change total fee', async function() {
@@ -265,7 +265,7 @@ describe('PangolinRouterSupportingFees', function() {
                     partner.address,
                     feeTotal,
                 )).to.emit(router, 'FeeChange');
-                const feeInfo = await router.feeInfos(partner.address);
+                const feeInfo = await getFeeInfo(partner.address);
                 expect(feeInfo.feeCut).to.equal(50_00);
                 expect(feeInfo.feePartner).to.equal(50);
                 expect(feeInfo.feeProtocol).to.equal(50);
@@ -280,7 +280,7 @@ describe('PangolinRouterSupportingFees', function() {
                     partner.address,
                     feeTotal,
                 )).to.emit(router, 'FeeChange');
-                const feeInfo = await router.feeInfos(partner.address);
+                const feeInfo = await getFeeInfo(partner.address);
                 expect(feeInfo.feeCut).to.equal(25_00);
                 expect(feeInfo.feePartner).to.equal(75);
                 expect(feeInfo.feeProtocol).to.equal(25);
@@ -299,7 +299,7 @@ describe('PangolinRouterSupportingFees', function() {
                     partner.address,
                     feeTotal,
                 )).to.emit(router, 'FeeChange');
-                const feeInfo = await router.feeInfos(partner.address);
+                const feeInfo = await getFeeInfo(partner.address);
                 expect(feeInfo.feeCut).to.equal(0);
                 expect(feeInfo.feePartner).to.equal(1_00);
                 expect(feeInfo.feeProtocol).to.equal(0);
@@ -1032,5 +1032,15 @@ describe('PangolinRouterSupportingFees', function() {
         const partnerFee = totalFee.sub(protocolFee);
         const remainder = amount.sub(totalFee);
         return { totalFee, protocolFee, partnerFee, remainder };
+    }
+    async function getFeeInfo(feeTo) {
+        const feeInfo = await router.getFeeInfo(feeTo);
+        return {
+            feePartner: feeInfo[0],
+            feeProtocol: feeInfo[1],
+            feeTotal: feeInfo[2],
+            feeCut: feeInfo[3],
+            initialized: feeInfo[4],
+        };
     }
 });

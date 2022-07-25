@@ -25,7 +25,8 @@ contract PangolinRouterSupportingFees is Ownable {
         bool initialized;
     }
 
-    mapping(address => FeeInfo) public feeInfos;
+    // @dev Available externally via getFeeInfo(feeTo)
+    mapping(address => FeeInfo) private feeInfos;
 
     // partner => manager => isAllowed
     mapping(address => mapping(address => bool)) public managers;
@@ -384,6 +385,22 @@ contract PangolinRouterSupportingFees is Ownable {
     }
 
     // **** FEE FUNCTIONS ****
+    function getFeeInfo(address feeTo) external view returns (
+        uint24 feePartner,
+        uint24 feeProtocol,
+        uint24 feeTotal,
+        uint24 feeCut,
+        bool initialized
+    ) {
+        FeeInfo storage feeInfo = feeInfos[feeTo];
+        return (
+            feeInfo.feePartner,
+            feeInfo.feeProtocol,
+            feeInfo.feeTotal,
+            feeInfo.feeCut,
+            feeInfo.initialized
+        );
+    }
     function activatePartner(address partner) external {
         FeeInfo storage feeInfo = feeInfos[partner];
         require(!feeInfo.initialized, "Already initialized");
