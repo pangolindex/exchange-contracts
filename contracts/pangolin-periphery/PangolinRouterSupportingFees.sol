@@ -5,25 +5,21 @@ import "../pangolin-lib/libraries/TransferHelper.sol";
 import "./libraries/PangolinLibrary8.sol";
 
 import "./interfaces/IERC20.sol";
+import "./interfaces/IPangolinRouterSupportingFees.sol";
 import "./interfaces/IWAVAX.sol";
 
-contract PangolinRouterSupportingFees is Ownable {
-    address public immutable FACTORY;
-    address public immutable WAVAX;
+// SPDX-License-Identifier: MIT
+
+// @dev Router allowing percent fees to be charged on the output token of a swap
+contract PangolinRouterSupportingFees is IPangolinRouterSupportingFees, Ownable {
+    address public immutable override FACTORY;
+    address public immutable override WAVAX;
 
     uint24 constant private BIPS = 100_00;
     uint24 constant private MAX_FEE_CUT = 50_00;
     uint24 constant private MAX_FEE_FLOOR = 30;
     uint24 constant public MAX_FEE = 2_00;
     uint24 public FEE_FLOOR = 0;
-
-    struct FeeInfo {
-        uint24 feePartner;      // Range [ 0, 200 ]
-        uint24 feeProtocol;     // Range [ 0, 200 ]
-        uint24 feeTotal;        // Range [ 0, 200 ]
-        uint24 feeCut;          // Range [ 0, 5000 ]
-        bool initialized;
-    }
 
     // @dev Available externally via getFeeInfo(feeTo)
     mapping(address => FeeInfo) private feeInfos;
@@ -35,14 +31,6 @@ contract PangolinRouterSupportingFees is Ownable {
         require(deadline >= block.timestamp, "EXPIRED");
         _;
     }
-
-    event PartnerActivated(address indexed partner, uint24 feePartner, uint24 feeProtocol, uint24 feeTotal, uint24 feeCut);
-    event FeeChange(address indexed partner, uint24 feePartner, uint24 feeProtocol, uint24 feeTotal, uint24 feeCut);
-    event ProtocolFee(address indexed partner, address indexed token, uint256 amount);
-    event PartnerFee(address indexed partner, address indexed token, uint256 amount);
-    event FeeWithdrawn(address indexed token, uint256 amount, address to);
-    event FeeFloorChange(uint24 feeFloor);
-    event ManagerChange(address indexed partner, address manager, bool isAllowed);
 
     constructor(address _FACTORY, address _WAVAX, address firstOwner) {
         require(_FACTORY != address(0), "Invalid factory");
