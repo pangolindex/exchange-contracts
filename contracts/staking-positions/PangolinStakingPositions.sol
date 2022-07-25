@@ -46,7 +46,7 @@ interface ITokenMetadata {
  * @dev Assumptions (not checked to be true):
  *      - `rewardsToken` reverts or returns false on invalid transfers,
  *      - `block.timestamp * totalRewardAdded` fits 128 bits,
- *      - `block.timestamp` fits 40 bits.
+ *      - `block.timestamp` is never greater than `2**40 - 1 - 2**32`.
  *
  * @dev Limitations (checked to be true):
  *      - `totalStaked` fits 96 bits.
@@ -71,8 +71,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
         // The sum of `reward/totalValue` of each interval. `totalValue` is the sum of all staked
         // tokens multiplied by their respective staking durations.  On every update, the
         // `rewardPerValue` is incremented by rewards given during that interval divided by the
-        // total value, which is average staking duration multiplied by total staked. See `Regular
-        // Position from Ideal Position` for more details.
+        // total value, which is average staking duration multiplied by total staked. See Proofs.
         uint256 rewardPerValue;
     }
 
@@ -134,10 +133,10 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     uint256 private constant MAX_APPROVAL_PAUSE_DURATION = 2 days;
 
     /** @notice The event emitted when withdrawing or harvesting from a position. */
-    event Withdrawn(uint256 indexed positionId, uint256 amount, uint256 reward);
+    event Withdrawn(uint256 indexed positionId, uint256 indexed amount, uint256 indexed reward);
 
     /** @notice The event emitted when staking to, minting, or compounding a position. */
-    event Staked(uint256 indexed positionId, uint256 amount, uint256 reward);
+    event Staked(uint256 indexed positionId, uint256 indexed amount, uint256 indexed reward);
 
     /** @notice The event emitted when admin changes `approvalPauseDuration`. */
     event PauseDurationSet(uint256 newApprovalPauseDuration);
@@ -239,8 +238,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     }
 
     /**
-     * @notice External function to close a position by withdrawing the staked balance and claiming
-     *         all the accrued rewards.
+     * @notice External function to close a position by burning the associated NFT.
      * @param positionId The identifier of the position to close.
      */
     function burn(uint256 positionId) external {
@@ -509,7 +507,8 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
             totalValueVariables.sumOfEntryTimes -= positionValueVariables.sumOfEntryTimes;
         }
 
-        delete positions[positionId];
+        // Simply destroy the position.
+        _burn(positionId);
 
         // Transfer only the staked balance from the contract to user.
         _transferToCaller(balance);

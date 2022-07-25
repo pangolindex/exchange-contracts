@@ -87,12 +87,15 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
 
     /** @notice External restricted function to end the period and withdraw leftover rewards. */
     function endPeriod() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        // For efficiency, move periodFinish to memory.
+        uint256 tmpPeriodFinish = periodFinish;
+
         // Ensure period has not already ended.
-        if (block.timestamp >= periodFinish) revert TooLate();
+        if (block.timestamp >= tmpPeriodFinish) revert TooLate();
 
         unchecked {
             // Get the rewards remaining to be distributed.
-            uint256 leftover = (periodFinish - block.timestamp) * _rewardRate;
+            uint256 leftover = (tmpPeriodFinish - block.timestamp) * _rewardRate;
 
             // Decrement totalRewardAdded by the amount to be withdrawn.
             totalRewardAdded -= uint96(leftover);
@@ -127,26 +130,33 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
         // that `_pendingRewards()` will change, hence a user might “lose” rewards earned since
         // `lastUpdate`. It is not a very big deal as the `lastUpdate` is likely to be updated
         // frequently, but just something to acknowledge.
-        uint256 tmpRewardRate;
+        uint256 newRewardRate;
         if (lastUpdate >= periodFinish) {
-            tmpRewardRate = amount / tmpPeriodDuration;
+            // Use assembly because periodDuration can never be zero.
+            assembly {
+                newRewardRate := div(amount, tmpPeriodDuration)
+            }
         } else {
             unchecked {
                 uint256 leftover = (periodFinish - lastUpdate) * _rewardRate;
-                tmpRewardRate = (amount + leftover) / tmpPeriodDuration;
+                assembly {
+                    newRewardRate := div(add(amount, leftover), tmpPeriodDuration)
+                }
             }
         }
 
         // Ensure sufficient amount is supplied hence reward rate is non-zero.
-        if (tmpRewardRate == 0) revert NoEffect();
+        if (newRewardRate == 0) revert NoEffect();
 
-        // Assign the tmpRewardRate back to storage.
+        // Assign the newRewardRate back to storage.
         // MAX_TOTAL_REWARD / MIN_PERIOD_DURATION fits 80 bits.
-        _rewardRate = uint80(tmpRewardRate);
+        _rewardRate = uint80(newRewardRate);
 
         // Update lastUpdate and periodFinish.
-        lastUpdate = uint40(block.timestamp);
-        periodFinish = uint40(block.timestamp + tmpPeriodDuration);
+        unchecked {
+            lastUpdate = uint40(block.timestamp);
+            periodFinish = uint40(block.timestamp + tmpPeriodDuration);
+        }
 
         // Transfer reward tokens from the caller to the contract.
         _transferFromCaller(amount);
