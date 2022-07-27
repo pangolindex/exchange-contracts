@@ -663,9 +663,27 @@ contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsF
                     (deltaRewardSummations.rewardPerValue * position.previousValues)) / PRECISION;
     }
 
-    /* ************* */
-    /*   OVERRIDES   */
-    /* ************* */
+    /* *********************** */
+    /* OVERRIDES and NFT STUFF */
+    /* *********************** */
+
+    function tokensOfOwnerByIndex(
+        address owner,
+        uint256 from,
+        uint256 to
+    ) external view returns (uint256[] memory) {
+        if (from > to) revert OutOfBounds();
+
+        uint256 length = to - from + 1;
+        uint256[] memory tokens = new uint256[](length);
+        while (from <= to) {
+            tokens[from] = tokenOfOwnerByIndex(owner, from);
+            unchecked {
+                ++from;
+            }
+        }
+        return tokens;
+    }
 
     function _burn(uint256 tokenId) internal override onlyOwner(tokenId) {
         // Delete position when burning the NFT.
