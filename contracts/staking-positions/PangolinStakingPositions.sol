@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPLv3
 pragma solidity 0.8.15;
 
-import "@rari-capital/solmate/src/tokens/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "./PangolinStakingPositionsFunding.sol";
 
 interface ITokenMetadata {
@@ -52,7 +52,7 @@ interface ITokenMetadata {
  *      - `totalStaked` fits 96 bits.
  *      - `totalRewardAdded` fits 96 bits.
  */
-contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
+contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsFunding {
     struct ValueVariables {
         // The amount of tokens staked in the position or the contract.
         uint96 balance;
@@ -102,7 +102,7 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     ITokenMetadata public tokenMetadata;
 
     /** @notice The struct holding the totalStaked and sumOfEntryTimes. */
-    ValueVariables totalValueVariables;
+    ValueVariables public totalValueVariables;
 
     /** @notice The variables that govern the reward distribution. */
     RewardSummations public rewardSummationsStored;
@@ -667,26 +667,28 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     /*   OVERRIDES   */
     /* ************* */
 
-    function _burn(uint256 tokenId) internal override(ERC721) onlyOwner(tokenId) {
+    function _burn(uint256 tokenId) internal override onlyOwner(tokenId) {
         // Delete position when burning the NFT.
         delete positions[tokenId];
         super._burn(tokenId);
     }
 
-    function transferFrom(
+    function _beforeTokenTransfer(
         address from,
         address to,
         uint256 tokenId
-    ) public override(ERC721) {
+    ) internal override {
         // Ignore approvals for a period following a destructive action.
-        uint256 approvalPauseUntil = positions[tokenId].lastDevaluation + approvalPauseDuration;
-        if (msg.sender != from && block.timestamp <= approvalPauseUntil) revert TooEarly();
+        if (msg.sender != from) {
+            uint256 pausedUntil = positions[tokenId].lastDevaluation + approvalPauseDuration;
+            if (block.timestamp <= pausedUntil) revert TooEarly();
+        }
 
-        super.transferFrom(from, to, tokenId);
+        super._beforeTokenTransfer(from, to, tokenId);
     }
 
-    function tokenURI(uint256 tokenId) public view override(ERC721) returns (string memory) {
-        if (_ownerOf[tokenId] == address(0)) revert NonExistentToken();
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
+        ERC721._requireMinted(tokenId);
 
         // Use external contract to handle token metadata.
         return tokenMetadata.tokenURI(this, tokenId);
@@ -695,11 +697,11 @@ contract PangolinStakingPositions is ERC721, PangolinStakingPositionsFunding {
     function supportsInterface(bytes4 interfaceId)
         public
         view
-        override(ERC721, AccessControlEnumerable)
+        override(ERC721Enumerable, AccessControlEnumerable)
         returns (bool)
     {
         return
             AccessControlEnumerable.supportsInterface(interfaceId) ||
-            ERC721.supportsInterface(interfaceId);
+            ERC721Enumerable.supportsInterface(interfaceId);
     }
 }
