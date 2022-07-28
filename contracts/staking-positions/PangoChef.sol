@@ -779,8 +779,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
      */
     function _initializePool(address tokenOrRecipient, PoolType poolType) private {
         // Get the next `poolId` from `_poolsLength`, then increment `_poolsLength`.
-        uint256 poolId = _poolsLength;
-        ++_poolsLength;
+        uint256 poolId = _poolsLength++;
 
         // Ensure address and pool type are not empty.
         if (tokenOrRecipient == address(0) || poolType == PoolType.UNSET_POOL) revert NullInput();
