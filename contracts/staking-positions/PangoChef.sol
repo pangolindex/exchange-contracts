@@ -392,8 +392,9 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
      * @notice Private function to deposit tokens to a pool.
      * @param poolId The identifier of the pool to deposit to.
      * @param userId The address of the user to deposit for.
-     * @param amount The amount of tokens to deposit. There should be zero amount as input when
-     *               compounding rewards.
+     * @param amount The amount of staking tokens to deposit when stakeType is REGULAR.
+     *               Zero when the stakeType is COMPOUND.
+     *               The reward to pair with gas token when stakeType is COMPOUND_TO_POOL_ZERO.
      * @param stakeType The staking method (i.e.: staking, compounding, compounding to pool zero).
      * @param maxPairAmount When compounding, slippage control to limit the amount of tokens
      *                      getting paired with PNG.
@@ -435,7 +436,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
             assert(poolId == 0);
 
             // Add liquidity using the rewards of another pool.
-            amount += _addLiquidity(pool, amount, maxPairAmount);
+            amount = _addLiquidity(pool, amount, maxPairAmount);
 
             // Rewards used in compounding comes from other pools. Therefore stash the rewards of
             // this pool, which is neither harvested nor used in compounding.
@@ -444,12 +445,13 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
             // Compounding.
         } else {
             assert(stakeType == StakeType.COMPOUND);
+            assert(amount == 0);
 
             // Ensure the pool token is a Pangolin pair token containing PNG as one of the pairs.
             _setRewardPair(pool);
 
             // Add liquidity using the rewards of this pool.
-            amount += _addLiquidity(pool, reward, maxPairAmount);
+            amount = _addLiquidity(pool, reward, maxPairAmount);
 
             // Rewards used in compounding comes from this pool. So clear stashed rewards.
             user.stashedRewards = 0;
