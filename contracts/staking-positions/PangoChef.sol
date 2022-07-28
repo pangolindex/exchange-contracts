@@ -329,6 +329,16 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
     }
 
     /**
+     * @notice External view function to get the info about a user of a pool
+     * @param poolId The identifier of the pool the user is in.
+     * @param userId The address of the user in the pool.
+     * @return The user struct that contains all the information of the user
+     */
+    function getUser(uint256 poolId, address userId) external view returns (User memory) {
+        return pools[poolId].users[userId];
+    }
+
+    /**
      * @notice External view function to get the reward rate of a user of a pool.
      * @dev In SAR, users have different APRs, unlike other staking algorithms. This external
      *      function clearly demonstrates how the SAR algorithm is supposed to distribute the
