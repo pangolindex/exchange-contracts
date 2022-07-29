@@ -324,7 +324,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         reward = _claim(poolId);
 
         // Transfer rewards from the contract to the user, and emit the associated event.
-        rewardsToken.safeTransfer(msg.sender, reward);
+        if (reward != 0) rewardsToken.safeTransfer(msg.sender, reward);
         emit Withdrawn(poolId, msg.sender, 0, reward);
     }
 
@@ -566,7 +566,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         _snapshotRewardSummations(pool, user);
 
         // Transfer withdrawn tokens.
-        rewardsToken.safeTransfer(msg.sender, reward);
+        if (reward != 0) rewardsToken.safeTransfer(msg.sender, reward);
         if (amount != 0) ERC20(pool.tokenOrRecipient).safeTransfer(msg.sender, amount);
         emit Withdrawn(poolId, msg.sender, amount, reward);
 
@@ -658,9 +658,6 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // Ensure slippage is not above the limit.
         if (pairAmount > maxPairAmount) revert HighSlippage();
 
-        // Transfer reward tokens from the contract to the pair contract.
-        tmpRewardsToken.safeTransfer(poolToken, rewardAmount);
-
         // Non-zero message value signals desire to pay with native token.
         if (msg.value > 0) {
             // Ensure reward pair is native token.
@@ -673,11 +670,17 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
             IWAVAX(rewardPair).deposit{ value: pairAmount }();
 
             // Refund user.
-            SafeTransferLib.safeTransferETH(msg.sender, maxPairAmount - pairAmount);
+            unchecked {
+                uint256 refundAmount = msg.value - pairAmount;
+                if (refundAmount != 0) SafeTransferLib.safeTransferETH(msg.sender, refundAmount);
+            }
         }
 
         // Transfer reward pair tokens from the user to the pair contract.
         ERC20(rewardPair).safeTransferFrom(msg.sender, poolToken, pairAmount);
+
+        // Transfer reward tokens from the contract to the pair contract.
+        tmpRewardsToken.safeTransfer(poolToken, rewardAmount);
 
         // Mint liquidity tokens to the PangoChef and return the amount minted.
         poolTokenAmount = IPangolinPair(poolToken).mint(address(this));
@@ -761,7 +764,9 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // Only increment lock if the user is not already locking pool zero.
         if (!user.isLockingPoolZero) {
             // Increment caller’s lock count on pool zero.
-            ++poolZeroLockCount[msg.sender];
+            unchecked {
+                ++poolZeroLockCount[msg.sender];
+            }
 
             // Mark user of the pool as locking the pool zero.
             user.isLockingPoolZero = true;
@@ -780,7 +785,9 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
             if (poolZeroLockCount[msg.sender] != 0) revert Locked();
         } else if (user.isLockingPoolZero) {
             // Decrement lock count on pool zero if this pool was locking it.
-            --poolZeroLockCount[msg.sender];
+            unchecked {
+                --poolZeroLockCount[msg.sender];
+            }
             user.isLockingPoolZero = false;
         }
     }
