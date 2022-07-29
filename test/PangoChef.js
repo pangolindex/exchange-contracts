@@ -1,7 +1,7 @@
 // test/PangoChef.js
 // Load dependencies
 const { expect } = require("chai");
-const { ethers } = require("hardhat");
+const { ethers, network } = require("hardhat");
 const { BigNumber } = require("ethers");
 
 const DENOMINATOR = BigNumber.from("10000");
@@ -44,7 +44,7 @@ describe.only("PangoChef.sol", function () {
     await this.png.deployed();
     this.alt_png = await this.png.connect(this.unauthorized);
 
-    // Deploye another ERC20 token.
+    // Deploy another ERC20 token.
     this.another_token = await this.Pangolin.deploy(PNG_SUPPLY, PNG_SUPPLY, "PNG", "Pangolin");
     await this.another_token.deployed();
     this.alt_another_token = await this.another_token.connect(this.unauthorized);
@@ -158,7 +158,7 @@ describe.only("PangoChef.sol", function () {
       // We will stake four times, so divide the pgl amount in wallet by 4.
       const amount = this.pgl_amount.div("4");
 
-      // Stake first time, initialiazing the contract.
+      // Stake first time, initializing the contract.
       expect(await this.chef.stake("0", amount)).to.emit(this.chef, "Staked");
 
       // Get last time stamp.

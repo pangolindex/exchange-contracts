@@ -33,7 +33,7 @@ interface ITokenMetadata {
  *      withdrawn.
  *
  *      We can refer to `balance * stakingDuration` as `value`. Based on this definition, the
- *      formula above can be simplifed to `value_position / value_total`.
+ *      formula above can be simplified to `value_position / value_total`.
  *
  *      Although this looks similar to just `balance_position / balance_total`, unlike balance, the
  *      value of every position is constantly changing as a function of time. Therefore, we cannot
@@ -328,7 +328,7 @@ contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsF
 
     /**
      * @notice External only-owner function to change the contract that constructs tokenURIs.
-     * @param newTokenMetadata The addresss of the new contract address that constructs tokenURIs.
+     * @param newTokenMetadata The addresses of the new contract address that constructs tokenURIs.
      */
     function setTokenMetadata(ITokenMetadata newTokenMetadata)
         external

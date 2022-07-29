@@ -150,7 +150,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
     /** @notice The event emitted when a pool is created. */
     event PoolInitialized(uint256 indexed poolId, address indexed tokenOrRecipient);
 
-    /** @notice The event emitted when the rewarder of a pool is chagned. */
+    /** @notice The event emitted when the rewarder of a pool is changed. */
     event RewarderSet(uint256 indexed poolId, address indexed rewarder);
 
     /**
@@ -278,7 +278,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         nonReentrant
     {
         // Harvest rewards from the provided pool. This does not reset the staking duration, but
-        // it will increment the lock on pool zero. The lock on pool zero will be deceremented
+        // it will increment the lock on pool zero. The lock on pool zero will be decremented
         // whenever the provided pool has its staking duration reset (e.g.: through `_withdraw()`).
         uint256 reward = _harvestWithoutReset(poolId);
 
