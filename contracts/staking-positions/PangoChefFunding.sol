@@ -91,7 +91,7 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
     event PeriodDurationUpdated(uint256 newDuration);
 
     /** @notice The event emitted when the weight of a pool changes. */
-    event WeightSet(uint256 poolId, uint256 newWeight);
+    event WeightSet(uint256 indexed poolId, uint256 newWeight);
 
     /**
      * @notice Constructor to create PangoChefFunding contract.
@@ -167,22 +167,26 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
         totalRewardAdded += uint96(amount);
 
         // Update the _rewardRate, ensuring leftover rewards from the ongoing period are included.
-        uint256 tmpRewardRate;
+        uint256 newRewardRate;
         if (block.timestamp >= periodFinish) {
-            tmpRewardRate = amount / tmpPeriodDuration;
+            assembly {
+                newRewardRate := div(amount, tmpPeriodDuration)
+            }
         } else {
             unchecked {
                 uint256 leftover = (periodFinish - block.timestamp) * _rewardRate;
-                tmpRewardRate = (amount + leftover) / tmpPeriodDuration;
+                assembly {
+                    newRewardRate := div(add(amount, leftover), tmpPeriodDuration)
+                }
             }
         }
 
         // Ensure sufficient amount is supplied hence reward rate is non-zero.
-        if (tmpRewardRate == 0) revert NoEffect();
+        if (newRewardRate == 0) revert NoEffect();
 
-        // Assign the tmpRewardRate back to storage.
+        // Assign the newRewardRate back to storage.
         // MAX_TOTAL_REWARD / MIN_PERIOD_DURATION fits 80 bits.
-        _rewardRate = uint80(tmpRewardRate);
+        _rewardRate = uint80(newRewardRate);
 
         // Update periodFinish.
         periodFinish = uint48(block.timestamp + tmpPeriodDuration);
@@ -290,23 +294,6 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
     }
 
     /**
-     * @notice Internal function to snapshot the `rewardPerWeightStored` for the pool.
-     * @param pool The pool to update its `rewardPerWeightPaid`.
-     * @return reward The amount of reward tokens that is marked for distributing to the pool.
-     */
-    function _updateRewardPerWeightPaid(PoolRewardInfo storage pool) internal returns (uint256) {
-        uint256 rewards = _poolPendingRewards(pool, false);
-        pool.rewardPerWeightPaid = rewardPerWeightStored;
-        return rewards;
-    }
-
-    /** @notice Internal function to increment the `rewardPerWeightStored`. */
-    function _updateRewardPerWeightStored() internal {
-        rewardPerWeightStored += _getRewardPerWeightIncrementation();
-        lastUpdate = uint48(block.timestamp);
-    }
-
-    /**
      * @notice Internal view function to get the pending rewards of a pool.
      * @param pool The pool to get its pending rewards.
      * @param increment A flag to choose whether use incremented `rewardPerWeightStored` or not.
@@ -317,18 +304,38 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
         view
         returns (uint256)
     {
-        uint256 rewardPerWeight = increment
-            ? rewardPerWeightStored + _getRewardPerWeightIncrementation()
-            : rewardPerWeightStored;
-        uint256 rewardPerWeightPayable = rewardPerWeight - pool.rewardPerWeightPaid;
-        return pool.stashedRewards + ((pool.weight * rewardPerWeightPayable) / WEIGHT_PRECISION);
+        unchecked {
+            uint256 rewardPerWeight = increment
+                ? rewardPerWeightStored + _getRewardPerWeightIncrementation()
+                : rewardPerWeightStored;
+            uint256 rewardPerWeightPayable = rewardPerWeight - pool.rewardPerWeightPaid;
+            return
+                pool.stashedRewards + ((pool.weight * rewardPerWeightPayable) / WEIGHT_PRECISION);
+        }
+    }
+
+    /**
+     * @notice Private function to snapshot the `rewardPerWeightStored` for the pool.
+     * @param pool The pool to update its `rewardPerWeightPaid`.
+     * @return The amount of reward tokens that is marked for distributing to the pool.
+     */
+    function _updateRewardPerWeightPaid(PoolRewardInfo storage pool) private returns (uint256) {
+        uint256 rewards = _poolPendingRewards(pool, false);
+        pool.rewardPerWeightPaid = rewardPerWeightStored;
+        return rewards;
+    }
+
+    /** @notice Private function to increment the `rewardPerWeightStored`. */
+    function _updateRewardPerWeightStored() private {
+        rewardPerWeightStored += _getRewardPerWeightIncrementation();
+        lastUpdate = uint48(block.timestamp);
     }
 
     /**
      * @notice Internal view function to get how much to increment `rewardPerWeightStored`.
      * @return incrementation The incrementation amount for the `rewardPerWeightStored`.
      */
-    function _getRewardPerWeightIncrementation() internal view returns (uint128 incrementation) {
+    function _getRewardPerWeightIncrementation() private view returns (uint128 incrementation) {
         uint256 globalPendingRewards = _globalPendingRewards();
         uint256 tmpTotalWeight = totalWeight;
 
@@ -343,7 +350,7 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
      *         update time.
      * @return The amount of reward tokens that has been accumulated since last update time.
      */
-    function _globalPendingRewards() internal view returns (uint256) {
+    function _globalPendingRewards() private view returns (uint256) {
         // For efficiency, move periodFinish timestamp to memory.
         uint256 tmpPeriodFinish = periodFinish;
 
