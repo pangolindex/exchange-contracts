@@ -169,14 +169,15 @@ contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsF
     /**
      * @notice External function to open a new position to the caller.
      * @param amount The amount of tokens to transfer from the caller to the position.
+     * @param positionId The identifier of the newly created position.
      */
-    function mint(uint256 amount) external {
+    function mint(uint256 amount) external returns (uint256 positionId) {
         // Update summations. Note that rewards accumulated when there is no one staking will
         // be lost. But this is only a small risk of value loss when the contract first goes live.
         _updateRewardSummations();
 
         // Get the new positionId and mint the associated NFT.
-        uint256 positionId = ++_positionsLength;
+        positionId = ++_positionsLength;
         _mint(msg.sender, positionId);
 
         // Use a private function to handle the logic pertaining to depositing into a position.
