@@ -718,24 +718,38 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         if (withdrawStake) {
             ERC20(pool.tokenOrRecipient).safeTransfer(msg.sender, balance);
             emit Withdrawn(poolId, msg.sender, balance, 0);
+        // Still try withdrawing, but do a non-reverting low-level call.
+        } else {
+            (bool success, bytes memory returndata) = pool.tokenOrRecipient.call(
+                abi.encodeWithSelector(ERC20.transfer.selector, msg.sender, balance)
+            );
+            if (success && returndata.length > 0 && abi.decode(returndata, (bool))) {
+                emit Withdrawn(poolId, msg.sender, balance, 0);
+            }
         }
 
-        // Do a low-level call for rewarder. If external function reverts, only the external
-        // contract reverts. To prevent DOS, this function (_emergencyExit) must never revert
-        // unless `balance == 0`. This can return true if rewarder is not a contract. No problem.
-        (bool success, ) = address(pool.rewarder).call(
-            abi.encodePacked(
-                IRewarder.onReward.selector,
-                abi.encode(poolId, msg.sender, msg.sender, 0, 0)
-            )
-        );
+        {
+            // Do a low-level call for rewarder. If external function reverts, only the external
+            // contract reverts. To prevent DOS, this function (_emergencyExit) must never revert
+            // unless `balance == 0`. This can still return true if rewarder is not a contract.
+            (bool success, ) = address(pool.rewarder).call(
+                abi.encodeWithSelector(
+                    IRewarder.onReward.selector,
+                    poolId,
+                    msg.sender,
+                    msg.sender,
+                    0,
+                    0
+                )
+            );
 
-        // Record last failed Rewarder calls. This can be used for slashing rewards by a
-        // non-malicious Rewarder just in case it reverts due to some bug. If rewarder is correctly
-        // written, this statement should never execute. We also do not care if `success` is `true`
-        // due to rewarder not being a contract. A non-contract rewarder only means that it is
-        // unset. So we do not need to record the timestamp.
-        if (!success) lastTimeRewarderCallFailed[poolId][msg.sender] = block.timestamp;
+            // Record last failed Rewarder calls. This can be used for slashing rewards by a
+            // non-malicious Rewarder just in case it reverts due to some bug. If rewarder is
+            // correctly written, this statement should never execute. We also do not care if
+            // `success` is `true` due to rewarder not being a contract. A non-contract rewarder
+            // only means that it is unset. So we do not need to record the timestamp.
+            if (!success) lastTimeRewarderCallFailed[poolId][msg.sender] = block.timestamp;
+        }
     }
 
     /**
