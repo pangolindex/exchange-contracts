@@ -72,7 +72,7 @@ In this repository, there are two implementations of SAR algorithm.
 ### `PangolinStakingPositions`
 
 [`PangolinStakingPositions`](./PangolinStakingPositions.sol) is a single-sided staking solution in
-which both the staking and reward tokens are the same token (i.e.: PNG). The rewards comes from AMM
+which both the staking and reward tokens are the same token (i.e.: PNG). The rewards come from AMM
 revenue. The revenue tokens get converted to PNG through `FeeCollector` (`SushiMaker` equivalent),
 and then PNG is added to `PangolinStakingPositions` as reward. In this implementation of SAR, we also
 track positions instead of users, which allows leveraging the NFT technology.
@@ -82,7 +82,7 @@ functions. This function makes no external calls because the reward and staking 
 same. Note that the compounding function is not just for convenience, it is also a way to bypass restarting the staking duration by calling `harvest()` (🔴).
 
 * 🟢 `compound()`:
-  * Harvests and restakes the accrued rewards without restarting the staking duration,
+  * Harvests and re-stakes the accrued rewards without restarting the staking duration,
   * The staking duration of the newly staked tokens starts from zero.
 
 Since all positions are NFTs, this implementation opens the door for derivatives. This would allow
@@ -104,7 +104,7 @@ will revert.
 
 [`PangoChef`](./PangoChef.sol) is a MiniChef analogue that uses SAR algorithm.
 
-In this implementation, there can be infinite amount of pools which separetely utilize the SAR
+In this implementation, there can be infinite amount of pools which separately utilize the SAR
 algorithm. So each pool has its own total staked balance and average staking duration.
 
 PangoChef distributes global rewards to pools based on Synthetix’s staking algorithm, such that
@@ -153,7 +153,7 @@ zero should be zero. In another example, if a user compounds the rewards of pool
 lock count will be three. The user will only be able to withdraw or harvest from pool zero after
 they withdraw or harvest at least once from all of those three pools. This mechanism ensures the principle of
 **rewards of a pool must not leave the contract without the pool’s staking duration getting reset**.
-Violation of this prinicple would be a critical vulnerability. Another major bug would be the lock count
+Violation of this principle would be a critical vulnerability. Another major bug would be the lock count
 getting stuck at non-zero without a way to bring it back to zero again.
 
 Another feature of PangoChef is rewarder. Rewarder is an external contract that can be defined
@@ -198,7 +198,7 @@ We also use an uncommonly high precision / multiplier / fixed denominator (i.e: 
 storing “reward summations” used in the SAR algorithm. The reason for this is that loss of
 precision can cause handing out dust amounts of extra rewards to stakers. This is in contrast to
 Synthetix’ staking algorithm, where loss of precision would simply result in dust amounts of
-less rewards getting distributed. When extra rewards are distributed, that can result in the last
+fewer rewards getting distributed. When extra rewards are distributed, that can result in the last
 participant unable to withdraw unless extra reward tokens are transferred to the contract. This is
 perhaps something to be investigated to determine the optimal precision multiplier.
 
@@ -263,7 +263,7 @@ $$
 	= b_a \times \left( \sum_{i=k}^{l}{\frac{R_i (t_{k-1} - t_{j-1})}{B_i D_i}} + \sum_{i=k}^{l}{\frac{R_i (t_i - t_{k-1})}{B_i D_i}} \right) + b_b \times \sum_{i=k}^{l}{\frac{R_i (t_i - t_{k-1})}{B_i D_i}}
 $$
 
-Third, merge the rightmost expression inside the parantheses with the summation of position $b$ (notice that the summation is the same).
+Third, merge the rightmost expression inside the parentheses with the summation of position $b$ (notice that the summation is the same).
 
 $$
 	= b_a \times \sum_{i=k}^{l}{\frac{R_i (t_{k-1} - t_{j-1})}{B_i D_i}} + (b_a + b_b) \times \sum_{i=k}^{l}{\frac{R_i (t_i - t_{k-1})}{B_i D_i}}
