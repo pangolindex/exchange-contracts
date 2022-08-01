@@ -10,4 +10,3 @@ interface IPangolinPair {
 
     function mint(address to) external returns (uint256 liquidity);
 }
-
