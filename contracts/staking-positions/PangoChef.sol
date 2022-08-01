@@ -30,11 +30,12 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
     enum StakeType {
         // In REGULAR staking, user supplies the amount of tokens to be staked.
         REGULAR,
-        // In COMPOUND staking, rewards from the pool are paired with another token supplied by the
-        // user, and the created pool token is staked to the same pool as where rewards came from.
+        // In COMPOUND staking, rewards from the pool are paired with another reserve token
+        // supplied by the user, and the created pool token is staked to the same pool as where
+        // the rewards come from.
         COMPOUND,
-        // In COMPOUND_TO_POOL_ZERO staking, rewards from another pool are paired with native gas
-        // token supplied by the user, to be staked in pool zero.
+        // In COMPOUND_TO_POOL_ZERO staking, rewards from any pool are paired with the native gas
+        // token supplied by the user, to be staked to pool zero.
         COMPOUND_TO_POOL_ZERO
     }
 
@@ -56,13 +57,12 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // The sum of `reward/totalValue` of each interval. `totalValue` is the sum of all staked
         // tokens multiplied by their respective staking durations.  On every update, the
         // `rewardPerValue` is incremented by rewards given during that interval divided by the
-        // total value, which is average staking duration multiplied by total staked. See `Regular
-        // Position from Ideal Position` for more details.
+        // total value, which is average staking duration multiplied by total staked. See proofs.
         uint256 rewardPerValue;
     }
 
     struct User {
-        // Two variables that determine the share of rewards a user receives from the pool.
+        // Two variables that specify the share of rewards a user must receive from the pool.
         ValueVariables valueVariables;
         // Summations snapshotted on the last update of the user.
         RewardSummations rewardSummationsPaid;
@@ -94,9 +94,9 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // An external contract that distributes additional rewards.
         IRewarder rewarder;
         // The address that is paired with PNG. It is zero address if the pool token is not a
-        // liquidity pool token, or if the liquidity pool do not have PNG as one of the pairs.
+        // liquidity pool token, or if the liquidity pool do not have PNG as one of the reserves.
         address rewardPair;
-        // Two variables that determine the total shares (i.e.: “value”) in the pool.
+        // Two variables that specify the total shares (i.e.: “value”) in the pool.
         ValueVariables valueVariables;
         // Summations incremented on every action on the pool.
         RewardSummations rewardSummationsStored;
@@ -116,7 +116,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
     /** @notice Record latest timestamps of low-level call fails, so Rewarder can slash rewards. */
     mapping(uint256 => mapping(address => uint256)) public lastTimeRewarderCallFailed;
 
-    /** @notice The AMM factory that creates pair tokens. */
+    /** @notice The UNI-V2 factory that creates pair tokens. */
     IPangolinFactory public immutable factory;
 
     /** @notice The contract for wrapping and unwrapping the native gas token (e.g.: WETH). */
@@ -135,7 +135,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
     event Withdrawn(
         uint256 indexed positionId,
         address indexed userId,
-        uint256 amount,
+        uint256 indexed amount,
         uint256 reward
     );
 
@@ -143,7 +143,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
     event Staked(
         uint256 indexed positionId,
         address indexed userId,
-        uint256 amount,
+        uint256 indexed amount,
         uint256 reward
     );
 
@@ -218,7 +218,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
     }
 
     /**
-     * @notice External function to stake to a pool in behalf of another user.
+     * @notice External function to stake to a pool on behalf of another user.
      * @param poolId The identifier of the pool to stake to.
      * @param userId The address of the pool to stake for.
      * @param amount The amount of pool tokens to stake.
@@ -234,8 +234,8 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
     /**
      * @notice External function to stake to a pool using the rewards of the pool.
      * @dev This function only works if the staking token is a Pangolin liquidity token (PGL), and
-     *      one of its pairs is the rewardsToken (PNG). The user must supply sufficient amount
-     *      of the other token to be combined with PNG. The rewards and the user supplied pair
+     *      one of its reserves is the rewardsToken (PNG). The user must supply sufficient amount
+     *      of the other reserve to be combined with PNG. The rewards and the user supplied pair
      *      token is then used to mint a liquidity pool token, which must be the same token as the
      *      staking token.
      * @param poolId The identifier of the pool to compound.
@@ -393,7 +393,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
      * @param poolId The identifier of the pool to deposit to.
      * @param userId The address of the user to deposit for.
      * @param amount The amount of staking tokens to deposit when stakeType is REGULAR.
-     *               Zero when the stakeType is COMPOUND.
+     *               It should be zero when the stakeType is COMPOUND.
      *               The reward to pair with gas token when stakeType is COMPOUND_TO_POOL_ZERO.
      * @param stakeType The staking method (i.e.: staking, compounding, compounding to pool zero).
      * @param maxPairAmount When compounding, slippage control to limit the amount of tokens
@@ -480,7 +480,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
                 userValueVariables.sumOfEntryTimes += addedEntryTimes;
 
                 // Increment the previousValues. This allows staking duration to not reset when
-                // reward variables are snapshotted.
+                // reward summations are snapshotted.
                 user.previousValues += uint152(oldBalance * (block.timestamp - user.lastUpdate));
             }
         }
@@ -609,8 +609,8 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
 
         // Increment the previousValues to not reset the staking duration. In the proofs,
         // previousValues was regarding combining positions, however we are not combining positions
-        // here. Consider this trick as combining with a null position. This allows us to continue
-        // having the same staking duration but excluding any rewards before this interval.
+        // here. Consider this trick as combining with a null position. This allows us to not reset
+        // the staking duration but exclude any rewards before block time.
         uint256 userBalance = user.valueVariables.balance;
         user.previousValues += uint152(userBalance * (block.timestamp - user.lastUpdate));
 
@@ -750,7 +750,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
             // non-malicious Rewarder just in case it reverts due to some bug. If rewarder is
             // correctly written, this statement should never execute. We also do not care if
             // `success` is `true` due to rewarder not being a contract. A non-contract rewarder
-            // only means that it is unset. So we do not need to record the timestamp.
+            // only means that it is unset. So it does not matter if we record or not.
             if (!success) lastTimeRewarderCallFailed[poolId][msg.sender] = block.timestamp;
         }
     }
