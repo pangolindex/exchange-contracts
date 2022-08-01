@@ -100,6 +100,16 @@ module.exports = {
           },
         },
       },
+      "contracts/WAVAX.sol": {
+        version: "0.5.17",
+        settings: { // For mocking
+          outputSelection: {
+            "*": {
+              "*": ["storageLayout"],
+            },
+          },
+        },
+      },
     }
   },
   networks: networksFromSdk,
