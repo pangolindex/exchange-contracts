@@ -92,9 +92,10 @@ contract TokenMetadata is AccessControlEnumerable {
                 .valueVariables;
 
         uint256 balance = positionValueVariables.balance;
-        uint256 entryTime = positionValueVariables.sumOfEntryTimes / balance;
-        uint256 apr = (pangolinStakingPositions.positionRewardRate(positionId) * 365 days * 100) /
-            balance;
+        uint256 entryTime = balance == 0 ? 0 : positionValueVariables.sumOfEntryTimes / balance;
+        uint256 apr = balance == 0
+            ? 0
+            : (pangolinStakingPositions.positionRewardRate(positionId) * 365 days * 100) / balance;
         uint256 earned = parseEther(pangolinStakingPositions.positionPendingRewards(positionId));
         balance = parseEther(balance);
 
