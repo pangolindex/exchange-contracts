@@ -48,7 +48,7 @@ contract AllocationVester is Claimable {
      * @param distributionToken The address of the token to be distributed
      * @dev Distribution token supply must fit 96bits
      */
-    constructor(address distributionToken, address initialAdmin) Claimable(initialAdmin) {
+    constructor(address distributionToken) {
         require(distributionToken != address(0), "zero address");
         token = IERC20(distributionToken);
     }
