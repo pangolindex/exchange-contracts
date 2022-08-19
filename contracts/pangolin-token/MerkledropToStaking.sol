@@ -11,7 +11,7 @@ interface IPangolinStakingPositions is IERC721 {
     function mint(uint256 amount) external returns (uint256 positionId);
 }
 
-contract Merkledrop is Ownable, Pausable {
+contract MerkledropToStaking is Ownable, Pausable {
     mapping(address => uint96) public claimedAmounts;
     IERC20 public immutable PNG;
     IPangolinStakingPositions public immutable SAR;
