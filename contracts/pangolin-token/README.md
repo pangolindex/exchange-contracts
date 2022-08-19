@@ -2,19 +2,19 @@
 
 ## Airdrop Instructions
 
-Generate a CSV file with at least two columns. The CSV must have a header on its first line. One of the columns should have a header titled `address`, and the othe other column should have a header titled `total_amount`. They should list the airdrop recipient EVM address and the corresponding airdrop amount in its smallest denominator (e.g. wei). An address must not repeat. Below is the `head` of an example airdrop file.
+Generate a CSV file with at least two columns. Its first four lines will be discarded, so the CSV must start from the fifth line. The fifth line must be a header. One of the columns should have a header titled `address`, and the othe other column should have a header titled `allocated amount`. They should list the airdrop recipient EVM address and the corresponding airdrop amount in its smallest denominator (e.g. wei). An address must not repeat. Below is the `head` of an example airdrop file.
 
 ```csv
-airdrop_name,airdrop_id,address,total_amount,amount_from_transfers,amount_from_lp,amount_from_stake
-PNG holders 1,77e7ce13-175c-59cc-9851-9e6f91d523b8,0x2a678781388a9A73232e0B14bF14880B0eCEb2E8,218584240541714022400,218584240541714022400,0,0
-PNG holders 1,77e7ce13-175c-59cc-9851-9e6f91d523b8,0x281f13075F23439e785D28Ac128c9D6b6318c5dc,18000000000000000000000,18000000000000000000000,0,0
-PNG holders 1,77e7ce13-175c-59cc-9851-9e6f91d523b8,0x774445B1f482a94FbDB877FA3E74373927e9F936,100000000000000000000,100000000000000000000,0,0
-PNG holders 1,77e7ce13-175c-59cc-9851-9e6f91d523b8,0x7630E1aB1c4A27f126c4f0f770B3faa253909813,369292570138413498368,369292570138413498368,0,0
-PNG holders 1,77e7ce13-175c-59cc-9851-9e6f91d523b8,0xD38d1048faEE71ef6C2F108C38913b40fe15335B,12147139941220791353344,12147139941220791353344,0,0
-PNG holders 1,77e7ce13-175c-59cc-9851-9e6f91d523b8,0x0013e2cC636A0c9cC3dB6C9731960D32e5350976,463811404690904383488,463811404690904383488,0,0
-PNG holders 1,77e7ce13-175c-59cc-9851-9e6f91d523b8,0x593095a8D87b78CBfF32766686ec48f3823F8b36,52115072413719888,52115072413719888,0,0
-PNG holders 1,77e7ce13-175c-59cc-9851-9e6f91d523b8,0xBD039f0494cF848a60B2203147D8BE51d4bDE206,116738858917094752256,116738858917094752256,0,0
-PNG holders 1,77e7ce13-175c-59cc-9851-9e6f91d523b8,0xcF804D3c0cC08c4D7bfA9e1E16aB8f2FcD3b43AE,488165824579393617920,488165824579393617920,0,0
+Airdrop name,PNG holders 1,Airdrop id,77e7ce13-175c-59cc-9851-9e6f91d523b8
+Days transfers,423
+Days lp,423
+Days stake,209
+address,transfers,lp,stake,total amount,day average total amount,allocated amount
+0x5f71a197D303Cd700511323976067ECe43dE8AD0,0,264869892466635833344,900000000000000000000,1164869892466635833344,5558560012793712922.481160994,42150403369008584983
+0x392ba0702CB461B1ee1aFD39221A41D4d961dAa2,0,0,66643398903922311168,66643398903922311168,318867937339341201.7607655502,2417966550574648084
+0xdd85DC6BE21cE76A2457315E93Ad23286A486988,0,0,172000000000000000000,172000000000000000000,822966507177033492.8229665072,6240531748664490208
+0xB39ED41edD5BC794027fbbEc44B957B38390493F,305657173744426024960,152828586872213012480,0,458485760616639037440,1445187582715962292.955082742,10958816566728850096
+0xef24ca62187Dc526c2Fbce9752F37605E725C996,76300576209990647808,0,0,76300576209990647808,180379612789575999.5460992908,1367813502260800454
 ```
 
 After such an airdrop file is generated, it must be located in a directory called `airdrop` inside the git root, and it should be named `NETWORK_NAME-addresses.csv`, where `NETWORK_NAME` is the name of the network as stated in our sdk repo. The default network name is `hardhat`. In that case `/airdrop/hardhat-addresses.csv` must be used.
@@ -26,3 +26,4 @@ Then, `/airdrop/NETWORK_NAME` directory must be created. Then `npx hardhat run -
 ```
 
 Finally, `/airdrop/NETWORK_NAME` directory can be copied to a server to be statically served.
+

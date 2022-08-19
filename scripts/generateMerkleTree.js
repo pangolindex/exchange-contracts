@@ -7,6 +7,13 @@ const airdropFile = `airdrop/${network.name}-addresses.csv`;
 const readFileLines = filename => fs.readFileSync(filename).toString('UTF8').split('\n');
 
 let lines = readFileLines(airdropFile);
+
+// discard first four lines
+lines.shift();
+lines.shift();
+lines.shift();
+lines.shift();
+
 const header = lines[0].split(',');
 const addressColumn = header.indexOf('address');
 const amountColumn = header.indexOf('total_amount');
