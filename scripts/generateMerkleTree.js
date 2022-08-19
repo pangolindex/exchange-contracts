@@ -14,16 +14,21 @@ lines.shift();
 lines.shift();
 lines.shift();
 
-const header = lines[0].split(',');
+const header = lines[0].trim().split(',');
 const addressColumn = header.indexOf('address');
-const amountColumn = header.indexOf('total_amount');
+const amountColumn = header.indexOf('allocated amount');
+
 lines.pop() // remove empty last line
 lines.shift(); // remove header
+
+if (addressColumn == -1 || amountColumn == -1) {
+  console.log("Airdrop file appears to be invalid.");
+}
 
 const leaves = lines.map((line) => (
   ethers.utils.solidityPack(
     ["address", "uint96"],
-    [line.split(',')[addressColumn], line.split(',')[amountColumn]]
+    [line.trim().split(',')[addressColumn], line.trim().split(',')[amountColumn]]
   )
 ))
 const tree = new MerkleTree(leaves, ethers.utils.keccak256, { sort: true })
