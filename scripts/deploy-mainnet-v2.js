@@ -11,6 +11,7 @@ const {
     AIRDROP_MERKLE_ROOT,
     VESTER_ALLOCATIONS,
     REVENUE_DISTRIBUTION,
+    START_VESTING,
     TIMELOCK_DELAY,
     WETH_PNG_FARM_ALLOCATION
 } = require(`../constants/${network.name}.js`);
@@ -240,6 +241,12 @@ async function main() {
         PNG_SYMBOL,
         "to Airdrop."
     );
+
+    if (START_VESTING) {
+        await vester.startVesting();
+        await confirmTransactionCount();
+        console.log("Token vesting began.");
+    }
 
     await vester.transferOwnership(timelock.address);
     await confirmTransactionCount();

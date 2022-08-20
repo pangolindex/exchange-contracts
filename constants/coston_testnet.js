@@ -6,7 +6,8 @@ exports.TOTAL_SUPPLY = 230000000; // 230M
 exports.AIRDROP_AMOUNT = 3450000; // 3.45M or 1.5% of max supply
 exports.TIMELOCK_DELAY = 3 * 24 * 60 * 60; // 3 days
 exports.USE_GNOSIS_SAFE = false;
-exports.WETH_PNG_FARM_ALLOCATION = 3000, // 30x weight
+exports.WETH_PNG_FARM_ALLOCATION = 3000; // 30x weight
+exports.START_VESTING = true;
 exports.AIRDROP_MERKLE_ROOT = "0xdf80b955444b88869eab91f07f8412f2ed362a2a11f46e36c5f56f5ab5a6e37d";
 exports.VESTER_ALLOCATIONS = [
   {
