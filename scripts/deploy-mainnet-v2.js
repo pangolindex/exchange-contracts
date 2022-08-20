@@ -59,6 +59,7 @@ async function main() {
     // dirty hack to circumvent duplicate nonce submission error
     var txCount = await ethers.provider.getTransactionCount(deployer.address);
     async function confirmTransactionCount() {
+        await delay(5000);
         let newTxCount;
         while (true) {
             try {
@@ -78,6 +79,7 @@ async function main() {
     }
 
     async function deploy(factory, args) {
+        await delay(5000);
         var ContractFactory = await ethers.getContractFactory(factory);
         var contract = await ContractFactory.deploy(...args);
         await contract.deployed();
