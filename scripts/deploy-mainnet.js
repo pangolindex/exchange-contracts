@@ -6,18 +6,26 @@ const {
     PNG_NAME,
     TOTAL_SUPPLY,
     USE_GNOSIS_SAFE,
-    PROPOSAL_THRESHOLD,
     WRAPPED_NATIVE_TOKEN,
-    INITIAL_FARMS,
     AIRDROP_AMOUNT,
+    AIRDROP_MERKLE_ROOT,
     VESTER_ALLOCATIONS,
+    REVENUE_DISTRIBUTION,
+    START_VESTING,
     TIMELOCK_DELAY,
-    PNG_STAKING_ALLOCATION,
-    WETH_PNG_FARM_ALLOCATION,
+    WETH_PNG_FARM_ALLOCATION
 } = require(`../constants/${network.name}.js`);
 if (USE_GNOSIS_SAFE) {
     var { EthersAdapter, SafeFactory } = require("@gnosis.pm/safe-core-sdk");
 }
+
+const FUNDER_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("FUNDER_ROLE"));
+const POOL_MANAGER_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("POOL_MANAGER_ROLE"));
+const HARVEST_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("HARVEST_ROLE"));
+const PAUSE_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("PAUSE_ROLE"));
+const RECOVERY_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("RECOVERY_ROLE"));
+const GOVERNOR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("GOVERNOR_ROLE"));
+const DEFAULT_ADMIN_ROLE = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
 var contracts = [];
 
@@ -34,6 +42,9 @@ async function main() {
     const initBalance = await deployer.getBalance();
     console.log("Balance:", ethers.utils.formatEther(initBalance) + "\n");
 
+    const pangolinPairFactory = await ethers.getContractFactory("PangolinPair");
+    const pangolinPairInitHash = ethers.utils.keccak256(pangolinPairFactory.bytecode);
+
     if (USE_GNOSIS_SAFE) {
         console.log("✅ Using Gnosis Safe.");
     } else {
@@ -44,13 +55,11 @@ async function main() {
     } else {
         console.log("✅ An existing wrapped gas token is defined.");
     }
-    if (INITIAL_FARMS.length === 0 || INITIAL_FARMS === undefined) {
-        console.log("⚠️  No initial farm is defined.");
-    }
 
     // dirty hack to circumvent duplicate nonce submission error
     var txCount = await ethers.provider.getTransactionCount(deployer.address);
     async function confirmTransactionCount() {
+        await delay(5000);
         let newTxCount;
         while (true) {
             try {
@@ -70,6 +79,7 @@ async function main() {
     }
 
     async function deploy(factory, args) {
+        await delay(5000);
         var ContractFactory = await ethers.getContractFactory(factory);
         var contract = await ContractFactory.deploy(...args);
         await contract.deployed();
@@ -101,19 +111,19 @@ async function main() {
         PNG_NAME,
     ]);
 
-    // Deploy this chain’s multisig
+    // Deploy foundation multisig
     if (USE_GNOSIS_SAFE) {
         const ethAdapter = new EthersAdapter({
             ethers,
             signer: deployer,
         });
         var Multisig = await SafeFactory.create({ ethAdapter });
-        var multisig = await Multisig.deploySafe(FOUNDATION_MULTISIG);
+        var foundation = await Multisig.deploySafe(FOUNDATION_MULTISIG);
         await confirmTransactionCount();
-        multisig.address = multisig.getAddress();
-        console.log(multisig.address, ": Gnosis");
+        foundation.address = foundation.getAddress();
+        console.log(foundation.address, ": Gnosis");
     } else {
-        var multisig = await deploy("MultiSigWalletWithDailyLimit", [
+        var foundation = await deploy("MultiSigWalletWithDailyLimit", [
             FOUNDATION_MULTISIG.owners,
             FOUNDATION_MULTISIG.threshold,
             0,
@@ -121,7 +131,7 @@ async function main() {
     }
 
     const timelock = await deploy("Timelock", [
-        multisig.address,
+        foundation.address,
         TIMELOCK_DELAY,
     ]);
     const factory = await deploy("PangolinFactory", [deployer.address]);
@@ -129,32 +139,61 @@ async function main() {
         factory.address,
         nativeToken,
     ]);
-    const chef = await deploy("MiniChefV2", [png.address, deployer.address]);
     const treasury = await deploy("CommunityTreasury", [png.address]);
-    const staking = await deploy("StakingRewards", [png.address, png.address]);
+
+    await factory.createPair(png.address, nativeToken);
+    await confirmTransactionCount();
+
+    const chef = await deploy("PangoChef", [
+        png.address,
+        deployer.address,
+        factory.address,
+        nativeToken
+    ]);
+    const chefFundForwarder = await deploy("RewardFundingForwarder", [chef.address]);
+
+    const stakingMetadata = await deploy("TokenMetadata", [foundation.address]);
+    const staking = await deploy("PangolinStakingPositions", [
+        png.address,
+        deployer.address,
+        stakingMetadata.address
+    ]);
+    const stakingFundForwarder = await deploy("RewardFundingForwarder", [staking.address]);
 
     // Deploy Airdrop
-    const airdrop = await deploy("Airdrop", [
-        ethers.utils.parseUnits(AIRDROP_AMOUNT.toString(), 18),
+    const airdrop = await deploy("MerkledropToStaking", [
         png.address,
-        multisig.address,
-        treasury.address,
+        staking.address,
+        deployer.address,
     ]);
 
     // Deploy TreasuryVester
     var vesterAllocations = [];
     for (let i = 0; i < VESTER_ALLOCATIONS.length; i++) {
+        let recipientAddress;
+        let isMiniChef;
+        if (VESTER_ALLOCATIONS[i].recipient == "treasury") {
+            recipientAddress = treasury.address;
+            isMiniChef = false;
+        } else if (VESTER_ALLOCATIONS[i].recipient == "multisig") {
+            recipientAddress = foundation.address;
+            isMiniChef = false;
+        } else if (VESTER_ALLOCATIONS[i].recipient == "chef") {
+            recipientAddress = chefFundForwarder.address;
+            isMiniChef = true;
+        }
+
         vesterAllocations.push([
-            eval(VESTER_ALLOCATIONS[i].recipient + ".address"),
+            recipientAddress,
             VESTER_ALLOCATIONS[i].allocation,
-            VESTER_ALLOCATIONS[i].isMiniChef,
+            isMiniChef,
         ]);
     }
     const vester = await deploy("TreasuryVester", [
         png.address, // vested token
         ethers.utils.parseUnits((TOTAL_SUPPLY - AIRDROP_AMOUNT).toString(), 18),
         vesterAllocations,
-        multisig.address,
+        foundation.address,
     ]);
 
     /*****************
@@ -165,24 +204,26 @@ async function main() {
     const feeCollector = await deploy("FeeCollector", [
         nativeToken,
         factory.address,
-        '0x40231f6b438bce0797c9ada29b718a87ea0a5cea3fe9a771abdd76bd41a3e545',
+        pangolinPairInitHash,
         staking.address,
-        chef.address,
-        0, // chef pid for dummy PGL
-        multisig.address, // treasury
-        timelock.address, // governor
-        multisig.address // admin
-    ]);
-
-    // Deploy DummyERC20 for diverting some PNG emissions to PNG staking
-    const dummyERC20 = await deploy("DummyERC20", [
-        "Dummy ERC20",
-        "PGL",
-        deployer.address,
-        100, // arbitrary amount
+        ethers.constants.AddressZero,
+        "0",
+        foundation.address,
+        timelock.address,
+        foundation.address
     ]);
 
     console.log("\n===============\n CONFIGURATION \n===============");
+
+    await airdrop.setMerkleRoot(AIRDROP_MERKLE_ROOT);
+    await confirmTransactionCount();
+    await airdrop.unpause();
+    await confirmTransactionCount();
+    console.log("Set airdrop merkle root and unpaused claiming.");
+
+    await airdrop.transferOwnership(foundation.address);
+    await confirmTransactionCount();
+    console.log("Transferred airdrop ownership to multisig.");
 
     await treasury.transferOwnership(timelock.address);
     await confirmTransactionCount();
@@ -208,84 +249,72 @@ async function main() {
         "to Airdrop."
     );
 
+    if (START_VESTING) {
+        await vester.startVesting();
+        await confirmTransactionCount();
+        console.log("Token vesting began.");
+    }
+
     await vester.transferOwnership(timelock.address);
     await confirmTransactionCount();
     console.log("Transferred TreasuryVester ownership to Timelock.");
-
-    await dummyERC20.renounceOwnership();
-    await confirmTransactionCount();
-    console.log("Renounced DummyERC20 ownership.");
-
-    // add dummy PGL to minichef
-    await chef.addPool(
-        PNG_STAKING_ALLOCATION,
-        dummyERC20.address,
-        ethers.constants.AddressZero
-    );
-    await confirmTransactionCount();
-    console.log("Added MiniChefV2 pool 0 for FeeCollector.");
-
-    // deposit dummy PGL for the fee collector
-    await dummyERC20.approve(chef.address, 100);
-    await confirmTransactionCount();
-    await chef.deposit(
-        0, // minichef pid
-        100, // amount
-        feeCollector.address // deposit to address
-    );
-    await confirmTransactionCount();
-    console.log("Deposited DummyERC20 to MiniChefV2 pool 0.");
 
     // change swap fee recipient to fee collector
     await factory.setFeeTo(feeCollector.address);
     await confirmTransactionCount();
     console.log("Set FeeCollector as the swap fee recipient.");
 
-    await factory.setFeeToSetter(multisig.address);
+    await factory.setFeeToSetter(foundation.address);
     await confirmTransactionCount();
     console.log("Transferred PangolinFactory ownership to Multisig.");
 
-    /********************
-     * MINICHEFv2 FARMS *
-     ********************/
+    /*******************
+     * PANGOCHEF ROLES *
+     *******************/
 
-    await factory.createPair(png.address, nativeToken);
+    await chef.grantRole(FUNDER_ROLE, vester.address);
     await confirmTransactionCount();
-    var pngPair = await factory.getPair(png.address, nativeToken);
-    await chef.addPool(
-        WETH_PNG_FARM_ALLOCATION,
-        pngPair,
-        ethers.constants.AddressZero
-    );
+    await chef.grantRole(FUNDER_ROLE, chefFundForwarder.address);
     await confirmTransactionCount();
-    console.log("Added MiniChef pool 1 for WAVAX-PNG.");
+    await chef.grantRole(FUNDER_ROLE, foundation.address);
+    await confirmTransactionCount();
+    await chef.grantRole(POOL_MANAGER_ROLE, foundation.address);
+    await confirmTransactionCount();
+    await chef.grantRole(DEFAULT_ADMIN_ROLE, foundation.address);
+    await confirmTransactionCount();
+    console.log("Added TreasuryVester as PangoChef funder.");
 
-    // create native token paired farms for tokens in INITIAL_FARMS
-    for (let i = 0; i < INITIAL_FARMS.length; i++) {
-        let tokenA = INITIAL_FARMS[i]["tokenA"];
-        let tokenB = INITIAL_FARMS[i]["tokenB"];
-        let weight = INITIAL_FARMS[i]["weight"];
-        await factory.createPair(tokenA, tokenB);
-        await confirmTransactionCount();
-        let pair = await factory.getPair(tokenA, tokenB);
-        await chef.addPool(weight, pair, ethers.constants.AddressZero);
-        await confirmTransactionCount();
-    }
-    const pools = await chef.poolInfos();
-    if (pools.length > 2)
-        console.log(
-            "Added",
-            (pools.length - 2).toString(),
-            "more farms to MiniChefV2."
-        );
-
-    await chef.addFunder(vester.address);
+    await chef.setWeights(["0"], [WETH_PNG_FARM_ALLOCATION]);
     await confirmTransactionCount();
-    console.log("Added TreasuryVester as MiniChefV2 funder.");
+    console.log("Gave 30x weight to PNG-NATIVE_TOKEN");
 
-    await chef.transferOwnership(multisig.address);
+    await chef.renounceRole(FUNDER_ROLE, deployer.address);
     await confirmTransactionCount();
-    console.log("Transferred MiniChefV2 ownership to Multisig.");
+    await chef.renounceRole(POOL_MANAGER_ROLE, deployer.address);
+    await confirmTransactionCount();
+    await chef.renounceRole(DEFAULT_ADMIN_ROLE, deployer.address);
+    await confirmTransactionCount();
+    console.log("Transferred PangoChef ownership to Multisig.");
+
+    /************************* *
+     * STAKING POSITIONS ROLES *
+     ************************* */
+
+    await staking.grantRole(FUNDER_ROLE, feeCollector.address);
+    await confirmTransactionCount();
+    await staking.grantRole(FUNDER_ROLE, stakingFundForwarder.address);
+    await confirmTransactionCount();
+    await staking.grantRole(FUNDER_ROLE, foundation.address);
+    await confirmTransactionCount();
+    await staking.grantRole(DEFAULT_ADMIN_ROLE, foundation.address);
+    await confirmTransactionCount();
+    console.log("Added FeeCollector as PangolinStakingPosition funder.");
+
+    await staking.renounceRole(FUNDER_ROLE, deployer.address);
+    await confirmTransactionCount();
+    await staking.renounceRole(DEFAULT_ADMIN_ROLE, deployer.address);
+    await confirmTransactionCount();
+    console.log("Transferred PangolinStakingPositions ownership to Multisig.");
 
     const endBalance = await deployer.getBalance();
     console.log(
