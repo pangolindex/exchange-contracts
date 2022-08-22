@@ -8,7 +8,7 @@ exports.TIMELOCK_DELAY = 3 * 24 * 60 * 60; // 3 days
 exports.USE_GNOSIS_SAFE = false;
 exports.WETH_PNG_FARM_ALLOCATION = 3000; // 30x weight
 exports.START_VESTING = true;
-exports.AIRDROP_MERKLE_ROOT = "0xdf80b955444b88869eab91f07f8412f2ed362a2a11f46e36c5f56f5ab5a6e37d";
+exports.AIRDROP_MERKLE_ROOT = "0xb594d4b23bbadc25478b55b3f93b38ca756eb88be8ce1ae7d206ba1c7af39b61";
 exports.VESTER_ALLOCATIONS = [
   {
     recipient: "treasury", // community treasury
