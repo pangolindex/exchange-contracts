@@ -113,6 +113,11 @@ async function main() {
 
     // Deploy foundation multisig
     if (USE_GNOSIS_SAFE) {
+        const ethAdapter = new EthersAdapter({
+            ethers,
+            signer: deployer,
+        });
+        var Multisig = await SafeFactory.create({ ethAdapter });
         var foundation = await Multisig.deploySafe(FOUNDATION_MULTISIG);
         await confirmTransactionCount();
         foundation.address = foundation.getAddress();
