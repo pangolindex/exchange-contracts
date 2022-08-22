@@ -11,7 +11,7 @@ const ZERO_ADDRESS = ethers.constants.AddressZero;
 const PERIOD_DURATION = 86400;
 
 // Start test block
-describe.only("PangoChef.sol", function () {
+describe("PangoChef.sol", function () {
   before(async function () {
     // Get all signers
     this.signers = await ethers.getSigners();
@@ -323,7 +323,8 @@ describe.only("PangoChef.sol", function () {
 
       // Compound with practically unlimited slippage.
       const maxPairAmount = ethers.utils.parseEther("10000000000000");
-      expect(await this.chef.compound("0", maxPairAmount, {value: maxPairAmount})).to.emit(this.chef, "Staked");
+      const slippage = { minPairAmount: 0, maxPairAmount: maxPairAmount };
+      expect(await this.chef.compound("0", slippage, {value: maxPairAmount})).to.emit(this.chef, "Staked");
     });
 
     it("compounds pool zero using WAVAX", async function () {
@@ -338,7 +339,8 @@ describe.only("PangoChef.sol", function () {
 
       // Compound with practically unlimited slippage.
       const maxPairAmount = ethers.utils.parseEther("10000000000000");
-      expect(await this.chef.compound("0", maxPairAmount, {value: "0"})).to.emit(this.chef, "Staked");
+      const slippage = { minPairAmount: 0, maxPairAmount: maxPairAmount };
+      expect(await this.chef.compound("0", slippage, {value: "0"})).to.emit(this.chef, "Staked");
     });
 
     it("compounds another pool using WAVAX", async function () {
@@ -357,7 +359,8 @@ describe.only("PangoChef.sol", function () {
 
       // Compound with practically unlimited slippage.
       const maxPairAmount = ethers.utils.parseEther("10000000000000");
-      expect(await this.chef.compound("1", maxPairAmount, {value: "0"})).to.emit(this.chef, "Staked");
+      const slippage = { minPairAmount: 0, maxPairAmount: maxPairAmount };
+      expect(await this.chef.compound("1", slippage, {value: "0"})).to.emit(this.chef, "Staked");
     });
   });
 
@@ -381,7 +384,8 @@ describe.only("PangoChef.sol", function () {
 
       // Compound with practically unlimited slippage.
       const maxPairAmount = ethers.utils.parseEther("10000000000000");
-      expect(await this.chef.compoundToPoolZero("1", maxPairAmount, {value: maxPairAmount})).to.emit(this.chef, "Staked");
+      const slippage = { minPairAmount: 0, maxPairAmount: maxPairAmount };
+      expect(await this.chef.compoundToPoolZero("1", slippage, {value: maxPairAmount})).to.emit(this.chef, "Staked");
     });
 
     it("compounds to pool zero using WAVAX", async function () {
@@ -400,7 +404,8 @@ describe.only("PangoChef.sol", function () {
 
       // Compound with practically unlimited slippage.
       const maxPairAmount = ethers.utils.parseEther("10000000000000");
-      expect(await this.chef.compoundToPoolZero("1", maxPairAmount, {value: "0"})).to.emit(this.chef, "Staked");
+      const slippage = { minPairAmount: 0, maxPairAmount: maxPairAmount };
+      expect(await this.chef.compoundToPoolZero("1", slippage, {value: "0"})).to.emit(this.chef, "Staked");
     });
   });
 

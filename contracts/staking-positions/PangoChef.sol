@@ -39,6 +39,13 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         COMPOUND_TO_POOL_ZERO
     }
 
+    struct Slippage {
+        // The minimum amount of paired tokens that has to be withdrawn from user.
+        uint256 minPairAmount;
+        // The maximum amount of paired tokens that can be withdrawn from user.
+        uint256 maxPairAmount;
+    }
+
     struct ValueVariables {
         // The amount of tokens staked by the user in the pool or total staked in the pool.
         uint104 balance;
@@ -214,7 +221,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
      * @param amount The amount of pool tokens to stake.
      */
     function stake(uint256 poolId, uint256 amount) external notEntered {
-        _stake(poolId, msg.sender, amount, StakeType.REGULAR, 0);
+        _stake(poolId, msg.sender, amount, StakeType.REGULAR, Slippage(0, 0));
     }
 
     /**
@@ -228,7 +235,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         address userId,
         uint256 amount
     ) external notEntered {
-        _stake(poolId, userId, amount, StakeType.REGULAR, 0);
+        _stake(poolId, userId, amount, StakeType.REGULAR, Slippage(0, 0));
     }
 
     /**
@@ -239,11 +246,11 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
      *      token is then used to mint a liquidity pool token, which must be the same token as the
      *      staking token.
      * @param poolId The identifier of the pool to compound.
-     * @param maxPairAmount The maximum amount of pair tokens that can be withdrawn from user to
-     *                      combine with PNG rewards when adding liquidity. It is slippage check.
+     * @param slippage A struct defining the minimum and maximum amounts of tokens that can be
+     *                 paired with reward token.
      */
-    function compound(uint256 poolId, uint256 maxPairAmount) external payable nonReentrant {
-        _stake(poolId, msg.sender, 0, StakeType.COMPOUND, maxPairAmount);
+    function compound(uint256 poolId, Slippage calldata slippage) external payable nonReentrant {
+        _stake(poolId, msg.sender, 0, StakeType.COMPOUND, slippage);
     }
 
     /**
@@ -269,14 +276,13 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
      * @dev The user must supply sufficient amount of the gas token (e.g.: AVAX/WAVAX) to be
      *      paired with the rewardsToken (e.g.:PNG).
      * @param poolId The identifier of the pool to harvest the rewards of to compound to pool zero.
-     * @param maxPairAmount The maximum amount of gas token that can be withdrawn from user to
-     *                      combine with PNG rewards when adding liquidity. It is slippage check.
+     * @param slippage A struct defining the minimum and maximum amounts of tokens that can be
+     *                 paired with reward token.
      */
-    function compoundToPoolZero(uint256 poolId, uint256 maxPairAmount)
-        external
-        payable
-        nonReentrant
-    {
+    function compoundToPoolZero(
+        uint256 poolId,
+        Slippage calldata slippage
+    ) external payable nonReentrant {
         // Harvest rewards from the provided pool. This does not reset the staking duration, but
         // it will increment the lock on pool zero. The lock on pool zero will be decremented
         // whenever the provided pool has its staking duration reset (e.g.: through `_withdraw()`).
@@ -284,7 +290,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
 
         // Stake to pool zero using special staking method, which will add liquidity using rewards
         // harvested from the provided pool.
-        _stake(0, msg.sender, reward, StakeType.COMPOUND_TO_POOL_ZERO, maxPairAmount);
+        _stake(0, msg.sender, reward, StakeType.COMPOUND_TO_POOL_ZERO, slippage);
     }
 
     /**
@@ -396,15 +402,15 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
      *               It should be zero when the stakeType is COMPOUND.
      *               The reward to pair with gas token when stakeType is COMPOUND_TO_POOL_ZERO.
      * @param stakeType The staking method (i.e.: staking, compounding, compounding to pool zero).
-     * @param maxPairAmount When compounding, slippage control to limit the amount of tokens
-     *                      getting paired with PNG.
+     * @param slippage A struct defining the minimum and maximum amounts of tokens that can be
+     *                 paired with reward token.
      */
     function _stake(
         uint256 poolId,
         address userId,
         uint256 amount,
         StakeType stakeType,
-        uint256 maxPairAmount
+        Slippage memory slippage
     ) private {
         // Create a storage pointers for the pool and the user.
         Pool storage pool = pools[poolId];
@@ -436,7 +442,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
             assert(poolId == 0);
 
             // Add liquidity using the rewards of another pool.
-            amount = _addLiquidity(pool, amount, maxPairAmount);
+            amount = _addLiquidity(pool, amount, slippage);
 
             // Rewards used in compounding comes from other pools. Therefore stash the rewards of
             // this pool, which is neither harvested nor used in compounding.
@@ -451,7 +457,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
             _setRewardPair(pool);
 
             // Add liquidity using the rewards of this pool.
-            amount = _addLiquidity(pool, reward, maxPairAmount);
+            amount = _addLiquidity(pool, reward, slippage);
 
             // Rewards used in compounding comes from this pool. So clear stashed rewards.
             user.stashedRewards = 0;
@@ -634,14 +640,14 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
      *                     reward amount is already set aside for adding liquidity. That means,
      *                     user does not need to send the rewards, and it was set aside through
      *                     harvesting.
-     * @param maxPairAmount The maximum amount of pair tokens that can be withdrawn from user to
-     *                      combine with PNG rewards when adding liquidity. It is slippage check.
+     * @param slippage A struct defining the minimum and maximum amounts of tokens that can be
+     *                 paired with reward token.
      * @return poolTokenAmount The amount of liquidity tokens that gets minted.
      */
     function _addLiquidity(
         Pool storage pool,
         uint256 rewardAmount,
-        uint256 maxPairAmount
+        Slippage memory slippage
     ) private returns (uint256 poolTokenAmount) {
         address poolToken = pool.tokenOrRecipient;
         address rewardPair = pool.rewardPair;
@@ -656,7 +662,8 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
             : (reserve0 * rewardAmount) / reserve1;
 
         // Ensure slippage is not above the limit.
-        if (pairAmount > maxPairAmount) revert HighSlippage();
+        if (pairAmount > slippage.maxPairAmount) revert HighSlippage();
+        if (pairAmount < slippage.minPairAmount) revert HighSlippage();
 
         // Non-zero message value signals desire to pay with native token.
         if (msg.value > 0) {
@@ -664,7 +671,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
             if (rewardPair != wrappedNativeToken) revert InvalidToken();
 
             // Ensure consistent slippage control.
-            if (msg.value != maxPairAmount) revert InvalidAmount();
+            if (msg.value != slippage.maxPairAmount) revert InvalidAmount();
 
             // Wrap the native token.
             IWAVAX(rewardPair).deposit{ value: pairAmount }();
