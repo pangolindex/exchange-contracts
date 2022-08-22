@@ -602,9 +602,9 @@
     "@types/web3" "1.0.19"
 
 "@openzeppelin/contracts@^4.3.2":
-  version "4.4.2"
-  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.4.2.tgz#4e889c9c66e736f7de189a53f8ba5b8d789425c2"
-  integrity sha512-NyJV7sJgoGYqbtNUWgzzOGW4T6rR19FmX1IJgXGdapGPWsuMelGJn9h03nos0iqfforCbCB0iYIR0MtIuIFLLw==
+  version "4.7.3"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.7.3.tgz#939534757a81f8d69cc854c7692805684ff3111e"
+  integrity sha512-dGRS0agJzu8ybo44pCIf3xBaPQN/65AIXNgK8+4gzKd5kbvlqyxryUYVLJv7fK98Seyd2hDZzVEHSWAh0Bt1Yw==
 
 "@pangolindex/exchange-contracts@^1.0.1":
   version "1.0.2"
@@ -614,9 +614,9 @@
     hardhat-tracer "^1.0.0-alpha.5"
 
 "@pangolindex/sdk@^1.4.0":
-  version "1.4.0"
-  resolved "https://registry.yarnpkg.com/@pangolindex/sdk/-/sdk-1.4.0.tgz#2edcc0cc673796568c0a58b9255555ce847c809e"
-  integrity sha512-LqYW7w/1ZZMTuh6F2cUDm78d6RATQt2jLqbsmsjxtzIRjCxlzFCIx5/+3o7ach6EiFc7Sa76RGW//iO/4SXKaw==
+  version "1.5.0"
+  resolved "https://registry.yarnpkg.com/@pangolindex/sdk/-/sdk-1.5.0.tgz#5b51d76775b2e6fc23aa82264dea291fc12fbd8a"
+  integrity sha512-b/OLh0wGygl/6unrlJ1VtzepV9DpeNz/ifNVsQOkDUZFlGQT3Gv6DvSXWJelYKPUSK24ZPoNXbu0bvqHfnjhIg==
   dependencies:
     "@pangolindex/exchange-contracts" "^1.0.1"
     big.js "^5.2.2"
@@ -625,6 +625,11 @@
     tiny-invariant "^1.1.0"
     tiny-warning "^1.0.3"
     toformat "^2.0.0"
+
+"@rari-capital/solmate@^6.4.0":
+  version "6.4.0"
+  resolved "https://registry.yarnpkg.com/@rari-capital/solmate/-/solmate-6.4.0.tgz#c6ee4110c8075f14b415e420b13bd8bdbbc93d9e"
+  integrity sha512-BXWIHHbG5Zbgrxi0qVYe0Zs+bfx+XgOciVUACjuIApV0KzC0kY8XdO1higusIei/ZKCC+GUKdcdQZflxYPUTKQ==
 
 "@resolver-engine/core@^0.3.3":
   version "0.3.3"
