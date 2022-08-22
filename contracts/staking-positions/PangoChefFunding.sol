@@ -297,20 +297,21 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
      * @notice Internal view function to get the pending rewards of a pool.
      * @param pool The pool to get its pending rewards.
      * @param increment A flag to choose whether use incremented `rewardPerWeightStored` or not.
-     * @return The amount of rewards earned by the pool since the last update of the pool.
+     * @return rewards The amount of rewards earned by the pool since the last update of the pool.
      */
     function _poolPendingRewards(PoolRewardInfo storage pool, bool increment)
         internal
         view
-        returns (uint256)
+        returns (uint256 rewards)
     {
         unchecked {
             uint256 rewardPerWeight = increment
                 ? rewardPerWeightStored + _getRewardPerWeightIncrementation()
                 : rewardPerWeightStored;
             uint256 rewardPerWeightPayable = rewardPerWeight - pool.rewardPerWeightPaid;
-            return
+            rewards =
                 pool.stashedRewards + ((pool.weight * rewardPerWeightPayable) / WEIGHT_PRECISION);
+            assert(rewards <= type(uint96).max);
         }
     }
 

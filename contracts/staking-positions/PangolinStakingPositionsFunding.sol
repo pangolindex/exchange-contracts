@@ -203,9 +203,9 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
     /**
      * @notice Internal view function to get the amount of accumulated reward tokens since last
      *         update time.
-     * @return The amount of reward tokens that has been accumulated since last update time.
+     * @return rewards The amount of reward tokens that has been accumulated since last update.
      */
-    function _pendingRewards() internal view returns (uint256) {
+    function _pendingRewards() internal view returns (uint256 rewards) {
         // For efficiency, move periodFinish timestamp to memory.
         uint256 tmpPeriodFinish = periodFinish;
 
@@ -224,11 +224,10 @@ abstract contract PangolinStakingPositionsFunding is AccessControlEnumerable, Ge
         // by reward rate.
         if (lastTimeRewardApplicable > tmpLastUpdate) {
             unchecked {
-                return (lastTimeRewardApplicable - tmpLastUpdate) * _rewardRate;
+                rewards = (lastTimeRewardApplicable - tmpLastUpdate) * _rewardRate;
             }
         }
 
-        // If the reward period is an invalid or a null range, return zero.
-        return 0;
+        assert(rewards <= type(uint96).max);
     }
 }
