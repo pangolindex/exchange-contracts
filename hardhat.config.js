@@ -85,6 +85,15 @@ module.exports = {
           }
         }
       },
+      {
+        version: "0.8.15",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 2000,
+          }
+        }
+      },
     ],
     overrides: {
       "contracts/mini-chef-zapper/MiniChefV2Zapper.sol": {
