@@ -41,7 +41,7 @@ contract MerkledropToStaking is Ownable, Pausable {
             amount -= previouslyClaimed;
         }
         uint256 positionId = SAR.mint(amount);
-        SAR.safeTransferFrom(address(this), msg.sender, positionId);
+        SAR.transferFrom(address(this), msg.sender, positionId);
         emit Claimed(msg.sender, amount);
     }
 
