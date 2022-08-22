@@ -669,15 +669,18 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
             // Wrap the native token.
             IWAVAX(rewardPair).deposit{ value: pairAmount }();
 
+            // Transfer reward pair tokens from this contract to the pair contract.
+            ERC20(rewardPair).safeTransfer(poolToken, pairAmount);
+
             // Refund user.
             unchecked {
                 uint256 refundAmount = msg.value - pairAmount;
                 if (refundAmount != 0) SafeTransferLib.safeTransferETH(msg.sender, refundAmount);
             }
+        } else {
+            // Transfer reward pair tokens from the user to the pair contract.
+            ERC20(rewardPair).safeTransferFrom(msg.sender, poolToken, pairAmount);
         }
-
-        // Transfer reward pair tokens from the user to the pair contract.
-        ERC20(rewardPair).safeTransferFrom(msg.sender, poolToken, pairAmount);
 
         // Transfer reward tokens from the contract to the pair contract.
         tmpRewardsToken.safeTransfer(poolToken, rewardAmount);
