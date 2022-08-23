@@ -17,8 +17,8 @@ contract MerkledropToStaking is Ownable, Pausable {
     IPangolinStakingPositions public immutable SAR;
     bytes32 public merkleRoot;
 
-    event Claimed(address account, uint96 amount);
-    event MerkleRootSet(bytes32 newMerkleRoot);
+    event Claimed(address indexed from, address indexed to, uint96 indexed amount);
+    event MerkleRootSet(bytes32 indexed newMerkleRoot);
 
     constructor(address airdropToken, address stakingPositions, address initialOwner) {
         require(airdropToken.code.length != 0, "invalid token address");
@@ -31,7 +31,15 @@ contract MerkledropToStaking is Ownable, Pausable {
         _pause();
     }
 
-    function claim(uint96 amount, bytes32[] calldata merkleProof) external whenNotPaused {
+    function claim(uint96 amount, bytes32[] calldata merkleProof) external {
+        claimTo(msg.sender, amount, merkleProof);
+    }
+
+    function claimTo(
+        address to,
+        uint96 amount,
+        bytes32[] calldata merkleProof
+    ) public whenNotPaused {
         uint96 previouslyClaimed = claimedAmounts[msg.sender];
         require(previouslyClaimed < amount, "nothing to claim");
         bytes32 node = bytes32(abi.encodePacked(msg.sender, amount));
@@ -41,8 +49,8 @@ contract MerkledropToStaking is Ownable, Pausable {
             amount -= previouslyClaimed;
         }
         uint256 positionId = SAR.mint(amount);
-        SAR.transferFrom(address(this), msg.sender, positionId);
-        emit Claimed(msg.sender, amount);
+        SAR.safeTransferFrom(address(this), to, positionId);
+        emit Claimed(msg.sender, to, amount);
     }
 
     function setMerkleRoot(bytes32 newMerkleRoot) external whenPaused onlyOwner {
