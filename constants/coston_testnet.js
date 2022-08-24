@@ -3,6 +3,7 @@ exports.WRAPPED_NATIVE_TOKEN = WCFLR;
 exports.PNG_SYMBOL = "PCT";
 exports.PNG_NAME = "Pangolin Coston";
 exports.TOTAL_SUPPLY = 230000000; // 230M
+exports.INITIAL_MINT = 3450000;
 exports.AIRDROP_AMOUNT = 3450000; // 3.45M or 1.5% of max supply
 exports.TIMELOCK_DELAY = 3 * 24 * 60 * 60; // 3 days
 exports.USE_GNOSIS_SAFE = false;

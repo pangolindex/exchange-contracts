@@ -7,6 +7,7 @@ const {
     TOTAL_SUPPLY,
     USE_GNOSIS_SAFE,
     WRAPPED_NATIVE_TOKEN,
+    INITIAL_MINT,
     AIRDROP_AMOUNT,
     AIRDROP_MERKLE_ROOT,
     VESTER_ALLOCATIONS,
@@ -106,7 +107,7 @@ async function main() {
     // Deploy PNG
     const png = await deploy("Png", [
         ethers.utils.parseUnits(TOTAL_SUPPLY.toString(), 18),
-        ethers.utils.parseUnits(AIRDROP_AMOUNT.toString(), 18),
+        ethers.utils.parseUnits(INITIAL_MINT.toString(), 18),
         PNG_SYMBOL,
         PNG_NAME,
     ]);
@@ -191,7 +192,7 @@ async function main() {
     }
     const vester = await deploy("TreasuryVester", [
         png.address, // vested token
-        ethers.utils.parseUnits((TOTAL_SUPPLY - AIRDROP_AMOUNT).toString(), 18),
+        ethers.utils.parseUnits((TOTAL_SUPPLY - INITIAL_MINT).toString(), 18),
         vesterAllocations,
         foundation.address,
     ]);
@@ -217,9 +218,13 @@ async function main() {
 
     await airdrop.setMerkleRoot(AIRDROP_MERKLE_ROOT);
     await confirmTransactionCount();
-    await airdrop.unpause();
-    await confirmTransactionCount();
-    console.log("Set airdrop merkle root and unpaused claiming.");
+    console.log("Set airdrop merkle root.");
+
+    if (START_VESTING) {
+        await airdrop.unpause();
+        await confirmTransactionCount();
+        console.log("Unpaused airdrop claiming.");
+    }
 
     await airdrop.transferOwnership(foundation.address);
     await confirmTransactionCount();
@@ -247,6 +252,18 @@ async function main() {
         AIRDROP_AMOUNT.toString(),
         PNG_SYMBOL,
         "to Airdrop."
+    );
+
+    await png.transfer(
+        foundation.address,
+        ethers.utils.parseUnits((INITIAL_MINT - AIRDROP_AMOUNT).toString(), 18)
+    );
+    await confirmTransactionCount();
+    console.log(
+        "Transferred",
+        (INITIAL_MINT - AIRDROP_AMOUNT).toString(),
+        PNG_SYMBOL,
+        "to Multisig."
     );
 
     if (START_VESTING) {
