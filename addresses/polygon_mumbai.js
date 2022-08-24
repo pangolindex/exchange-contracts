@@ -1,1 +1,181 @@
-exports.ADDRESSES=[{"address":"0x27f27EFE8589293a47b2f6f942815E65Be41c796","args":[{"type":"BigNumber","hex":"0xbe4064fbcc1d7ea6000000"},{"type":"BigNumber","hex":"0x0983383fca34acbb800000"},"matPNG","Pangolin"]},{"address":"0x385d21038cEb6FCEa4f94630aDf9CCbB846c76fb","args":[["0x72C397908Cb93d1B569BBB0Ff8d3D26B7b21d730","0xDA315a838E918026E51A864c43766f5AE86be8c6"],2,0]},{"address":"0xA8b0D52770188a7cBd057dac0A83A6a29ed438b6","args":[["0x72c397908cb93d1b569bbb0ff8d3d26b7b21d730","0x5e5b04a92890dee8921c2355220f09551fadb296","0x0de046423099cfd8c2fe02c7e1155b018cdc9992","0xecc562d8d3812d53d9ee4047920d47111a160b6a","0x223a06744123ab188affe484ec39b2d078b1db4e","0xfd7b8597cf8ee5317439b0b5c55a111f6eec449d","0xf5f08ba7f46e2a86b5ef3bfd56c2097c9f4276d7","0xac2ecd9e4208e97c335fdddbbf49ee219c0e7da6","0xc8643b1aba4d6ebde90a74ea311dfe235129be31","0xec9b9ec0ec4cb499bb7c246e38ab43e4a5e1f1ce"],5,0]},{"address":"0xbc3F4BF9adc1Ca3FbF7971655A9f8f07C3DEAE42","args":["0x385d21038cEb6FCEa4f94630aDf9CCbB846c76fb",259200]},{"address":"0x6798A4fe4420F08De26Ff3062492C057c4eB9a74","args":["0x5F27686E1fD42513c3c940b29C75441e656357D9"]},{"address":"0xA840510e0F7aBc5EFCAFb8c064BacF48BDEDC4b6","args":["0x6798A4fe4420F08De26Ff3062492C057c4eB9a74","0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889"]},{"address":"0x202d795d29AA0c91c08C6b8B1504f26e51A88112","args":["0x27f27EFE8589293a47b2f6f942815E65Be41c796","0x5F27686E1fD42513c3c940b29C75441e656357D9"]},{"address":"0x7f4D670Cd96b951E47Df3Bd9ee7948D457667117","args":["0x27f27EFE8589293a47b2f6f942815E65Be41c796"]},{"address":"0x29b74b0CDB64faa2219b604196f991D33e789CF1","args":["0x27f27EFE8589293a47b2f6f942815E65Be41c796","0x27f27EFE8589293a47b2f6f942815E65Be41c796"]},{"address":"0x9BC3C8382E1f57Ea443d7dE6Bca9cA7D494c325d","args":[{"type":"BigNumber","hex":"0x0983383fca34acbb800000"},"0x27f27EFE8589293a47b2f6f942815E65Be41c796","0x385d21038cEb6FCEa4f94630aDf9CCbB846c76fb","0x7f4D670Cd96b951E47Df3Bd9ee7948D457667117"]},{"address":"0xE3B7B78c87EccBe6d87771F11f0e092aaf5881d6","args":["0x27f27EFE8589293a47b2f6f942815E65Be41c796",{"type":"BigNumber","hex":"0xb4bd2cbc01e8d1ea800000"},[["0x7f4D670Cd96b951E47Df3Bd9ee7948D457667117",2105,null],["0x385d21038cEb6FCEa4f94630aDf9CCbB846c76fb",1579,null],["0xA8b0D52770188a7cBd057dac0A83A6a29ed438b6",263,null],["0x202d795d29AA0c91c08C6b8B1504f26e51A88112",6053,true]],"0x385d21038cEb6FCEa4f94630aDf9CCbB846c76fb"]},{"address":"0xE85DEDE14e422f6BBC9B0D2D1084654b122403CE","args":[["0x385d21038cEb6FCEa4f94630aDf9CCbB846c76fb","0xA8b0D52770188a7cBd057dac0A83A6a29ed438b6"],2,0]},{"address":"0x7C30cbBb6D4Fd7Be027eA7151F7876a8e94D6948","args":[[["0xA8b0D52770188a7cBd057dac0A83A6a29ed438b6",2000],["0x385d21038cEb6FCEa4f94630aDf9CCbB846c76fb",8000]]]},{"address":"0xC7C943c81F7050aaB04E2Fe8fe121e18a83aD84c","args":["0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889","0x6798A4fe4420F08De26Ff3062492C057c4eB9a74","0xA840510e0F7aBc5EFCAFb8c064BacF48BDEDC4b6","0x40231f6b438bce0797c9ada29b718a87ea0a5cea3fe9a771abdd76bd41a3e545","0x29b74b0CDB64faa2219b604196f991D33e789CF1","0x202d795d29AA0c91c08C6b8B1504f26e51A88112",0,"0x7C30cbBb6D4Fd7Be027eA7151F7876a8e94D6948","0xbc3F4BF9adc1Ca3FbF7971655A9f8f07C3DEAE42","0x385d21038cEb6FCEa4f94630aDf9CCbB846c76fb"]},{"address":"0x6e7D69Ad9e764259c8EB86C198727CFD7D5bEa54","args":["Dummy ERC20","PGL","0x5F27686E1fD42513c3c940b29C75441e656357D9",100]}]
+exports.ADDRESSES=[
+    {
+      "address": "0x4828a3D98E428e73184374845f23C40eB76bA695", // PNG
+      "args": [
+        {
+          "type": "BigNumber",
+          "hex": "0xbe4064fbcc1d7ea6000000"
+        },
+        {
+          "type": "BigNumber",
+          "hex": "0x0983383fca34acbb800000"
+        },
+        "matPNG",
+        "Pangolin"
+      ]
+    },
+    {
+      "address": "0x2412CF7162500001035B34a4aC4Cf4876B9a6f4b", // Chain Multisig
+      "args": [
+        [
+          "0x72C397908Cb93d1B569BBB0Ff8d3D26B7b21d730",
+          "0xDA315a838E918026E51A864c43766f5AE86be8c6"
+        ],
+        2,
+        0
+      ]
+    },
+    {
+      "address": "0x9284868361460C0Ca3dfcDcf035e90F0ea3A72A0", // Foundation Multisig
+      "args": [
+        [
+          "0x72c397908cb93d1b569bbb0ff8d3d26b7b21d730",
+          "0x5e5b04a92890dee8921c2355220f09551fadb296",
+          "0x0de046423099cfd8c2fe02c7e1155b018cdc9992",
+          "0xecc562d8d3812d53d9ee4047920d47111a160b6a",
+          "0x223a06744123ab188affe484ec39b2d078b1db4e",
+          "0xfd7b8597cf8ee5317439b0b5c55a111f6eec449d",
+          "0xf5f08ba7f46e2a86b5ef3bfd56c2097c9f4276d7",
+          "0xac2ecd9e4208e97c335fdddbbf49ee219c0e7da6",
+          "0xc8643b1aba4d6ebde90a74ea311dfe235129be31",
+          "0xec9b9ec0ec4cb499bb7c246e38ab43e4a5e1f1ce"
+        ],
+        5,
+        0
+      ]
+    },
+    {
+      "address": "0xE6ec3b8AD6ad20210a2698d89016DDF6965E5fBC", // Timelock
+      "args": [
+        "0x2412CF7162500001035B34a4aC4Cf4876B9a6f4b",
+        259200
+      ]
+    },
+    {
+      "address": "0xf7b351C98B5585b7aDa089F3fFD0fED785fB6cff", // PangolinFactory
+      "args": [
+        "0x5F27686E1fD42513c3c940b29C75441e656357D9"
+      ]
+    },
+    {
+      "address": "0x680ad00c72B8d55436E2812Df0f5a9Df7675e054", // PangolinRouter
+      "args": [
+        "0xf7b351C98B5585b7aDa089F3fFD0fED785fB6cff",
+        "0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889"
+      ]
+    },
+    {
+      "address": "0xa34Ad412652267FB3b1261D7d4F351a678B01Bf8", // MiniChefV2
+      "args": [
+        "0x4828a3D98E428e73184374845f23C40eB76bA695",
+        "0x5F27686E1fD42513c3c940b29C75441e656357D9"
+      ]
+    },
+    {
+      "address": "0x791d828FA611D5cD086e8047EAa8d7276c8d943E", // CommunityTreasury
+      "args": [
+        "0x4828a3D98E428e73184374845f23C40eB76bA695"
+      ]
+    },
+    {
+      "address": "0x3AA2baD17b768fFe5F9Fa05Ca95f97959862B41B", // StakingRewards
+      "args": [
+        "0x4828a3D98E428e73184374845f23C40eB76bA695",
+        "0x4828a3D98E428e73184374845f23C40eB76bA695"
+      ]
+    },
+    {
+      "address": "0x34338ad5D7fd49B24D07D1D8e8d38Fc64F42f94A", // Airdrop
+      "args": [
+        {
+          "type": "BigNumber",
+          "hex": "0x0983383fca34acbb800000"
+        },
+        "0x4828a3D98E428e73184374845f23C40eB76bA695",
+        "0x2412CF7162500001035B34a4aC4Cf4876B9a6f4b",
+        "0x791d828FA611D5cD086e8047EAa8d7276c8d943E"
+      ]
+    },
+    {
+      "address": "0xFeC5354eF11981D5dAF92F6CA61e618c5AdF4FD5", // TreasuryVester
+      "args": [
+        "0x4828a3D98E428e73184374845f23C40eB76bA695",
+        {
+          "type": "BigNumber",
+          "hex": "0xb4bd2cbc01e8d1ea800000"
+        },
+        [
+          [
+            "0x791d828FA611D5cD086e8047EAa8d7276c8d943E",
+            2105,
+            null
+          ],
+          [
+            "0x2412CF7162500001035B34a4aC4Cf4876B9a6f4b",
+            1579,
+            null
+          ],
+          [
+            "0x9284868361460C0Ca3dfcDcf035e90F0ea3A72A0",
+            263,
+            null
+          ],
+          [
+            "0xa34Ad412652267FB3b1261D7d4F351a678B01Bf8",
+            6053,
+            true
+          ]
+        ],
+        "0x2412CF7162500001035B34a4aC4Cf4876B9a6f4b"
+      ]
+    },
+    {
+      "address": "0x38F6d835FAF60a891016b2FC5692E76D2c6eEcbF", // Joint Multisig
+      "args": [
+        [
+          "0x2412CF7162500001035B34a4aC4Cf4876B9a6f4b",
+          "0x9284868361460C0Ca3dfcDcf035e90F0ea3A72A0"
+        ],
+        2,
+        0
+      ]
+    },
+    {
+      "address": "0x780A51831dc1cE3AAD2879479dBE9419e834744c", // RevenueDistributor
+      "args": [
+        [
+          [
+            "0x9284868361460C0Ca3dfcDcf035e90F0ea3A72A0",
+            2000
+          ],
+          [
+            "0x2412CF7162500001035B34a4aC4Cf4876B9a6f4b",
+            8000
+          ]
+        ]
+      ]
+    },
+    {
+      "address": "0xB2FcD54680150e3033A878cf1F689e1256d51fc5", // FeeCollector
+      "args": [
+        "0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889",
+        "0xf7b351C98B5585b7aDa089F3fFD0fED785fB6cff",
+        "0x40231f6b438bce0797c9ada29b718a87ea0a5cea3fe9a771abdd76bd41a3e545",
+        "0x3AA2baD17b768fFe5F9Fa05Ca95f97959862B41B",
+        "0xa34Ad412652267FB3b1261D7d4F351a678B01Bf8",
+        0,
+        "0x780A51831dc1cE3AAD2879479dBE9419e834744c",
+        "0xE6ec3b8AD6ad20210a2698d89016DDF6965E5fBC",
+        "0x2412CF7162500001035B34a4aC4Cf4876B9a6f4b"
+      ]
+    },
+    {
+      "address": "0x794854430111cc72B6cE33AF0cF0a88C8d73BE5c", // DummyERC20
+      "args": [
+        "Dummy ERC20",
+        "PGL",
+        "0x5F27686E1fD42513c3c940b29C75441e656357D9",
+        100
+      ]
+    }
+  ]
