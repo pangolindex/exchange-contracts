@@ -1,59 +1,25 @@
-const WONE = "0x3Ee7094DADda15810F191DD6AcF7E4FFa37571e4";
-exports.WRAPPED_NATIVE_TOKEN = WONE;
-exports.PNG_SYMBOL = "cosPNG";
-exports.PNG_NAME = "Pangolin";
+const WCFLR = "0x1659941d425224408c5679eeef606666c7991a8A";
+exports.WRAPPED_NATIVE_TOKEN = WCFLR;
+exports.PNG_SYMBOL = "PCT";
+exports.PNG_NAME = "Pangolin Coston";
 exports.TOTAL_SUPPLY = 230000000; // 230M
-exports.AIRDROP_AMOUNT = 11500000; // 11.5M or 5% of max supply
+exports.AIRDROP_AMOUNT = 3450000; // 3.45M or 1.5% of max supply
 exports.TIMELOCK_DELAY = 3 * 24 * 60 * 60; // 3 days
-exports.MULTISIG = {
-  owners: [
-    "0x72C397908Cb93d1B569BBB0Ff8d3D26B7b21d730", // Trollip
-    "0xDA315a838E918026E51A864c43766f5AE86be8c6"  // Shung
-  ],
-  threshold: 2
-};
 exports.USE_GNOSIS_SAFE = false;
-exports.PROPOSAL_THRESHOLD = 100000; // 100K
-exports.PNG_STAKING_ALLOCATION = 500, // 5x weight in minichef
-exports.WETH_PNG_FARM_ALLOCATION = 3000, // 30x weight
-exports.INITIAL_FARMS = [
-  {
-    tokenA: "0x21cf0eB2E3Ab483a67C900b27dA8F34185991982", // WAVAX
-    tokenB: WONE,
-    weight: 2000
-  },
-  {
-    tokenA: "0xf1db872E6454D553686b088c1Ea3889cF2FE3ABe", // OG
-    tokenB: WONE,
-    weight: 2000
-  }
-];
+exports.WETH_PNG_FARM_ALLOCATION = 3000; // 30x weight
+exports.START_VESTING = true;
+exports.AIRDROP_MERKLE_ROOT = "0xb594d4b23bbadc25478b55b3f93b38ca756eb88be8ce1ae7d206ba1c7af39b61";
 exports.VESTER_ALLOCATIONS = [
   {
     recipient: "treasury", // community treasury
     allocation: 2105, // 20%
   },
   {
-    recipient: "multisig", // fPNG team
-    allocation: 1579, // 10% team + 5% vc investor
-  },
-  {
-    recipient: "foundation", // PNG Foundation multisig
-    allocation: 263, // 2.5% advisory
+    recipient: "multisig", // team
+    allocation: 1842, // 10% team + 5% vc investor + 2.5% advisory
   },
   {
     recipient: "chef", // MiniChef
     allocation: 6053, // 57.5% LPs & PNG Staking
-    isMiniChef: true
   }
 ];
-exports.REVENUE_DISTRIBUTION = [
-  {
-    recipient: "foundation", // Pangolin Foundation
-    allocation: 2000,        // 20%
-  },
-  {
-    recipient: "multisig", // New team
-    allocation: 8000,      // 80%
-  }
-]
