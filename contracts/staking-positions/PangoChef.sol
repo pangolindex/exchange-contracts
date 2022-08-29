@@ -656,8 +656,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         (uint256 reserve0, uint256 reserve1, ) = IPangolinPair(poolToken).getReserves();
 
         // Get the reward token’s pair’s amount from the reserves.
-        ERC20 tmpRewardsToken = rewardsToken;
-        uint256 pairAmount = address(tmpRewardsToken) < rewardPair
+        uint256 pairAmount = address(rewardsToken) < rewardPair
             ? (reserve1 * rewardAmount) / reserve0
             : (reserve0 * rewardAmount) / reserve1;
 
@@ -690,7 +689,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         }
 
         // Transfer reward tokens from the contract to the pair contract.
-        tmpRewardsToken.safeTransfer(poolToken, rewardAmount);
+        rewardsToken.safeTransfer(poolToken, rewardAmount);
 
         // Mint liquidity tokens to the PangoChef and return the amount minted.
         poolTokenAmount = IPangolinPair(poolToken).mint(address(this));
