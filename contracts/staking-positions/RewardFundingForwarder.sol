@@ -11,7 +11,17 @@ interface IPangoChef {
     function hasRole(bytes32 role, address account) external view returns (bool);
 }
 
-/** @author shung for Pangolin */
+/**
+ * @author shung for Pangolin
+ * @notice
+ *
+ * Funder -> RewardFundingForwarder -> PangoChef
+ *               OR
+ * Funder -> RewardFundingForwarder -> PangolinStakingPositions
+ *
+ * Funder is any contract that was written for Synthetix' StakingRewards, or for MiniChef.
+ * RewardFundingForwarder provides compatibility for these old funding contracts.
+ */
 contract RewardFundingForwarder {
     IPangoChef public immutable pangoChef;
     address public immutable rewardsToken;
