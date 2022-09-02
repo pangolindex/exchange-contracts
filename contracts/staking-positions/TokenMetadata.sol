@@ -44,13 +44,16 @@ contract TokenMetadata is AccessControlEnumerable {
         "https://fonts.gstatic.com/s/poppins/v20/pxiEyp8kv8JHgFVrJJfecg.woff2";
     string public boldFontUri =
         "https://fonts.gstatic.com/s/poppins/v20/pxiByp8kv8JHgFVrLCz7Z1xlFQ.woff2";
-    string public imageBaseUri = "https://pangolin.exchange/static/sar/";
+    string public imageBaseUri = "https://static.pangolin.exchange/panguardian/";
     string public imageExtension = ".png";
+    bytes32 public immutable tokenSymbol;
 
-    constructor(address newAdmin) {
+    constructor(address newAdmin, string memory newTokenSymbol) {
         require(newAdmin != address(0));
         _grantRole(DEFAULT_ADMIN_ROLE, newAdmin);
         _grantRole(METADATA_ROLE, newAdmin);
+        require(bytes(newTokenSymbol).length <= 32);
+        tokenSymbol = bytes32(bytes(newTokenSymbol));
     }
 
     function setThousandSeparator(bytes1 newThousandSeparator) external onlyRole(METADATA_ROLE) {
@@ -113,11 +116,15 @@ contract TokenMetadata is AccessControlEnumerable {
             );
             bytes memory svgPart2 = abi.encodePacked(
                 getImageUri(balanceLevel, durationLevel),
-                '"></image> <text x="27.3" y="54.9" text-anchor="start" class="text_top"><tspan class="info_span">$PNG: </tspan><tspan class="data_span">',
+                '"></image> <text x="27.3" y="54.9" text-anchor="start" class="text_top"><tspan class="info_span">$',
+                tokenSymbol,
+                ': </tspan><tspan class="data_span">',
                 addThousandSeparator(balance),
                 '</tspan></text> <text x="635.7" y="54.9" text-anchor="end" class="text_top"><tspan class="info_span">APR: </tspan><tspan class="data_span">',
                 addThousandSeparator(apr),
-                '%</tspan></text> <text x="331.5" y="1001.97" text-anchor="middle" class="text_bottom"><tspan class="info_span">EARNED: </tspan><tspan class="data_span" x="331.5" dy="51.85">$PNG ',
+                '%</tspan></text> <text x="331.5" y="1001.97" text-anchor="middle" class="text_bottom"><tspan class="info_span">EARNED: </tspan><tspan class="data_span" x="331.5" dy="51.85">$',
+                tokenSymbol,
+                ' ',
                 addThousandSeparator(earned),
                 "</tspan></text> </svg>"
             );

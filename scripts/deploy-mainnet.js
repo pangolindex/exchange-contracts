@@ -153,7 +153,7 @@ async function main() {
     ]);
     const chefFundForwarder = await deploy("RewardFundingForwarder", [chef.address]);
 
-    const stakingMetadata = await deploy("TokenMetadata", [foundation.address]);
+    const stakingMetadata = await deploy("TokenMetadata", [foundation.address, PNG_SYMBOL]);
     const staking = await deploy("PangolinStakingPositions", [
         png.address,
         deployer.address,
