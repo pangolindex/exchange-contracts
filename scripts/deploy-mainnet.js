@@ -108,8 +108,8 @@ async function main() {
     const png = await deploy("Png", [
         ethers.utils.parseUnits(TOTAL_SUPPLY.toString(), 18),
         ethers.utils.parseUnits(INITIAL_MINT.toString(), 18),
-        PNG_SYMBOL,
         PNG_NAME,
+        PNG_SYMBOL,
     ]);
 
     // Deploy foundation multisig
@@ -234,13 +234,9 @@ async function main() {
     await confirmTransactionCount();
     console.log("Transferred CommunityTreasury ownership to Timelock.");
 
-    await png.setMinter(vester.address);
+    await png.transferOwnership(vester.address);
     await confirmTransactionCount();
-    console.log("Transferred PNG minter role to TreasuryVester.");
-
-    await png.setAdmin(timelock.address);
-    await confirmTransactionCount();
-    console.log("Transferred PNG ownership to Timelock.");
+    console.log("Transferred PNG ownership to TreasuryVester.");
 
     await png.transfer(
         airdrop.address,

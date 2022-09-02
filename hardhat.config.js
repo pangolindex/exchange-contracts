@@ -99,16 +99,6 @@ module.exports = {
       "contracts/mini-chef-zapper/MiniChefV2Zapper.sol": {
         version: "0.8.11"
       },
-      "contracts/pangolin-token/PNG.sol": {
-        version: "0.5.16",
-        settings: { // For mocking
-          outputSelection: {
-            "*": {
-              "*": ["storageLayout"],
-            },
-          },
-        },
-      },
       "contracts/WAVAX.sol": {
         version: "0.5.17",
         settings: { // For mocking
