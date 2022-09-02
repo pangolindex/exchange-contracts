@@ -9,6 +9,8 @@ exports.TIMELOCK_DELAY = 3 * 24 * 60 * 60; // 3 days
 exports.USE_GNOSIS_SAFE = false;
 exports.WETH_PNG_FARM_ALLOCATION = 3000; // 30x weight
 exports.START_VESTING = false;
+exports.LINEAR_VESTING = true;
+exports.VESTING_COUNT = 900; // 30 months == 900 days.
 exports.AIRDROP_MERKLE_ROOT = "0xa99168d65703044b47554952229de9e52fe8a5486e095ea150c0501b29de0a32";
 exports.VESTER_ALLOCATIONS = [
   {

@@ -13,6 +13,8 @@ const {
     VESTER_ALLOCATIONS,
     REVENUE_DISTRIBUTION,
     START_VESTING,
+    LINEAR_VESTING,
+    VESTING_COUNT,
     TIMELOCK_DELAY,
     WETH_PNG_FARM_ALLOCATION
 } = require(`../constants/${network.name}.js`);
@@ -190,12 +192,19 @@ async function main() {
             isMiniChef,
         ]);
     }
-    const vester = await deploy("TreasuryVester", [
-        png.address, // vested token
-        ethers.utils.parseUnits((TOTAL_SUPPLY - INITIAL_MINT).toString(), 18),
-        vesterAllocations,
-        foundation.address,
-    ]);
+    const vester = LINEAR_VESTING
+        ? await deploy("TreasuryVesterLinear", [
+            png.address, // vested token
+            vesterAllocations,
+            foundation.address,
+            ethers.utils.parseUnits((TOTAL_SUPPLY - INITIAL_MINT).toString(), 18).div(VESTING_COUNT),
+        ])
+        : await deploy("TreasuryVester", [
+            png.address, // vested token
+            ethers.utils.parseUnits((TOTAL_SUPPLY - INITIAL_MINT).toString(), 18),
+            vesterAllocations,
+            foundation.address,
+        ]);
 
     /*****************
      * FEE COLLECTOR *
