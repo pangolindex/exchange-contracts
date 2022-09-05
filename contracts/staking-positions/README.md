@@ -26,7 +26,7 @@ Sunshine and Rainbows is a novel staking algorithm. In SAR, rewards at a given i
 distributed based on the formula below.
 
 $$
-\textit{reward proportion} = \frac{\textit{position staked balance}}{\textit{total staked balance}} \times \frac{\textit{position staking duration}}{\textit{average staking duration}}
+\text{reward proportion} = \frac{\text{position staked balance}}{\text{total staked balance}} \times \frac{\text{position staking duration}}{\text{average staking duration}}
 $$
 
 [The proof section at the end](#sar-proof) describes how this formula is used to derive an algorithm
