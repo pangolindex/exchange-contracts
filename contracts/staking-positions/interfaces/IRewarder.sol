@@ -5,7 +5,7 @@ interface IRewarder {
     function onReward(
         uint256 pid,
         address user,
-        address recipient,
+        bool destructiveAction,
         uint256 rewardAmount,
         uint256 newLpAmount
     ) external;

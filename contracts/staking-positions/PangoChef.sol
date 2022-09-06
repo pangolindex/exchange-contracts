@@ -507,7 +507,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // If rewarder exists, notify the reward amount.
         IRewarder rewarder = pool.rewarder;
         if (address(rewarder) != address(0)) {
-            rewarder.onReward(poolId, userId, userId, reward, newBalance);
+            rewarder.onReward(poolId, userId, false, reward, newBalance);
         }
     }
 
@@ -579,7 +579,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // Get extra rewards from rewarder if it is not an emergency exit.
         IRewarder rewarder = pool.rewarder;
         if (address(rewarder) != address(0)) {
-            rewarder.onReward(poolId, msg.sender, msg.sender, reward, remaining);
+            rewarder.onReward(poolId, msg.sender, true, reward, remaining);
         }
     }
 
@@ -629,7 +629,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // Get extra rewards from rewarder.
         IRewarder rewarder = pool.rewarder;
         if (address(rewarder) != address(0)) {
-            rewarder.onReward(poolId, msg.sender, msg.sender, reward, userBalance);
+            rewarder.onReward(poolId, msg.sender, true, reward, userBalance);
         }
     }
 
@@ -749,7 +749,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
                     IRewarder.onReward.selector,
                     poolId,
                     msg.sender,
-                    msg.sender,
+                    true,
                     0,
                     0
                 )
