@@ -29,7 +29,8 @@
     "deploy": "export LANG=C && npx hardhat run scripts/deploy-mainnet.js",
     "test": "export LANG=C && npx hardhat test",
     "verify": "export LANG=C && npx hardhat run scripts/verify.js",
-    "lint": "prettier ./test/**/*.ts --check"
+    "lint": "prettier ./test/**/*.ts --check",
+    "prepublishOnly": "npm run compile"
   },
   "bugs": {
     "url": "https://github.com/pangolindex/exchange-contracts/issues"
@@ -42,5 +43,8 @@
     "@rari-capital/solmate": "^6.4.0",
     "chance": "^1.1.8",
     "dotenv": "^14.2.0"
+  },
+  "resolutions": {
+    "@pangolindex/exchange-contracts": "^2.1.4"
   }
 }
