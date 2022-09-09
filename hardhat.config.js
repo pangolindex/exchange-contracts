@@ -6,7 +6,7 @@ require('dotenv').config();
 
 // Create hardhat networks from @pangolindex/sdk
 let networksFromSdk = {};
-for (const chain of CHAINS) {
+for (const chain of Object.values(CHAINS)) {
   networksFromSdk[chain.id] = {
     url: chain.rpc_uri,
     chainId: chain.chain_id,
