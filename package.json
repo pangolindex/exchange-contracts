@@ -25,10 +25,10 @@
   "author": "Connor Daly <connor.daly@avalabs.org>",
   "license": "MIT",
   "scripts": {
-    "compile": "export LANG=C && npx hardhat compile",
-    "deploy": "export LANG=C && npx hardhat run scripts/deploy-mainnet.js",
-    "test": "export LANG=C && npx hardhat test",
-    "verify": "export LANG=C && npx hardhat run scripts/verify.js",
+    "compile": "npx hardhat compile",
+    "deploy": "npx hardhat run scripts/deploy-mainnet.js",
+    "test": "npx hardhat test",
+    "verify": "npx hardhat run scripts/verify.js",
     "lint": "prettier ./test/**/*.ts --check",
     "prepublishOnly": "npm run compile"
   },
