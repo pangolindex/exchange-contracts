@@ -16,7 +16,7 @@ interface IPng is IERC20 {
  * @notice A contract that vests & distributes tokens.
  * It only distributes a single token with a `mint` function.
  */
-contract TreasuryVesterLinear is Ownable {
+contract TreasuryVesterLinearV2 is Ownable {
     using SafeERC20 for IPng;
 
     struct Recipient{
@@ -33,9 +33,6 @@ contract TreasuryVesterLinear is Ownable {
 
     /// @notice The token to be vested/minted
     IPng public immutable vestedToken;
-
-    /// @notice Whether the vesting is enabled or not
-    bool public vestingEnabled;
 
     /// @notice The time stamp of the last vesting
     uint public lastUpdate;
@@ -73,10 +70,9 @@ contract TreasuryVesterLinear is Ownable {
 
     /**
      * @notice Distributes the tokens to recipients based on their allocation
-     * @dev If the vesting is enabled, anyone can call this function with 1 day intervals
+     * @dev Anyone can call this function with 1 day intervals
      */
     function distribute() external {
-        require(vestingEnabled, "TreasuryVester::distribute: vesting is not enabled");
         require(
             block.timestamp >= lastUpdate + VESTING_CLIFF,
             "TreasuryVester::distribute: it is too early to distribute"
@@ -90,12 +86,11 @@ contract TreasuryVesterLinear is Ownable {
             uint amount = recipient.allocation * dailyVestingAmount / DENOMINATOR;
             if (recipient.isMiniChef) {
                 // calls fund rewards of minichef after minting tokens to self
-                vestedToken.mint(address(this), amount);
                 vestedToken.approve(recipient.account, amount);
                 IMiniChefV2(recipient.account).fundRewards(amount, VESTING_CLIFF);
             } else {
                 // simply mints or transfer tokens to regular recipients
-                vestedToken.mint(recipient.account, amount);
+                vestedToken.safeTransfer(recipient.account, amount);
             }
         }
         emit TokensVested();
@@ -133,26 +128,6 @@ contract TreasuryVesterLinear is Ownable {
         );
         emit RecipientsChanged(newRecipients);
     }
-
-    /**
-     * @notice Enables distribution of the tokens
-     * @dev Callable by either the owner (i.e.: governance) or guardian
-     */
-    function startVesting() external {
-        require(
-            msg.sender == guardian || msg.sender == owner(),
-            "TreasuryVester::startVesting: unauthorized message sender"
-        );
-        require(
-            !vestingEnabled,
-            "TreasuryVester::startVesting: vesting is already enabled"
-        );
-        vestingEnabled = true;
-        emit VestingEnabled();
-    }
-
-    /// @notice An event that is emitted when vesting is enabled
-    event VestingEnabled();
 
     /// @notice An event that is emitted when tokens are distributed
     event TokensVested();
