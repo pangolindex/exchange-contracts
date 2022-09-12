@@ -5,9 +5,10 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20VotesComp.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 
-contract Png is ERC20, ERC20Burnable, ERC20Permit, ERC20VotesComp, Ownable {
+contract Png is ERC20, ERC20Burnable, ERC20Permit, ERC20VotesComp, AccessControlEnumerable {
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     uint256 public immutable cap;
 
     constructor(uint96 cap_, uint96 preMint, string memory name_, string memory symbol_)
@@ -16,9 +17,10 @@ contract Png is ERC20, ERC20Burnable, ERC20Permit, ERC20VotesComp, Ownable {
     {
         cap = cap_;
         _mint(msg.sender, preMint);
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
-    function mint(address to, uint256 amount) external onlyOwner {
+    function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) {
         _mint(to, amount);
     }
 
