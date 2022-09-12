@@ -252,7 +252,7 @@ async function main() {
     await confirmTransactionCount();
     await png.renounceRole(DEFAULT_ADMIN_ROLE, deployer.address);
     await confirmTransactionCount();
-    console.log("Transferred PNG ownership to multisig (to be renounced).");
+    console.log("Renounced PNG admin role to multisig.");
 
     await png.transfer(
         airdrop.address,
