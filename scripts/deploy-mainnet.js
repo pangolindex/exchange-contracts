@@ -23,6 +23,7 @@ if (USE_GNOSIS_SAFE) {
 }
 
 const FUNDER_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("FUNDER_ROLE"));
+const MINTER_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("MINTER_ROLE"));
 const POOL_MANAGER_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("POOL_MANAGER_ROLE"));
 const HARVEST_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("HARVEST_ROLE"));
 const PAUSE_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("PAUSE_ROLE"));
@@ -243,9 +244,13 @@ async function main() {
     await confirmTransactionCount();
     console.log("Transferred CommunityTreasury ownership to Timelock.");
 
-    await png.transferOwnership(vester.address);
+    await png.grantRole(MINTER_ROLE, vester.address);
     await confirmTransactionCount();
-    console.log("Transferred PNG ownership to TreasuryVester.");
+    console.log("Gave PNG minting role to TreasuryVester.");
+
+    await png.grantRole(DEFAULT_ADMIN_ROLE, foundation.address);
+    await confirmTransactionCount();
+    console.log("Transferred PNG ownership to multisig (to be renounced).");
 
     await png.transfer(
         airdrop.address,
