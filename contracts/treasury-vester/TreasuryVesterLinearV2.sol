@@ -13,7 +13,7 @@ interface IMiniChefV2 {
  * It only distributes a single token in its balance.
  */
 contract TreasuryVesterLinearV2 is Ownable {
-    using SafeERC20 for IPng;
+    using SafeERC20 for IERC20;
 
     struct Recipient{
         address account;
@@ -28,7 +28,7 @@ contract TreasuryVesterLinearV2 is Ownable {
     address public guardian;
 
     /// @notice The token to be vested
-    IPng public immutable vestedToken;
+    IERC20 public immutable vestedToken;
 
     /// @notice The time stamp of the last vesting
     uint public lastUpdate;
@@ -59,7 +59,7 @@ contract TreasuryVesterLinearV2 is Ownable {
         require(newGuardian != address(0), "TreasuryVester::Constructor: invalid guardian address");
         require(newVestedToken.code.length > 0, "TreasuryVester::Constructor: invalid token address");
         guardian = newGuardian;
-        vestedToken = IPng(newVestedToken);
+        vestedToken = IERC20(newVestedToken);
         dailyVestingAmount = newDailyVestingAmount;
         setRecipients(newRecipients);
     }
