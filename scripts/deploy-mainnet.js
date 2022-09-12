@@ -250,6 +250,8 @@ async function main() {
 
     await png.grantRole(DEFAULT_ADMIN_ROLE, foundation.address);
     await confirmTransactionCount();
+    await png.renounceRole(DEFAULT_ADMIN_ROLE, deployer.address);
+    await confirmTransactionCount();
     console.log("Transferred PNG ownership to multisig (to be renounced).");
 
     await png.transfer(
