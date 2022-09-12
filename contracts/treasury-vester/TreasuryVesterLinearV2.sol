@@ -8,13 +8,9 @@ interface IMiniChefV2 {
     function fundRewards(uint256 newFunding, uint256 duration) external;
 }
 
-interface IPng is IERC20 {
-    function mint(address dst, uint rawAmount) external;
-}
-
 /**
  * @notice A contract that vests & distributes tokens.
- * It only distributes a single token with a `mint` function.
+ * It only distributes a single token in its balance.
  */
 contract TreasuryVesterLinearV2 is Ownable {
     using SafeERC20 for IPng;
@@ -31,7 +27,7 @@ contract TreasuryVesterLinearV2 is Ownable {
     /// @notice The multisig who can initialize the vesting
     address public guardian;
 
-    /// @notice The token to be vested/minted
+    /// @notice The token to be vested
     IPng public immutable vestedToken;
 
     /// @notice The time stamp of the last vesting
@@ -70,7 +66,7 @@ contract TreasuryVesterLinearV2 is Ownable {
 
     /**
      * @notice Distributes the tokens to recipients based on their allocation
-     * @dev Anyone can call this function with 1 day intervals
+     * @dev Anyone can call this function with 1 day intervals if enough funds exist
      */
     function distribute() external {
         require(
@@ -85,11 +81,11 @@ contract TreasuryVesterLinearV2 is Ownable {
             Recipient memory recipient = recipients[i];
             uint amount = recipient.allocation * dailyVestingAmount / DENOMINATOR;
             if (recipient.isMiniChef) {
-                // calls fund rewards of minichef after minting tokens to self
+                // calls fund rewards of minichef
                 vestedToken.approve(recipient.account, amount);
                 IMiniChefV2(recipient.account).fundRewards(amount, VESTING_CLIFF);
             } else {
-                // simply mints or transfer tokens to regular recipients
+                // simply transfer tokens to regular recipients
                 vestedToken.safeTransfer(recipient.account, amount);
             }
         }
