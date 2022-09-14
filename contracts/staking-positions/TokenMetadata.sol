@@ -35,6 +35,8 @@ contract TokenMetadata is AccessControlEnumerable {
     using Strings for uint256;
 
     bytes32 public constant METADATA_ROLE = keccak256("METADATA_ROLE");
+    uint256[10] private exponents = [ 0, 2_718, 7_389, 20_086, 54_598, 148_413, 403_429, 1096_633, 2980_958, 8103_084 ];
+    uint256 private constant DENOMINATOR = 1_000;
 
     bytes1 public thousandSeparator = ",";
     string public description =
@@ -46,14 +48,14 @@ contract TokenMetadata is AccessControlEnumerable {
         "https://fonts.gstatic.com/s/poppins/v20/pxiByp8kv8JHgFVrLCz7Z1xlFQ.woff2";
     string public imageBaseUri = "https://static.pangolin.exchange/panguardian/";
     string public imageExtension = ".png";
-    bytes32 public immutable tokenSymbol;
+    string public tokenSymbol;
 
     constructor(address newAdmin, string memory newTokenSymbol) {
         require(newAdmin != address(0));
         _grantRole(DEFAULT_ADMIN_ROLE, newAdmin);
         _grantRole(METADATA_ROLE, newAdmin);
         require(bytes(newTokenSymbol).length <= 32);
-        tokenSymbol = bytes32(bytes(newTokenSymbol));
+        tokenSymbol = newTokenSymbol;
     }
 
     function setThousandSeparator(bytes1 newThousandSeparator) external onlyRole(METADATA_ROLE) {
@@ -102,8 +104,8 @@ contract TokenMetadata is AccessControlEnumerable {
         uint256 earned = parseEther(pangolinStakingPositions.positionPendingRewards(positionId));
         balance = parseEther(balance);
 
-        uint256 balanceLevel = getExponent(balance / 404);
-        uint256 durationLevel = getExponent((block.timestamp - entryTime) / 1 days);
+        uint256 balanceLevel = getExponent(balance, 404); // level 6 is reached at ~60k PNG.
+        uint256 durationLevel = getExponent((block.timestamp - entryTime), 2 hours + 40 minutes); // level 10 is reached in ~900 days.
 
         string memory svg;
         {
@@ -116,13 +118,13 @@ contract TokenMetadata is AccessControlEnumerable {
             );
             bytes memory svgPart2 = abi.encodePacked(
                 getImageUri(balanceLevel, durationLevel),
-                '"></image> <text x="27.3" y="54.9" text-anchor="start" class="text_top"><tspan class="info_span">$',
+                '"></image> <text x="27.3" y="54.9" text-anchor="start" class="text_top"><tspan class="info_span">&#36;',
                 tokenSymbol,
                 ': </tspan><tspan class="data_span">',
                 addThousandSeparator(balance),
                 '</tspan></text> <text x="635.7" y="54.9" text-anchor="end" class="text_top"><tspan class="info_span">APR: </tspan><tspan class="data_span">',
                 addThousandSeparator(apr),
-                '%</tspan></text> <text x="331.5" y="1001.97" text-anchor="middle" class="text_bottom"><tspan class="info_span">EARNED: </tspan><tspan class="data_span" x="331.5" dy="51.85">$',
+                '%</tspan></text> <text x="331.5" y="1001.97" text-anchor="middle" class="text_bottom"><tspan class="info_span">EARNED: </tspan><tspan class="data_span" x="331.5" dy="51.85">&#36;',
                 tokenSymbol,
                 ' ',
                 addThousandSeparator(earned),
@@ -192,16 +194,16 @@ contract TokenMetadata is AccessControlEnumerable {
             );
     }
 
-    function getExponent(uint256 value) private pure returns (uint256) {
-        if (value >= 8103) return 9;
-        if (value >= 2981) return 8;
-        if (value >= 1097) return 7;
-        if (value >= 403) return 6;
-        if (value >= 148) return 5;
-        if (value >= 55) return 4;
-        if (value >= 20) return 3;
-        if (value >= 7) return 2;
-        if (value >= 3) return 1;
+    function getExponent(uint256 value, uint256 multiplier) private view returns (uint256) {
+        if (value * DENOMINATOR >= exponents[9] * multiplier) return 9;
+        if (value * DENOMINATOR >= exponents[8] * multiplier) return 8;
+        if (value * DENOMINATOR >= exponents[7] * multiplier) return 7;
+        if (value * DENOMINATOR >= exponents[6] * multiplier) return 6;
+        if (value * DENOMINATOR >= exponents[5] * multiplier) return 5;
+        if (value * DENOMINATOR >= exponents[4] * multiplier) return 4;
+        if (value * DENOMINATOR >= exponents[3] * multiplier) return 3;
+        if (value * DENOMINATOR >= exponents[2] * multiplier) return 2;
+        if (value * DENOMINATOR >= exponents[1] * multiplier) return 1;
         return 0;
     }
 

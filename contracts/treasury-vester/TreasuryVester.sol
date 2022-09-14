@@ -10,7 +10,7 @@ interface IMiniChefV2 {
 }
 
 interface IPng is IERC20 {
-    function mint(address dst, uint rawAmount) external returns (bool);
+    function mint(address dst, uint rawAmount) external;
 }
 
 /**
