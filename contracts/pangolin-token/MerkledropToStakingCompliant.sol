@@ -13,11 +13,14 @@ interface IPangolinStakingPositions is IERC721 {
 }
 
 contract MerkledropToStakingCompliant is Ownable, Pausable {
+    using ECDSA for bytes32;
+    using ECDSA for bytes;
+
     mapping(address => uint96) public claimedAmounts;
     IERC20 public immutable PNG;
     IPangolinStakingPositions public immutable SAR;
     bytes32 public merkleRoot;
-    bytes32 public complianceHash = keccak256("By signing this transaction, I hereby acknowledge that I am not a US resident or citizen. (Citizens or residents of the United States of America are not allowed to the PSB token airdrop due to applicable law.)");
+    bytes32 public complianceHash = bytes("By signing this transaction, I hereby acknowledge that I am not a US resident or citizen. (Citizens or residents of the United States of America are not allowed to the PSB token airdrop due to applicable law.)").toEthSignedMessageHash();
 
     event Claimed(address indexed from, address indexed to, uint96 indexed amount);
     event MerkleRootSet(bytes32 indexed newMerkleRoot);
@@ -36,23 +39,18 @@ contract MerkledropToStakingCompliant is Ownable, Pausable {
     function claim(
         uint96 amount,
         bytes32[] calldata merkleProof,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        bytes calldata signature
     ) external {
-        claimTo(msg.sender, amount, merkleProof, v, r, s);
+        claimTo(msg.sender, amount, merkleProof, signature);
     }
 
     function claimTo(
         address to,
         uint96 amount,
         bytes32[] calldata merkleProof,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        bytes calldata signature
     ) public whenNotPaused {
-        address signer = ECDSA.recover(complianceHash, v, r, s);
-        require(signer == msg.sender, "invalid compliance signature");
+        require(complianceHash.recover(signature) == msg.sender, "invalid compliance signature");
         uint96 previouslyClaimed = claimedAmounts[msg.sender];
         require(previouslyClaimed < amount, "nothing to claim");
         bytes32 node = bytes32(abi.encodePacked(msg.sender, amount));
@@ -67,7 +65,7 @@ contract MerkledropToStakingCompliant is Ownable, Pausable {
     }
 
     function setComplianceMessage(string calldata newComplianceMessage) external onlyOwner {
-        complianceHash = keccak256(bytes(newComplianceMessage));
+        complianceHash = bytes(newComplianceMessage).toEthSignedMessageHash();
     }
 
     function setMerkleRoot(bytes32 newMerkleRoot) external whenPaused onlyOwner {
