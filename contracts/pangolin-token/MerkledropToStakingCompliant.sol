@@ -24,6 +24,7 @@ contract MerkledropToStakingCompliant is Ownable, Pausable {
 
     event Claimed(address indexed from, address indexed to, uint96 indexed amount);
     event MerkleRootSet(bytes32 indexed newMerkleRoot);
+    event NewComplianceMessage(bytes32 indexed newComplianceHash, string newComplianceMessage);
 
     constructor(address airdropToken, address stakingPositions, address initialOwner) {
         require(airdropToken.code.length != 0, "invalid token address");
@@ -65,7 +66,9 @@ contract MerkledropToStakingCompliant is Ownable, Pausable {
     }
 
     function setComplianceMessage(string calldata newComplianceMessage) external onlyOwner {
-        complianceHash = bytes(newComplianceMessage).toEthSignedMessageHash();
+        bytes32 newComplianceHash = bytes(newComplianceMessage).toEthSignedMessageHash();
+        complianceHash = newComplianceHash;
+        emit NewComplianceMessage(newComplianceHash, newComplianceMessage);
     }
 
     function setMerkleRoot(bytes32 newMerkleRoot) external whenPaused onlyOwner {
