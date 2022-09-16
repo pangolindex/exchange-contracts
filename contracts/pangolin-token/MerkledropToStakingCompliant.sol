@@ -20,7 +20,8 @@ contract MerkledropToStakingCompliant is Ownable, Pausable {
     IERC20 public immutable PNG;
     IPangolinStakingPositions public immutable SAR;
     bytes32 public merkleRoot;
-    bytes32 public complianceHash = bytes("By signing this transaction, I hereby acknowledge that I am not a US resident or citizen. (Citizens or residents of the United States of America are not allowed to the PSB token airdrop due to applicable law.)").toEthSignedMessageHash();
+    string public complianceMessage = "By signing this transaction, I hereby acknowledge that I am not a US resident or citizen. (Citizens or residents of the United States of America are not allowed to the PSB token airdrop due to applicable law.)";
+    bytes32 public complianceHash = bytes(complianceMessage).toEthSignedMessageHash();
 
     event Claimed(address indexed from, address indexed to, uint96 indexed amount);
     event MerkleRootSet(bytes32 indexed newMerkleRoot);
@@ -68,6 +69,7 @@ contract MerkledropToStakingCompliant is Ownable, Pausable {
     function setComplianceMessage(string calldata newComplianceMessage) external onlyOwner {
         bytes32 newComplianceHash = bytes(newComplianceMessage).toEthSignedMessageHash();
         complianceHash = newComplianceHash;
+        complianceMessage = newComplianceMessage;
         emit NewComplianceMessage(newComplianceHash, newComplianceMessage);
     }
 
