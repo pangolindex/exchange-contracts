@@ -361,7 +361,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         uint256 userValue = _getValue(pool.users[userId].valueVariables);
 
         // Return the rewardRate of the user. Do not revert if poolValue is zero.
-        return userValue == 0 ? 0 : (rewardRate() * userValue) / poolValue;
+        return userValue == 0 ? 0 : (poolRewardRate(poolId) * userValue) / poolValue;
     }
 
     /**
@@ -629,7 +629,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // Get extra rewards from rewarder.
         IRewarder rewarder = pool.rewarder;
         if (address(rewarder) != address(0)) {
-            rewarder.onReward(poolId, msg.sender, true, reward, userBalance);
+            rewarder.onReward(poolId, msg.sender, false, reward, userBalance);
         }
     }
 
