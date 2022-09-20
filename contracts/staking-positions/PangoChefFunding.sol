@@ -257,7 +257,7 @@ abstract contract PangoChefFunding is AccessControlEnumerable, GenericErrors {
      * @param poolId The identifier of the pool to check the reward rate of.
      * @return The rewards per second of the pool.
      */
-    function poolRewardRate(uint256 poolId) external view returns (uint256) {
+    function poolRewardRate(uint256 poolId) public view returns (uint256) {
         // Return the rewardRate of the pool.
         uint256 poolWeight = poolRewardInfos[poolId].weight;
         return poolWeight == 0 ? 0 : (rewardRate() * poolWeight) / totalWeight;
