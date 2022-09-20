@@ -629,7 +629,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // Get extra rewards from rewarder.
         IRewarder rewarder = pool.rewarder;
         if (address(rewarder) != address(0)) {
-            rewarder.onReward(poolId, msg.sender, true, reward, userBalance);
+            rewarder.onReward(poolId, msg.sender, false, reward, userBalance);
         }
     }
 
