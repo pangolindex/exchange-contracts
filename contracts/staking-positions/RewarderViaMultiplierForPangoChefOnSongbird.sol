@@ -3,7 +3,7 @@ pragma solidity 0.8.15;
 
 import "./PangoChef.sol";
 
-contract RewarderViaMultiplierForPangoChef is IRewarder {
+contract RewarderViaMultiplierForPangoChefOnSongbird is IRewarder {
     using SafeTransferLib for ERC20;
 
     ERC20[] public rewardTokens;
@@ -75,6 +75,9 @@ contract RewarderViaMultiplierForPangoChef is IRewarder {
         int256 deltaSumOfEntryTimes = int256(uint256(newUserValueVariables.sumOfEntryTimes)) - int256(uint256(previousUserValueVariables.sumOfEntryTimes));
         if ((previousUserValueVariables.balance == 0 && newBalance != 0) || (deltaBalance == 0 && deltaSumOfEntryTimes == 0)) {
             destructiveAction = false; // override because in these circumstances value given by songbird pangochef is invalid. the circumstance happens during `compoundToPoolZero`. songbird pangochef incorrectly returns `true` for it, however it should have been a non-destructive action.
+        }
+        if (newBalance == 0) {
+            destructiveAction = true;
         }
 
         for (uint256 i; i < rewardTokens.length; ++i) {
