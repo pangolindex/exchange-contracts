@@ -73,11 +73,9 @@ contract RewarderViaMultiplierForPangoChefOnSongbird is IRewarder {
         usersValueVariables[pid][user] = newUserValueVariables;
         bool equalBalance = newUserValueVariables.balance == previousUserValueVariables.balance;
         bool equalSumOfEntryTimes = newUserValueVariables.sumOfEntryTimes == previousUserValueVariables.sumOfEntryTimes;
-        if ((previousUserValueVariables.balance == 0 && newBalance != 0) || (equalBalance && equalSumOfEntryTimes)) {
+        if ((previousUserValueVariables.balance == 0 || (equalBalance && equalSumOfEntryTimes)) && newBalance != 0) {
+
             destructiveAction = false; // override because in these circumstances value given by songbird pangochef is invalid. the circumstance happens during `compoundToPoolZero`. songbird pangochef incorrectly returns `true` for it, however it should have been a non-destructive action.
-        }
-        if (newBalance == 0) {
-            destructiveAction = true;
         }
 
         for (uint256 i; i < rewardTokens.length; ++i) {
