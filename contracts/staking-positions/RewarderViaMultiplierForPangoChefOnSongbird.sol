@@ -71,9 +71,9 @@ contract RewarderViaMultiplierForPangoChefOnSongbird is IRewarder {
         PangoChef.ValueVariables memory newUserValueVariables = PangoChef(CHEF_V2).getUser(pid, user).valueVariables;
         PangoChef.ValueVariables memory previousUserValueVariables = usersValueVariables[pid][user];
         usersValueVariables[pid][user] = newUserValueVariables;
-        int256 deltaBalance = int256(uint256(newUserValueVariables.balance)) - int256(uint256(previousUserValueVariables.balance)); // pangochef balances are limited to uint104, so no underflow or truncation possible
-        int256 deltaSumOfEntryTimes = int256(uint256(newUserValueVariables.sumOfEntryTimes)) - int256(uint256(previousUserValueVariables.sumOfEntryTimes));
-        if ((previousUserValueVariables.balance == 0 && newBalance != 0) || (deltaBalance == 0 && deltaSumOfEntryTimes == 0)) {
+        bool equalBalance = newUserValueVariables.balance == previousUserValueVariables.balance;
+        bool equalSumOfEntryTimes = newUserValueVariables.sumOfEntryTimes == previousUserValueVariables.sumOfEntryTimes;
+        if ((previousUserValueVariables.balance == 0 && newBalance != 0) || (equalBalance && equalSumOfEntryTimes)) {
             destructiveAction = false; // override because in these circumstances value given by songbird pangochef is invalid. the circumstance happens during `compoundToPoolZero`. songbird pangochef incorrectly returns `true` for it, however it should have been a non-destructive action.
         }
         if (newBalance == 0) {
