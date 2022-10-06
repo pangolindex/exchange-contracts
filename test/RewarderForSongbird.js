@@ -300,4 +300,19 @@ describe("RewarderViaMultiplierForPangoChefOnSongbird.sol", function () {
     previousBalance = lastBalance;
   });
 
+  it("stake before compoundToPoolZero does not trick the contract", async function () {
+    expect(await this.chef.stake("1", this.amount.div("2"))).to.emit(this.chef, "Staked");
+    expect(await this.chef.withdraw("1", this.amount.div("4"))).to.emit(this.chef, "Withdrawn");
+    await network.provider.send("evm_increaseTime", [50000]);
+
+    let previousBalance = await this.another_token.balanceOf(this.admin.address);
+    let lastBalance = previousBalance;
+
+    expect(await this.chef.stake("1", this.amount.div("4"))).to.emit(this.chef, "Staked");
+    expect(await this.chef.compoundToPoolZero("1", { minPairAmount: "0", maxPairAmount: this.amount }, { value: this.amount } )).to.emit(this.chef, "Staked");
+
+    lastBalance = await this.another_token.balanceOf(this.admin.address);
+    expect(lastBalance).to.equal(previousBalance);
+  });
+
 });
