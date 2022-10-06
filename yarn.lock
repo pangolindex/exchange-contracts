@@ -631,6 +631,18 @@
     tiny-warning "^1.0.3"
     toformat "^2.0.0"
 
+"@pangolindex/sdk@3.1.6":
+  version "3.1.6"
+  resolved "https://registry.yarnpkg.com/@pangolindex/sdk/-/sdk-3.1.6.tgz#326f74b7a55b4ece29d8fede9ba0ac5d13b11d6a"
+  integrity sha512-gj2U/1ND4mxJFSVMD21OTccYKk8dC7sq9fUqBCEqsByuFWBTLoTWFIt7mYphsJ76U8SdswuUELZrN8PmI6S3ig==
+  dependencies:
+    big.js "^5.2.2"
+    decimal.js-light "^2.5.0"
+    jsbi "^3.1.1"
+    tiny-invariant "^1.1.0"
+    tiny-warning "^1.0.3"
+    toformat "^2.0.0"
+
 "@rari-capital/solmate@^6.4.0":
   version "6.4.0"
   resolved "https://registry.yarnpkg.com/@rari-capital/solmate/-/solmate-6.4.0.tgz#c6ee4110c8075f14b415e420b13bd8bdbbc93d9e"
