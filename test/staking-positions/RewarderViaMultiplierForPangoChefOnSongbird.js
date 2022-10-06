@@ -1,14 +1,9 @@
-// test/PangoChef.js
 // Load dependencies
 const { expect } = require("chai");
 const { ethers, network } = require("hardhat");
-const { BigNumber } = require("ethers");
 
-const DENOMINATOR = BigNumber.from("10000");
-const ONE_DAY = BigNumber.from("86400");
 const PNG_SUPPLY = ethers.utils.parseUnits("500000000", 18);
 const ZERO_ADDRESS = ethers.constants.AddressZero;
-const PERIOD_DURATION = 86400;
 
 console.log("Before running this test, set `onReward()` hook boolean (destructiveAuction) to `true` in `harvestWithoutReset()` function of PangoChef. That parameters was wrongly set in Songbird. Make that change such that this actually tests the behaviour of Pangochef as deployed on Songbird.");
 
@@ -134,14 +129,11 @@ describe("RewarderViaMultiplierForPangoChefOnSongbird.sol", function () {
     await network.provider.send("evm_increaseTime", [1000]);
     // have stake in pool2 after the rewarders are set
     expect(await this.chef.stake("2", this.amount)).to.emit(this.chef, "Staked");
-
-    //var blockNumber = await ethers.provider.getBlockNumber();
-    //this.minterInit = (await ethers.provider.getBlock(blockNumber)).timestamp;
   });
 
   // Test cases
 
-  it("staking does not give out secondary rewards in no circumstance", async function () {
+  it("staking does not give out secondary rewards in any circumstance", async function () {
     const initialBalance = await this.another_token.balanceOf(this.admin.address);
 
     expect(await this.chef.stake("1", this.amount)).to.emit(this.chef, "Staked");
@@ -157,7 +149,7 @@ describe("RewarderViaMultiplierForPangoChefOnSongbird.sol", function () {
     expect(initialBalance).to.equal(finalBalance);
   });
 
-  it("compound does not give out secondary rewards in no circumstance", async function () {
+  it("compound does not give out secondary rewards in any circumstance", async function () {
     const initialBalance = await this.another_token.balanceOf(this.admin.address);
 
     expect(await this.chef.compound("1", { minPairAmount: "0", maxPairAmount: this.amount }, { value: this.amount } )).to.emit(this.chef, "Staked");
@@ -173,7 +165,7 @@ describe("RewarderViaMultiplierForPangoChefOnSongbird.sol", function () {
     expect(initialBalance).to.equal(finalBalance);
   });
 
-  it("compoundToPoolZero does not give out secondary rewards in no circumstance", async function () {
+  it("compoundToPoolZero does not give out secondary rewards in any circumstance", async function () {
     const initialBalance = await this.another_token.balanceOf(this.admin.address);
 
     expect(await this.chef.compoundToPoolZero("1", { minPairAmount: "0", maxPairAmount: this.amount }, { value: this.amount } )).to.emit(this.chef, "Staked");
@@ -191,113 +183,105 @@ describe("RewarderViaMultiplierForPangoChefOnSongbird.sol", function () {
 
   it("withdraw gives out secondary rewards except on snapshotting first time", async function () {
     let previousBalance = await this.another_token.balanceOf(this.admin.address);
-    let lastBalance = previousBalance;
-
-    const rewardAmount = await this.chef.userPendingRewards('1', this.admin.address);
+    let balance = previousBalance;
 
     expect(await this.chef.withdraw("1", this.amount.div('4'))).to.emit(this.chef, "Withdrawn");
-    lastBalance = await this.another_token.balanceOf(this.admin.address);
-    expect(lastBalance).to.equal(previousBalance);
-    previousBalance = lastBalance;
+    balance = await this.another_token.balanceOf(this.admin.address);
+    expect(balance).to.equal(previousBalance);
+    previousBalance = balance;
     await network.provider.send("evm_increaseTime", [1000]);
     expect(await this.chef.withdraw("1", this.amount.div('4'))).to.emit(this.chef, "Withdrawn");
-    lastBalance = await this.another_token.balanceOf(this.admin.address);
-    expect(lastBalance).to.be.above(previousBalance);
-    previousBalance = lastBalance;
+    balance = await this.another_token.balanceOf(this.admin.address);
+    expect(balance).to.be.above(previousBalance);
+    previousBalance = balance;
     await network.provider.send("evm_increaseTime", [1000]);
     expect(await this.chef.withdraw("1", this.amount.div('4'))).to.emit(this.chef, "Withdrawn");
-    lastBalance = await this.another_token.balanceOf(this.admin.address);
-    expect(lastBalance).to.be.above(previousBalance);
-    previousBalance = lastBalance;
+    balance = await this.another_token.balanceOf(this.admin.address);
+    expect(balance).to.be.above(previousBalance);
+    previousBalance = balance;
     await network.provider.send("evm_increaseTime", [1000]);
     expect(await this.chef.withdraw("1", this.amount.div('4'))).to.emit(this.chef, "Withdrawn");
-    lastBalance = await this.another_token.balanceOf(this.admin.address);
-    expect(lastBalance).to.be.above(previousBalance);
-    previousBalance = lastBalance;
+    balance = await this.another_token.balanceOf(this.admin.address);
+    expect(balance).to.be.above(previousBalance);
+    previousBalance = balance;
 
     expect(await this.chef.withdraw("2", this.amount.div('4'))).to.emit(this.chef, "Withdrawn");
-    lastBalance = await this.another_token.balanceOf(this.admin.address);
-    expect(lastBalance).to.be.above(previousBalance);
-    previousBalance = lastBalance;
+    balance = await this.another_token.balanceOf(this.admin.address);
+    expect(balance).to.be.above(previousBalance);
+    previousBalance = balance;
     await network.provider.send("evm_increaseTime", [1000]);
     expect(await this.chef.withdraw("2", this.amount.div('4'))).to.emit(this.chef, "Withdrawn");
-    lastBalance = await this.another_token.balanceOf(this.admin.address);
-    expect(lastBalance).to.be.above(previousBalance);
-    previousBalance = lastBalance;
+    balance = await this.another_token.balanceOf(this.admin.address);
+    expect(balance).to.be.above(previousBalance);
+    previousBalance = balance;
     await network.provider.send("evm_increaseTime", [1000]);
     expect(await this.chef.withdraw("2", this.amount.div('4'))).to.emit(this.chef, "Withdrawn");
-    lastBalance = await this.another_token.balanceOf(this.admin.address);
-    expect(lastBalance).to.be.above(previousBalance);
-    previousBalance = lastBalance;
+    balance = await this.another_token.balanceOf(this.admin.address);
+    expect(balance).to.be.above(previousBalance);
+    previousBalance = balance;
     await network.provider.send("evm_increaseTime", [1000]);
     expect(await this.chef.withdraw("2", this.amount.div('4'))).to.emit(this.chef, "Withdrawn");
-    lastBalance = await this.another_token.balanceOf(this.admin.address);
-    expect(lastBalance).to.be.above(previousBalance);
-    previousBalance = lastBalance;
+    balance = await this.another_token.balanceOf(this.admin.address);
+    expect(balance).to.be.above(previousBalance);
   });
 
   it("withdraw all gives out secondary rewards in all circumstances", async function () {
     let previousBalance = await this.another_token.balanceOf(this.admin.address);
-    let lastBalance = previousBalance;
-
-    const rewardAmount = await this.chef.userPendingRewards('1', this.admin.address);
+    let balance = previousBalance;
 
     expect(await this.chef.withdraw("1", this.amount)).to.emit(this.chef, "Withdrawn");
-    lastBalance = await this.another_token.balanceOf(this.admin.address);
-    expect(lastBalance).to.be.above(previousBalance);
-    previousBalance = lastBalance;
+    balance = await this.another_token.balanceOf(this.admin.address);
+    expect(balance).to.be.above(previousBalance);
+    previousBalance = balance;
     await network.provider.send("evm_increaseTime", [1000]);
 
     expect(await this.chef.withdraw("2", this.amount)).to.emit(this.chef, "Withdrawn");
-    lastBalance = await this.another_token.balanceOf(this.admin.address);
-    expect(lastBalance).to.be.above(previousBalance);
+    balance = await this.another_token.balanceOf(this.admin.address);
+    expect(balance).to.be.above(previousBalance);
   });
 
   it("harvest gives out secondary rewards except on snapshotting first time", async function () {
     let previousBalance = await this.another_token.balanceOf(this.admin.address);
-    let lastBalance = previousBalance;
-
-    const rewardAmount = await this.chef.userPendingRewards('1', this.admin.address);
+    let balance = previousBalance;
 
     expect(await this.chef.harvest("1")).to.emit(this.chef, "Withdrawn");
-    lastBalance = await this.another_token.balanceOf(this.admin.address);
-    expect(lastBalance).to.equal(previousBalance);
-    previousBalance = lastBalance;
+    balance = await this.another_token.balanceOf(this.admin.address);
+    expect(balance).to.equal(previousBalance);
+    previousBalance = balance;
     await network.provider.send("evm_increaseTime", [1000]);
     expect(await this.chef.harvest("1")).to.emit(this.chef, "Withdrawn");
-    lastBalance = await this.another_token.balanceOf(this.admin.address);
-    expect(lastBalance).to.be.above(previousBalance);
-    previousBalance = lastBalance;
+    balance = await this.another_token.balanceOf(this.admin.address);
+    expect(balance).to.be.above(previousBalance);
+    previousBalance = balance;
     await network.provider.send("evm_increaseTime", [1000]);
     expect(await this.chef.harvest("1")).to.emit(this.chef, "Withdrawn");
-    lastBalance = await this.another_token.balanceOf(this.admin.address);
-    expect(lastBalance).to.be.above(previousBalance);
-    previousBalance = lastBalance;
+    balance = await this.another_token.balanceOf(this.admin.address);
+    expect(balance).to.be.above(previousBalance);
+    previousBalance = balance;
     await network.provider.send("evm_increaseTime", [1000]);
     expect(await this.chef.harvest("1")).to.emit(this.chef, "Withdrawn");
-    lastBalance = await this.another_token.balanceOf(this.admin.address);
-    expect(lastBalance).to.be.above(previousBalance);
-    previousBalance = lastBalance;
+    balance = await this.another_token.balanceOf(this.admin.address);
+    expect(balance).to.be.above(previousBalance);
+    previousBalance = balance;
 
     expect(await this.chef.harvest("1")).to.emit(this.chef, "Withdrawn");
-    lastBalance = await this.another_token.balanceOf(this.admin.address);
-    expect(lastBalance).to.be.above(previousBalance);
-    previousBalance = lastBalance;
+    balance = await this.another_token.balanceOf(this.admin.address);
+    expect(balance).to.be.above(previousBalance);
+    previousBalance = balance;
     await network.provider.send("evm_increaseTime", [1000]);
     expect(await this.chef.harvest("1")).to.emit(this.chef, "Withdrawn");
-    lastBalance = await this.another_token.balanceOf(this.admin.address);
-    expect(lastBalance).to.be.above(previousBalance);
-    previousBalance = lastBalance;
+    balance = await this.another_token.balanceOf(this.admin.address);
+    expect(balance).to.be.above(previousBalance);
+    previousBalance = balance;
     await network.provider.send("evm_increaseTime", [1000]);
     expect(await this.chef.harvest("1")).to.emit(this.chef, "Withdrawn");
-    lastBalance = await this.another_token.balanceOf(this.admin.address);
-    expect(lastBalance).to.be.above(previousBalance);
-    previousBalance = lastBalance;
+    balance = await this.another_token.balanceOf(this.admin.address);
+    expect(balance).to.be.above(previousBalance);
+    previousBalance = balance;
     await network.provider.send("evm_increaseTime", [1000]);
     expect(await this.chef.harvest("1")).to.emit(this.chef, "Withdrawn");
-    lastBalance = await this.another_token.balanceOf(this.admin.address);
-    expect(lastBalance).to.be.above(previousBalance);
-    previousBalance = lastBalance;
+    balance = await this.another_token.balanceOf(this.admin.address);
+    expect(balance).to.be.above(previousBalance);
   });
 
   it("stake before compoundToPoolZero does not trick the contract", async function () {
@@ -305,14 +289,13 @@ describe("RewarderViaMultiplierForPangoChefOnSongbird.sol", function () {
     expect(await this.chef.withdraw("1", this.amount.div("4"))).to.emit(this.chef, "Withdrawn");
     await network.provider.send("evm_increaseTime", [50000]);
 
-    let previousBalance = await this.another_token.balanceOf(this.admin.address);
-    let lastBalance = previousBalance;
+    const previousBalance = await this.another_token.balanceOf(this.admin.address);
 
     expect(await this.chef.stake("1", this.amount.div("4"))).to.emit(this.chef, "Staked");
     expect(await this.chef.compoundToPoolZero("1", { minPairAmount: "0", maxPairAmount: this.amount }, { value: this.amount } )).to.emit(this.chef, "Staked");
 
-    lastBalance = await this.another_token.balanceOf(this.admin.address);
-    expect(lastBalance).to.equal(previousBalance);
+    const balance = await this.another_token.balanceOf(this.admin.address);
+    expect(balance).to.equal(previousBalance);
   });
 
 });

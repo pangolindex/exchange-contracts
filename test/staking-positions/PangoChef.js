@@ -2,10 +2,7 @@
 // Load dependencies
 const { expect } = require("chai");
 const { ethers, network } = require("hardhat");
-const { BigNumber } = require("ethers");
 
-const DENOMINATOR = BigNumber.from("10000");
-const ONE_DAY = BigNumber.from("86400");
 const PNG_SUPPLY = ethers.utils.parseUnits("500000000", 18);
 const ZERO_ADDRESS = ethers.constants.AddressZero;
 const PERIOD_DURATION = 86400;
@@ -111,9 +108,6 @@ describe("PangoChef.sol", function () {
     this.pgl.transfer(this.unauthorized.address, this.pgl_amount);
     this.png.transfer(this.unauthorized.address, this.png_amount);
     this.another_token.transfer(this.unauthorized.address, this.png_amount);
-
-    //var blockNumber = await ethers.provider.getBlockNumber();
-    //this.minterInit = (await ethers.provider.getBlock(blockNumber)).timestamp;
   });
 
   // Test cases
