@@ -69,10 +69,10 @@ contract RewarderViaMultiplierForPangoChefOnSongbird is IRewarder {
 
         // In Songbird PangoChef, `compoundToPoolZero` calls `onReward` with `destructiveAction == true`. This is invalid.
         // The following block detects the improper `destructiveAction == true`, and overrides it with `false`.
+        PangoChef.ValueVariables memory newUserValueVariables = PangoChef(CHEF_V2).getUser(pid, user).valueVariables;
+        PangoChef.ValueVariables memory previousUserValueVariables = usersValueVariables[pid][user];
+        usersValueVariables[pid][user] = newUserValueVariables;
         if (destructiveAction && newBalance != 0) {
-            PangoChef.ValueVariables memory newUserValueVariables = PangoChef(CHEF_V2).getUser(pid, user).valueVariables;
-            PangoChef.ValueVariables memory previousUserValueVariables = usersValueVariables[pid][user];
-            usersValueVariables[pid][user] = newUserValueVariables;
             bool equalBalance = newUserValueVariables.balance == previousUserValueVariables.balance;
             bool equalSumOfEntryTimes = newUserValueVariables.sumOfEntryTimes == previousUserValueVariables.sumOfEntryTimes;
             if (previousUserValueVariables.balance == 0 || (equalBalance && equalSumOfEntryTimes)) destructiveAction = false;
