@@ -4,3 +4,6 @@ scripts/
 test/
 cache/
 node_modules/
+.env
+.idea
+.vscode
