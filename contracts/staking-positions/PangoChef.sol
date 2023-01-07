@@ -877,9 +877,6 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         if (pool.poolType != PoolType.RELAYER_POOL) revert InvalidType();
     }
 
-    function _onlyUncompoundablePool(Pool storage pool) private view {
-    }
-
     /**
      * @notice Private function to claim the pool’s pending rewards, and based on the claimed
      *         amount update the two variables that govern the reward distribution.
