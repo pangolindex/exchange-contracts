@@ -9,6 +9,13 @@ import "./interfaces/IPangolinFactory.sol";
 import "./interfaces/IPangolinPair.sol";
 import "./interfaces/IRewarder.sol";
 
+/** @dev We call this contract with try/catch to figure out if pair is an actual pair. */
+contract SafeExternalCalls {
+    function getReserveTokenAddresses(address pair) external view returns (address, address) {
+        return (IPangolinPair(pair).token0(), IPangolinPair(pair).token1());
+    }
+}
+
 /**
  * @title PangoChef
  * @author Shung for Pangolin
@@ -17,6 +24,7 @@ import "./interfaces/IRewarder.sol";
  */
 contract PangoChef is PangoChefFunding, ReentrancyGuard {
     using SafeTransferLib for ERC20;
+    using EnumerableSet for EnumerableSet.UintSet;
 
     enum PoolType {
         // UNSET_POOL is used to check if a pool is initialized.
@@ -34,9 +42,9 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // supplied by the user, and the created pool token is staked to the same pool as where
         // the rewards come from.
         COMPOUND,
-        // In COMPOUND_TO_POOL_ZERO staking, rewards from any pool are paired with the native gas
-        // token supplied by the user, to be staked to pool zero.
-        COMPOUND_TO_POOL_ZERO
+        // In COMPOUND_TO staking, rewards from any pool can be paired with another token to
+        // be staked in another pool.
+        COMPOUND_TO
     }
 
     struct Slippage {
@@ -82,11 +90,13 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         uint152 previousValues;
         // The last time the user info was updated.
         uint48 lastUpdate;
-        // When a user uses the rewards of a pool to compound into pool zero, the pool zero gets
-        // locked until that pool has its staking duration reset. Otherwise people can exploit
-        // the `compoundToPoolZero()` function to harvest rewards of a pool without resetting its
-        // staking duration, which would defeat the purpose of using SAR algorithm.
-        bool isLockingPoolZero;
+        // The number of pools that locked this pool. User can only withdraw from a pool if its
+        // lock count is zero. When a user uses the rewards of a pool to compound into another
+        // pool, the compounded pool gets locked until the harvested pool has its staking duration
+        // reset. Otherwise people can exploit the `compoundTo()` function to harvest rewards of a
+        // pool without resetting its staking duration, which would defeat the purpose of using SAR
+        // algorithm.
+        uint56 lockCount;
         // Rewards of the user gets stashed when user’s summations are updated without
         // harvesting the rewards or without utilizing the rewards in compounding.
         uint96 stashedRewards;
@@ -114,14 +124,8 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
     /** @notice The mapping from poolIds to the pool infos. */
     mapping(uint256 => Pool) public pools;
 
-    /**
-     * @notice The mapping from user addresses to the number of pools the user has that are locking
-     *         the pool zero. User can only withdraw from pool zero if the lock count is zero.
-     */
-    mapping(address => uint256) public poolZeroLockCount;
-
-    /** @notice Record latest timestamps of low-level call fails, so Rewarder can slash rewards. */
-    mapping(uint256 => mapping(address => uint256)) public lastTimeRewarderCallFailed;
+    /** The set of ids of the pools locked by this pool. */
+    mapping(uint256 => mapping(address => EnumerableSet.UintSet)) private lockedPools;
 
     /** @notice The UNI-V2 factory that creates pair tokens. */
     IPangolinFactory public immutable factory;
@@ -137,6 +141,11 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
 
     /** @notice The fixed denominator used for storing summations. */
     uint256 private constant PRECISION = 2**128;
+
+    /** @notice The maximum amount of pools that can be locked. This prevents unbounded loop. */
+    uint256 private constant MAX_LOCK_COUNT = 10;
+
+    SafeExternalCalls private safeExternalCalls;
 
     /** @notice The event emitted when withdrawing or harvesting from a position. */
     event Withdrawn(
@@ -179,13 +188,14 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // Check pair exists, which implies `newRewardsToken != 0 && newWrappedNativeToken != 0`.
         if (poolZeroPair == address(0)) revert NullInput();
 
-        // Initialize pool zero with WAVAX-PNG liquidity token.
-        _initializePool(poolZeroPair, PoolType.ERC20_POOL);
-        pools[0].rewardPair = newWrappedNativeToken;
-
         // Initialize the immutable state variables.
         factory = newFactory;
         wrappedNativeToken = newWrappedNativeToken;
+
+        safeExternalCalls = SafeExternalCalls(new SafeExternalCalls());
+
+        // Initialize pool zero with WAVAX-PNG liquidity token.
+        _initializePool(poolZeroPair, PoolType.ERC20_POOL);
     }
 
     /**
@@ -275,22 +285,24 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
      *         any other ERC20_POOL.
      * @dev The user must supply sufficient amount of the gas token (e.g.: AVAX/WAVAX) to be
      *      paired with the rewardsToken (e.g.:PNG).
-     * @param poolId The identifier of the pool to harvest the rewards of to compound to pool zero.
+     * @param harvestPoolId The identifier of the pool to harvest the rewards from.
+     * @param compoundPoolId The identifier of the pool to stake the rewards into.
      * @param slippage A struct defining the minimum and maximum amounts of tokens that can be
      *                 paired with reward token.
      */
-    function compoundToPoolZero(
-        uint256 poolId,
+    function compoundTo(
+        uint256 harvestPoolId,
+        uint256 compoundPoolId,
         Slippage calldata slippage
     ) external payable nonReentrant {
         // Harvest rewards from the provided pool. This does not reset the staking duration, but
         // it will increment the lock on pool zero. The lock on pool zero will be decremented
         // whenever the provided pool has its staking duration reset (e.g.: through `_withdraw()`).
-        uint256 reward = _harvestWithoutReset(poolId);
+        uint256 reward = _harvestWithoutReset(harvestPoolId, compoundPoolId);
 
         // Stake to pool zero using special staking method, which will add liquidity using rewards
         // harvested from the provided pool.
-        _stake(0, msg.sender, reward, StakeType.COMPOUND_TO_POOL_ZERO, slippage);
+        _stake(compoundPoolId, msg.sender, reward, StakeType.COMPOUND_TO, slippage);
     }
 
     /**
@@ -306,8 +318,16 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
      * @dev This is an extreme emergency function, used only to save pool zero from perpetually
      *      remaining locked if there is a DOS on the staking token.
      * @param poolId The identifier of the pool to exit from.
+     * @param confirmation Prevents naive users from calling this function by mistake.
      */
-    function emergencyExitLevel2(uint256 poolId) external nonReentrant {
+    function emergencyExitLevel2(uint256 poolId, bytes32 confirmation) external nonReentrant {
+        if (confirmation != keccak256(
+                abi.encodePacked(
+                    "I am ready to lose everything in this pool. Let me go.",
+                    msg.sender
+                )
+            )
+        ) revert UnprivilegedCaller();
         _emergencyExit(poolId, false);
     }
 
@@ -335,13 +355,26 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
     }
 
     /**
-     * @notice External view function to get the info about a user of a pool
+     * @notice External view function to get the info about a user of a pool.
      * @param poolId The identifier of the pool the user is in.
      * @param userId The address of the user in the pool.
-     * @return The user struct that contains all the information of the user
+     * @return The user struct that contains all the information of the user.
      */
     function getUser(uint256 poolId, address userId) external view returns (User memory) {
         return pools[poolId].users[userId];
+    }
+
+    /**
+     * @notice External view function to get the pools locked by user in a specific pool.
+     * @param poolId The identifier of the pool the user is in.
+     * @param userId The address of the user in the pool.
+     * @return The pool identifier array of the pools locked by the user.
+     */
+    function getLockedPools(
+        uint256 poolId,
+        address userId
+    ) external view returns (uint256[] memory) {
+        return lockedPools[poolId][userId].values();
     }
 
     /**
@@ -400,7 +433,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
      * @param userId The address of the user to deposit for.
      * @param amount The amount of staking tokens to deposit when stakeType is REGULAR.
      *               It should be zero when the stakeType is COMPOUND.
-     *               The reward to pair with gas token when stakeType is COMPOUND_TO_POOL_ZERO.
+     *               The reward token to pair when stakeType is COMPOUND_TO.
      * @param stakeType The staking method (i.e.: staking, compounding, compounding to pool zero).
      * @param slippage A struct defining the minimum and maximum amounts of tokens that can be
      *                 paired with reward token.
@@ -438,9 +471,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
             user.stashedRewards = uint96(reward);
             reward = 0;
             // Staking into pool zero using harvested rewards from another pool.
-        } else if (stakeType == StakeType.COMPOUND_TO_POOL_ZERO) {
-            assert(poolId == 0);
-
+        } else if (stakeType == StakeType.COMPOUND_TO) {
             // Add liquidity using the rewards of another pool.
             amount = _addLiquidity(pool, amount, slippage);
 
@@ -452,9 +483,6 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         } else {
             assert(stakeType == StakeType.COMPOUND);
             assert(amount == 0);
-
-            // Ensure the pool token is a Pangolin pair token containing PNG as one of the pairs.
-            _setRewardPair(pool);
 
             // Add liquidity using the rewards of this pool.
             amount = _addLiquidity(pool, reward, slippage);
@@ -529,7 +557,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
 
         // Ensure pool zero is not locked.
         // Decrement lock count on pool zero if this pool was locking it.
-        _decrementLockOnPoolZero(poolId, user);
+        _decrementLock(user, poolId);
 
         // Get position balance and ensure sufficient balance exists.
         ValueVariables storage userValueVariables = user.valueVariables;
@@ -586,28 +614,34 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
     /**
      * @notice Private function to harvest from a pool without resetting its staking duration.
      * @dev Harvested rewards must not leave the contract, so that they can be used in compounding.
-     * @param poolId The identifier of the pool to harvest from.
+     * @param harvestPoolId The identifier of the pool to harvest from.
+     * @param compoundPoolId The identifier of the pool the rewards will be compounded to.
      * @return reward The amount of harvested rewards.
      */
-    function _harvestWithoutReset(uint256 poolId) private returns (uint256 reward) {
+    function _harvestWithoutReset(
+        uint256 harvestPoolId,
+        uint256 compoundPoolId
+    ) private returns (uint256 reward) {
         // Create a storage pointer for the pool and the user.
-        Pool storage pool = pools[poolId];
+        Pool storage pool = pools[harvestPoolId];
         User storage user = pool.users[msg.sender];
 
         // Ensure pool is ERC20 type.
         _onlyERC20Pool(pool);
 
-        // Update pool summations that govern the reward distribution from pool to users.
-        _updateRewardSummations(poolId, pool);
+        // Ensure pool cannot compound(). This is to prevent cyclical lock. That is, pool A locks
+        // pool B locks pool A. The following check ensures that if pool B can be compounded, it
+        // cannot compound to other pools.
+        if (pool.rewardPair != address(0)) revert InvalidToken();
 
-        // Pool zero should instead use `compound()`.
-        if (poolId == 0) revert InvalidType();
+        // Update pool summations that govern the reward distribution from pool to users.
+        _updateRewardSummations(harvestPoolId, pool);
 
         // Increment lock count on pool zero if this pool was not already locking it.
-        _incrementLockOnPoolZero(user);
+        _incrementLock(harvestPoolId, compoundPoolId);
 
         // Get the rewards accrued by the user, then delete the user stash.
-        reward = _userPendingRewards(poolId, pool, user);
+        reward = _userPendingRewards(harvestPoolId, pool, user);
         user.stashedRewards = 0;
 
         // Ensure there are sufficient rewards to use in compounding.
@@ -624,12 +658,12 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         _snapshotRewardSummations(pool, user);
 
         // Emit the harvest event, even though it will not be transferred to the user.
-        emit Withdrawn(poolId, msg.sender, 0, reward);
+        emit Withdrawn(harvestPoolId, msg.sender, 0, reward);
 
         // Get extra rewards from rewarder.
         IRewarder rewarder = pool.rewarder;
         if (address(rewarder) != address(0)) {
-            rewarder.onReward(poolId, msg.sender, false, reward, userBalance);
+            rewarder.onReward(harvestPoolId, msg.sender, false, reward, userBalance);
         }
     }
 
@@ -651,6 +685,9 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
     ) private returns (uint256 poolTokenAmount) {
         address poolToken = pool.tokenOrRecipient;
         address rewardPair = pool.rewardPair;
+
+        // Ensure the pool token is a Pangolin pair token containing PNG as one of the pairs.
+        if (rewardPair == address(0)) revert InvalidType();
 
         // Get token amounts from the pool.
         (uint256 reserve0, uint256 reserve1, ) = IPangolinPair(poolToken).getReserves();
@@ -709,7 +746,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         _onlyERC20Pool(pool);
 
         // Decrement lock count on pool zero if this pool was locking it.
-        _decrementLockOnPoolZero(poolId, user);
+        _decrementLock(user, poolId);
 
         // Create storage pointers for the value variables.
         ValueVariables storage poolValueVariables = pool.valueVariables;
@@ -730,74 +767,58 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         if (withdrawStake) {
             ERC20(pool.tokenOrRecipient).safeTransfer(msg.sender, balance);
             emit Withdrawn(poolId, msg.sender, balance, 0);
-        // Still try withdrawing, but do a non-reverting low-level call.
-        } else {
-            (bool success, bytes memory returndata) = pool.tokenOrRecipient.call(
-                abi.encodeWithSelector(ERC20.transfer.selector, msg.sender, balance)
-            );
-            if (success && returndata.length > 0 && abi.decode(returndata, (bool))) {
-                emit Withdrawn(poolId, msg.sender, balance, 0);
-            }
         }
 
-        {
-            // Do a low-level call for rewarder. If external function reverts, only the external
-            // contract reverts. To prevent DOS, this function (_emergencyExit) must never revert
-            // unless `balance == 0`. This can still return true if rewarder is not a contract.
-            (bool success, ) = address(pool.rewarder).call(
-                abi.encodeWithSelector(
-                    IRewarder.onReward.selector,
-                    poolId,
-                    msg.sender,
-                    true,
-                    0,
-                    0
-                )
-            );
-
-            // Record last failed Rewarder calls. This can be used for slashing rewards by a
-            // non-malicious Rewarder just in case it reverts due to some bug. If rewarder is
-            // correctly written, this statement should never execute. We also do not care if
-            // `success` is `true` due to rewarder not being a contract. A non-contract rewarder
-            // only means that it is unset. So it does not matter if we record or not.
-            if (!success) lastTimeRewarderCallFailed[poolId][msg.sender] = block.timestamp;
+        // Do a low-level call for rewarder. If external function reverts, only the external
+        // contract reverts. To prevent DOS, this function (_emergencyExit) must never revert
+        // unless `balance == 0`. This can still return true if rewarder is not a contract.
+        address rewarder = address(pool.rewarder);
+        bytes memory rewarderData = abi.encodeWithSelector(
+            IRewarder.onReward.selector,
+            poolId,
+            msg.sender,
+            true,
+            0,
+            0
+        );
+        // Gas griefing is not possible as only 63/64 of the gas is forwarded per EIP-150.
+        assembly {
+            pop(call(gas(), rewarder, 0, add(rewarderData, 0x20), mload(rewarderData), 0, 0))
         }
     }
 
     /**
      * @notice Private function increment the lock count on pool zero.
-     * @param user The properties of a pool’s user that is incrementing the lock. The user
-     *             properties of the pool must belong to the caller.
+     * @param harvestPoolId The identifier of the pool the user is harvesting the rewards from.
+     * @param compoundPoolId The identifier of the pool that the rewards will be compounded to.
      */
-    function _incrementLockOnPoolZero(User storage user) private {
-        // Only increment lock if the user is not already locking pool zero.
-        if (!user.isLockingPoolZero) {
-            // Increment caller’s lock count on pool zero.
-            unchecked {
-                ++poolZeroLockCount[msg.sender];
-            }
+    function _incrementLock(uint256 harvestPoolId, uint256 compoundPoolId) private {
+        // Only increment lock if the user is not already locking the pool.
+        if (lockedPools[harvestPoolId][msg.sender].add(compoundPoolId))
+            ++pools[compoundPoolId].users[msg.sender].lockCount;
 
-            // Mark user of the pool as locking the pool zero.
-            user.isLockingPoolZero = true;
-        }
+        if (lockedPools[harvestPoolId][msg.sender].length() > MAX_LOCK_COUNT) revert OutOfBounds();
     }
 
     /**
      * @notice Private function ensure pool zero is not locked and decrement the lock count.
-     * @param poolId The identifier of the pool which the user properties belong to.
      * @param user The properties of a pool’s user that is decrementing the lock. The user
-     *             properties of the pool must belong to the caller.
+     *        properties of the pool must belong to the caller.
+     * @param withdrawPoolId The identifier of the aforementioned pool.
      */
-    function _decrementLockOnPoolZero(uint256 poolId, User storage user) private {
-        if (poolId == 0) {
-            // Ensure pool zero is not locked.
-            if (poolZeroLockCount[msg.sender] != 0) revert Locked();
-        } else if (user.isLockingPoolZero) {
-            // Decrement lock count on pool zero if this pool was locking it.
+    function _decrementLock(User storage user, uint256 withdrawPoolId) private {
+        if (user.lockCount != 0) revert Locked();
+        for (
+            uint256 lastIndex = lockedPools[withdrawPoolId][msg.sender].length();
+            lastIndex != 0;
+        ) {
             unchecked {
-                --poolZeroLockCount[msg.sender];
+                --lastIndex;
             }
-            user.isLockingPoolZero = false;
+            uint256 lockedPoolId = lockedPools[withdrawPoolId][msg.sender].at(lastIndex);
+            if (lockedPools[withdrawPoolId][msg.sender].remove(lockedPoolId)) {
+                --pools[lockedPoolId].users[msg.sender].lockCount; // must always execute
+            }
         }
     }
 
@@ -810,56 +831,34 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
     function _initializePool(address tokenOrRecipient, PoolType poolType) private {
         // Get the next `poolId` from `_poolsLength`, then increment `_poolsLength`.
         uint256 poolId = _poolsLength++;
+        Pool storage pool = pools[poolId];
 
         // Ensure address and pool type are not empty.
         if (tokenOrRecipient == address(0) || poolType == PoolType.UNSET_POOL) revert NullInput();
 
-        // Ensure token is a contract.
-        if (poolType == PoolType.ERC20_POOL && tokenOrRecipient.code.length == 0) {
-            revert InvalidToken();
-        }
-
         // Assign the function arguments to the pool mapping then emit the associated event.
-        Pool storage pool = pools[poolId];
         pool.tokenOrRecipient = tokenOrRecipient;
         pool.poolType = poolType;
-        emit PoolInitialized(poolId, tokenOrRecipient);
-    }
 
-    /**
-     * @notice Private function to ensure the pool token is a Pangolin liquidity token created by
-     *         Pangolin Factory, and that the one of the pair tokens is the reward token. Reverts
-     *         if not true. If true, it stores the pair of the PNG for future accesses.
-     * @return rewardPair The address of the reward pair.
-     */
-    function _setRewardPair(Pool storage pool) private returns (address rewardPair) {
-        // Get the currently stored pair of the reward token.
-        rewardPair = pool.rewardPair;
+        // Set rewardPair if token is a Pangolin pair which has rewardsToken as one of the reserves.
+        if (poolType == PoolType.ERC20_POOL) {
+            if (tokenOrRecipient.code.length == 0) revert InvalidToken();
 
-        // Try to initialize the pair of the reward token if it is not already initialized.
-        if (rewardPair == address(0)) {
-            // Move pool token to memory for efficiency.
-            address poolToken = pool.tokenOrRecipient;
-
-            // Get the tokens of the liquidity pool.
-            address token0 = IPangolinPair(poolToken).token0();
-            address token1 = IPangolinPair(poolToken).token1();
-
-            // Ensure the pool token was created by the pair factory.
-            if (factory.getPair(token0, token1) != poolToken) revert InvalidToken();
-
-            // Ensure one of the tokens in the pair is the rewards token. Revert otherwise.
-            if (token0 == address(rewardsToken)) {
-                rewardPair = token1;
-            } else if (token1 == address(rewardsToken)) {
-                rewardPair = token0;
-            } else {
-                revert InvalidType();
-            }
-
-            // Store the pair of the rewards token in storage.
-            pool.rewardPair = rewardPair;
+            // Gas griefing is not possible as only 63/64 of the gas is forwarded per EIP-150.
+            try safeExternalCalls.getReserveTokenAddresses(
+                tokenOrRecipient
+            ) returns (address token0, address token1) {
+                if (factory.getPair(token0, token1) == tokenOrRecipient) {
+                    if (token0 == address(rewardsToken)) {
+                        pool.rewardPair = token1;
+                    } else if (token1 == address(rewardsToken)) {
+                        pool.rewardPair = token0;
+                    }
+                }
+            } catch {}
         }
+
+        emit PoolInitialized(poolId, tokenOrRecipient);
     }
 
     /**
@@ -876,6 +875,9 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
      */
     function _onlyRelayerPool(Pool storage pool) private view {
         if (pool.poolType != PoolType.RELAYER_POOL) revert InvalidType();
+    }
+
+    function _onlyUncompoundablePool(Pool storage pool) private view {
     }
 
     /**

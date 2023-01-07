@@ -28,6 +28,7 @@ describe("PangoChef.sol", function () {
     this.Wavax = await ethers.getContractFactory("WAVAX");
     this.Pair = await ethers.getContractFactory("PangolinPair");
     this.Router = await ethers.getContractFactory("PangolinRouter");
+    this.Rewarder = await ethers.getContractFactory("RewarderViaMultiplierForPangoChef");
   });
 
   beforeEach(async function () {
@@ -361,7 +362,7 @@ describe("PangoChef.sol", function () {
   //////////////////////////////
   //     compoundToPoolZero
   //////////////////////////////
-  describe("compoundToPoolZero", function () {
+  describe("compoundTo", function () {
     it("compounds to pool zero using AVAX", async function () {
       // Fund the contract.
       expect(await this.chef.addReward(ethers.utils.parseEther("1000000"))).to.emit(this.chef, "RewardAdded")
@@ -379,7 +380,7 @@ describe("PangoChef.sol", function () {
       // Compound with practically unlimited slippage.
       const maxPairAmount = ethers.utils.parseEther("10000000000000");
       const slippage = { minPairAmount: 0, maxPairAmount: maxPairAmount };
-      expect(await this.chef.compoundToPoolZero("1", slippage, {value: maxPairAmount})).to.emit(this.chef, "Staked");
+      expect(await this.chef.compoundTo("1", "0", slippage, {value: maxPairAmount})).to.emit(this.chef, "Staked");
     });
 
     it("compounds to pool zero using WAVAX", async function () {
@@ -399,7 +400,7 @@ describe("PangoChef.sol", function () {
       // Compound with practically unlimited slippage.
       const maxPairAmount = ethers.utils.parseEther("10000000000000");
       const slippage = { minPairAmount: 0, maxPairAmount: maxPairAmount };
-      expect(await this.chef.compoundToPoolZero("1", slippage, {value: "0"})).to.emit(this.chef, "Staked");
+      expect(await this.chef.compoundTo("1", "0", slippage, {value: "0"})).to.emit(this.chef, "Staked");
     });
   });
 
@@ -493,8 +494,43 @@ describe("PangoChef.sol", function () {
       expect(await this.chef.addReward(ethers.utils.parseEther("1000000"))).to.emit(this.chef, "RewardAdded")
       await network.provider.send("evm_increaseTime", [3600]);
 
+      const confirmation = ethers.utils.solidityKeccak256(["string", "address"], ["I am ready to lose everything in this pool. Let me go.", this.admin.address]);
+
       // Try claiming with rewards.
-      await this.chef.emergencyExitLevel2("0");
+      await this.chef.emergencyExitLevel2("0", confirmation);
+    });
+
+    it("exits when rewarder is set", async function () {
+      const amount = this.pgl_amount.div("4");
+      expect(await this.chef.stake("0", amount)).to.emit(this.chef, "Staked");
+      expect(await this.chef.stake("0", amount)).to.emit(this.chef, "Staked");
+
+      // Add rewards and pass time.
+      expect(await this.chef.addReward(ethers.utils.parseEther("1000000"))).to.emit(this.chef, "RewardAdded")
+      await network.provider.send("evm_increaseTime", [3600]);
+
+      this.rewarder = await this.Rewarder.deploy([ this.another_token.address ], [ ethers.utils.parseEther("1") ], '18', this.chef.address);
+      await this.rewarder.deployed();
+      await this.another_token.transfer(this.rewarder.address, ethers.utils.parseEther("50000"));
+      expect(await this.chef.setRewarder("0", this.rewarder.address)).to.emit(this.chef, "RewarderSet");
+
+      // Try claiming with rewards.
+      await this.chef.emergencyExitLevel1("0");
+    });
+
+    it("exits when EOA rewarder is set", async function () {
+      const amount = this.pgl_amount.div("4");
+      expect(await this.chef.stake("0", amount)).to.emit(this.chef, "Staked");
+      expect(await this.chef.stake("0", amount)).to.emit(this.chef, "Staked");
+
+      // Add rewards and pass time.
+      expect(await this.chef.addReward(ethers.utils.parseEther("1000000"))).to.emit(this.chef, "RewardAdded")
+      await network.provider.send("evm_increaseTime", [3600]);
+
+      expect(await this.chef.setRewarder("0", this.admin.address)).to.emit(this.chef, "RewarderSet");
+
+      // Try claiming with rewards.
+      await this.chef.emergencyExitLevel1("0");
     });
   });
 

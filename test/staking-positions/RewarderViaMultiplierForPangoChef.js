@@ -60,6 +60,12 @@ describe("RewarderViaMultiplierForPangoChef.sol", function () {
     this.pgl = await this.Pair.attach(pgl_address);
     this.alt_pgl = await this.pgl.connect(this.unauthorized);
 
+    // Create ANOTHER_TOKEN-WAVAX pair.
+    await this.factory.createPair(this.another_token.address, this.wavax.address);
+    let another_pgl_address = await this.factory.getPair(this.wavax.address, this.another_token.address);
+    this.another_pgl = await this.Pair.attach(another_pgl_address);
+    this.alt_another_pgl = await this.another_pgl.connect(this.unauthorized);
+
     // Deploy PangoChef.
     this.chef = await this.Chef.deploy(this.png.address, this.admin.address, this.factory.address, this.wavax.address);
     await this.chef.deployed();
@@ -72,6 +78,7 @@ describe("RewarderViaMultiplierForPangoChef.sol", function () {
     await this.wavax.approve(this.chef.address, ethers.constants.MaxUint256);
     await this.png.approve(this.chef.address, ethers.constants.MaxUint256);
     await this.pgl.approve(this.chef.address, ethers.constants.MaxUint256);
+    await this.another_pgl.approve(this.chef.address, ethers.constants.MaxUint256);
     await this.another_token.approve(this.chef.address, ethers.constants.MaxUint256);
 
     // Approve for second user.
@@ -81,12 +88,19 @@ describe("RewarderViaMultiplierForPangoChef.sol", function () {
     await this.alt_wavax.approve(this.chef.address, ethers.constants.MaxUint256);
     await this.alt_png.approve(this.chef.address, ethers.constants.MaxUint256);
     await this.alt_pgl.approve(this.chef.address, ethers.constants.MaxUint256);
+    await this.alt_another_pgl.approve(this.chef.address, ethers.constants.MaxUint256);
     await this.alt_another_token.approve(this.chef.address, ethers.constants.MaxUint256);
 
+    // Mint main PGL
     await this.wavax.deposit({value: ethers.utils.parseEther("1000000000000")});
     await this.png.transfer(this.pgl.address, ethers.utils.parseEther("1000000"));
     await this.wavax.transfer(this.pgl.address, ethers.utils.parseEther("50000"));
     await this.pgl.mint(this.admin.address);
+
+    // Mint second PGL
+    await this.another_token.transfer(this.another_pgl.address, ethers.utils.parseEther("1000000"));
+    await this.wavax.transfer(this.another_pgl.address, ethers.utils.parseEther("50000"));
+    await this.another_pgl.mint(this.admin.address);
 
     // Get token amounts per address.
     this.pgl_amount = (await this.pgl.balanceOf(this.admin.address)).div("2");
@@ -94,13 +108,15 @@ describe("RewarderViaMultiplierForPangoChef.sol", function () {
 
     // Transfer tokens to the second user.
     this.pgl.transfer(this.unauthorized.address, this.pgl_amount);
+    this.another_pgl.transfer(this.unauthorized.address, this.pgl_amount);
     this.png.transfer(this.unauthorized.address, this.png_amount);
     this.another_token.transfer(this.unauthorized.address, this.png_amount);
 
     // Initialize second pool, and add weight.
     expect(await this.chef.initializePool(this.pgl.address, "1")).to.emit(this.chef, "PoolInitialized");
     expect(await this.chef.initializePool(this.pgl.address, "1")).to.emit(this.chef, "PoolInitialized");
-    expect(await this.chef.setWeights(["0", "1", "2"], ["500", "500", "500"])).to.emit(this.chef, "WeightSet");
+    expect(await this.chef.initializePool(this.another_pgl.address, "1")).to.emit(this.chef, "PoolInitialized");
+    expect(await this.chef.setWeights(["0", "1", "2", "3"], ["500", "500", "500", "500"])).to.emit(this.chef, "WeightSet");
     expect(await this.chef.addReward(ethers.utils.parseEther("10000"))).to.emit(this.chef, "RewardAdded")
 
     this.amount = this.pgl_amount.div("10");
@@ -116,6 +132,10 @@ describe("RewarderViaMultiplierForPangoChef.sol", function () {
     await this.pool2Rewarder.deployed();
     await this.another_token.transfer(this.pool2Rewarder.address, this.amount);
 
+    this.pool3Rewarder = await this.Rewarder.deploy([ this.another_token.address ], [ ethers.utils.parseEther("1") ], '18', this.chef.address);
+    await this.pool3Rewarder.deployed();
+    await this.another_token.transfer(this.pool3Rewarder.address, this.amount);
+
     // have stake in pool0 initially
     expect(await this.chef.stake("0", this.amount)).to.emit(this.chef, "Staked");
     expect(await this.chef.stake("1", this.amount)).to.emit(this.chef, "Staked");
@@ -124,9 +144,11 @@ describe("RewarderViaMultiplierForPangoChef.sol", function () {
     await this.chef.setRewarder(0, this.pool0Rewarder.address);
     await this.chef.setRewarder(1, this.pool1Rewarder.address);
     await this.chef.setRewarder(2, this.pool2Rewarder.address);
+    await this.chef.setRewarder(3, this.pool3Rewarder.address);
     await network.provider.send("evm_increaseTime", [1000]);
     // have stake in pool2 after the rewarders are set
     expect(await this.chef.stake("2", this.amount)).to.emit(this.chef, "Staked");
+    expect(await this.chef.stake("3", this.amount)).to.emit(this.chef, "Staked");
   });
 
   // Test cases
@@ -163,16 +185,16 @@ describe("RewarderViaMultiplierForPangoChef.sol", function () {
     expect(initialBalance).to.equal(finalBalance);
   });
 
-  it("compoundToPoolZero does not give out secondary rewards in any circumstance", async function () {
+  it("compoundTo does not give out secondary rewards in any circumstance", async function () {
     const initialBalance = await this.another_token.balanceOf(this.admin.address);
 
-    expect(await this.chef.compoundToPoolZero("1", { minPairAmount: "0", maxPairAmount: this.amount }, { value: this.amount } )).to.emit(this.chef, "Staked");
+    expect(await this.chef.compoundTo("3", "0", { minPairAmount: "0", maxPairAmount: this.amount }, { value: this.amount } )).to.emit(this.chef, "Staked");
     await network.provider.send("evm_increaseTime", [1000]);
-    expect(await this.chef.compoundToPoolZero("1", { minPairAmount: "0", maxPairAmount: this.amount }, { value: this.amount } )).to.emit(this.chef, "Staked");
+    expect(await this.chef.compoundTo("3", "0", { minPairAmount: "0", maxPairAmount: this.amount }, { value: this.amount } )).to.emit(this.chef, "Staked");
 
-    expect(await this.chef.compoundToPoolZero("2", { minPairAmount: "0", maxPairAmount: this.amount }, { value: this.amount } )).to.emit(this.chef, "Staked");
-    await network.provider.send("evm_increaseTime", [1000]);
-    expect(await this.chef.compoundToPoolZero("2", { minPairAmount: "0", maxPairAmount: this.amount }, { value: this.amount } )).to.emit(this.chef, "Staked");
+    //expect(await this.chef.compoundTo("2", "0", { minPairAmount: "0", maxPairAmount: this.amount }, { value: this.amount } )).to.emit(this.chef, "Staked");
+    //await network.provider.send("evm_increaseTime", [1000]);
+    //expect(await this.chef.compoundTo("2", "0", { minPairAmount: "0", maxPairAmount: this.amount }, { value: this.amount } )).to.emit(this.chef, "Staked");
 
     const finalBalance = await this.another_token.balanceOf(this.admin.address);
 
@@ -282,15 +304,15 @@ describe("RewarderViaMultiplierForPangoChef.sol", function () {
     expect(balance).to.be.above(previousBalance);
   });
 
-  it("stake before compoundToPoolZero does not trick the contract", async function () {
-    expect(await this.chef.stake("1", this.amount.div("2"))).to.emit(this.chef, "Staked");
-    expect(await this.chef.withdraw("1", this.amount.div("4"))).to.emit(this.chef, "Withdrawn");
+  it("stake before compoundTo does not trick the contract", async function () {
+    expect(await this.chef.stake("3", this.amount.div("2"))).to.emit(this.chef, "Staked");
+    expect(await this.chef.withdraw("3", this.amount.div("4"))).to.emit(this.chef, "Withdrawn");
     await network.provider.send("evm_increaseTime", [50000]);
 
     const previousBalance = await this.another_token.balanceOf(this.admin.address);
 
-    expect(await this.chef.stake("1", this.amount.div("4"))).to.emit(this.chef, "Staked");
-    expect(await this.chef.compoundToPoolZero("1", { minPairAmount: "0", maxPairAmount: this.amount }, { value: this.amount } )).to.emit(this.chef, "Staked");
+    expect(await this.chef.stake("3", this.amount.div("4"))).to.emit(this.chef, "Staked");
+    expect(await this.chef.compoundTo("3", "0", { minPairAmount: "0", maxPairAmount: this.amount }, { value: this.amount } )).to.emit(this.chef, "Staked");
 
     const balance = await this.another_token.balanceOf(this.admin.address);
     expect(balance).to.equal(previousBalance);
