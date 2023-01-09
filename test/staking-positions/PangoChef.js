@@ -382,6 +382,10 @@ describe("PangoChef.sol", function () {
       const slippage = { minPairAmount: 0, maxPairAmount: maxPairAmount };
       expect(await this.chef.compoundTo("1", "0", slippage, {value: maxPairAmount})).to.emit(this.chef, "Staked");
 
+      // Compound twice to check there is not double lock.
+      await network.provider.send("evm_increaseTime", [3600]);
+      expect(await this.chef.compoundTo("1", "0", slippage, {value: maxPairAmount})).to.emit(this.chef, "Staked");
+
       // check lock count
       expect((await this.chef.getUser("0", this.admin.address)).lockCount).to.equal("1");
       expect((await this.chef.getUser("1", this.admin.address)).lockCount).to.equal("0");
