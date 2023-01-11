@@ -2,7 +2,7 @@ require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-etherscan");
 const { CHAINS } = require("@pangolindex/sdk");
-require('dotenv').config();
+require("dotenv").config();
 
 // Create hardhat networks from @pangolindex/sdk
 let networksFromSdk = {};
@@ -28,6 +28,25 @@ task("accounts", "Prints the list of accounts", async () => {
   }
 });
 
+// To learn which networks are defined
+task(
+  "networks",
+  "Lists all networks defined in the hardhat.config.js file",
+  async () => {
+    // Load the hardhat.config.js file
+    const configFilePath = path.resolve(__dirname, "hardhat.config.js");
+    const config = require(configFilePath);
+
+    // Get the networks defined in the config file
+    const networks = config.networks;
+
+    // Print the name of each network
+    for (const networkName in networks) {
+      console.log(networkName);
+    }
+  }
+);
+
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
@@ -35,37 +54,37 @@ module.exports = {
   solidity: {
     compilers: [
       {
-        version: "0.4.16"
+        version: "0.4.16",
       },
       {
-        version: "0.5.16"
+        version: "0.5.16",
       },
       {
-        version: "0.6.2"
+        version: "0.6.2",
       },
       {
         version: "0.6.6",
         settings: {
           optimizer: {
             enabled: true,
-            runs: 1000
-          }
-        }
+            runs: 1000,
+          },
+        },
       },
       {
-        version: "0.6.12"
+        version: "0.6.12",
       },
       {
-        version: "0.7.0"
+        version: "0.7.0",
       },
       {
         version: "0.7.6",
         settings: {
           optimizer: {
             enabled: true,
-            runs: 1000
-          }
-        }
+            runs: 1000,
+          },
+        },
       },
       {
         version: "0.8.9",
@@ -73,8 +92,8 @@ module.exports = {
           optimizer: {
             enabled: true,
             runs: 1000,
-          }
-        }
+          },
+        },
       },
       {
         version: "0.8.13",
@@ -82,8 +101,8 @@ module.exports = {
           optimizer: {
             enabled: true,
             runs: 2000,
-          }
-        }
+          },
+        },
       },
       {
         version: "0.8.15",
@@ -91,17 +110,18 @@ module.exports = {
           optimizer: {
             enabled: true,
             runs: 2000,
-          }
-        }
+          },
+        },
       },
     ],
     overrides: {
       "contracts/mini-chef-zapper/MiniChefV2Zapper.sol": {
-        version: "0.8.11"
+        version: "0.8.11",
       },
       "contracts/WAVAX.sol": {
         version: "0.5.17",
-        settings: { // For mocking
+        settings: {
+          // For mocking
           outputSelection: {
             "*": {
               "*": ["storageLayout"],
@@ -109,44 +129,44 @@ module.exports = {
           },
         },
       },
-    }
+    },
   },
   networks: networksFromSdk,
   etherscan: {
     apiKey: {
-        mainnet: process.env.ETHERSCAN_API_KEY,
-        ropsten: process.env.ETHERSCAN_API_KEY,
-        rinkeby: process.env.ETHERSCAN_API_KEY,
-        goerli: process.env.ETHERSCAN_API_KEY,
-        kovan: process.env.ETHERSCAN_API_KEY,
-        // binance smart chain
-        bsc: process.env.BSCSCAN_API_KEY,
-        bscTestnet: process.env.BSCSCAN_API_KEY,
-        // huobi eco chain
-        heco: process.env.HECOINFO_API_KEY,
-        hecoTestnet: process.env.HECOINFO_API_KEY,
-        // fantom mainnet
-        opera: process.env.FTMSCAN_API_KEY,
-        ftmTestnet: process.env.FTMSCAN_API_KEY,
-        // optimism
-        optimisticEthereum: process.env.OPTIMISTIC_ETHERSCAN_API_KEY,
-        optimisticKovan: process.env.OPTIMISTIC_ETHERSCAN_API_KEY,
-        // polygon
-        polygon: process.env.POLYGONSCAN_API_KEY,
-        polygonMumbai: process.env.POLYGONSCAN_API_KEY,
-        // arbitrum
-        arbitrumOne: process.env.ARBISCAN_API_KEY,
-        arbitrumTestnet: process.env.ARBISCAN_API_KEY,
-        // avalanche
-        avalanche: process.env.SNOWTRACE_API_KEY,
-        avalancheFujiTestnet: process.env.SNOWTRACE_API_KEY,
-        // moonbeam
-        moonriver: process.env.MOONRIVER_MOONSCAN_API_KEY,
-        moonbaseAlpha: process.env.MOONBEAM_MOONSCAN_API_KEY,
-        // xdai and sokol don't need an API key, but you still need
-        // to specify one; any string placeholder will work
-        xdai: "api-key",
-        sokol: "api-key",
-    }
-  }
+      mainnet: process.env.ETHERSCAN_API_KEY,
+      ropsten: process.env.ETHERSCAN_API_KEY,
+      rinkeby: process.env.ETHERSCAN_API_KEY,
+      goerli: process.env.ETHERSCAN_API_KEY,
+      kovan: process.env.ETHERSCAN_API_KEY,
+      // binance smart chain
+      bsc: process.env.BSCSCAN_API_KEY,
+      bscTestnet: process.env.BSCSCAN_API_KEY,
+      // huobi eco chain
+      heco: process.env.HECOINFO_API_KEY,
+      hecoTestnet: process.env.HECOINFO_API_KEY,
+      // fantom mainnet
+      opera: process.env.FTMSCAN_API_KEY,
+      ftmTestnet: process.env.FTMSCAN_API_KEY,
+      // optimism
+      optimisticEthereum: process.env.OPTIMISTIC_ETHERSCAN_API_KEY,
+      optimisticKovan: process.env.OPTIMISTIC_ETHERSCAN_API_KEY,
+      // polygon
+      polygon: process.env.POLYGONSCAN_API_KEY,
+      polygonMumbai: process.env.POLYGONSCAN_API_KEY,
+      // arbitrum
+      arbitrumOne: process.env.ARBISCAN_API_KEY,
+      arbitrumTestnet: process.env.ARBISCAN_API_KEY,
+      // avalanche
+      avalanche: process.env.SNOWTRACE_API_KEY,
+      avalancheFujiTestnet: process.env.SNOWTRACE_API_KEY,
+      // moonbeam
+      moonriver: process.env.MOONRIVER_MOONSCAN_API_KEY,
+      moonbaseAlpha: process.env.MOONBEAM_MOONSCAN_API_KEY,
+      // xdai and sokol don't need an API key, but you still need
+      // to specify one; any string placeholder will work
+      xdai: "api-key",
+      sokol: "api-key",
+    },
+  },
 };
