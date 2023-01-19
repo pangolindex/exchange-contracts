@@ -281,8 +281,8 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
     }
 
     /**
-     * @notice External function to stake to pool zero (e.g.: PNG-WAVAX PGL) using the rewards of
-     *         any other ERC20_POOL.
+     * @notice External function to stake to a compoundable pool (e.g.: PNG-WAVAX PGL) using the
+     *         rewards of any other ERC20_POOL.
      * @dev The user must supply sufficient amount of the gas token (e.g.: AVAX/WAVAX) to be
      *      paired with the rewardsToken (e.g.:PNG).
      * @param harvestPoolId The identifier of the pool to harvest the rewards from.
@@ -296,12 +296,13 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         Slippage calldata slippage
     ) external payable nonReentrant {
         // Harvest rewards from the provided pool. This does not reset the staking duration, but
-        // it will increment the lock on pool zero. The lock on pool zero will be decremented
-        // whenever the provided pool has its staking duration reset (e.g.: through `_withdraw()`).
+        // it will increment the lock on the compounded pool. The lock on compounded pool will be
+        // decremented whenever the provided pool has its staking duration reset (e.g.: through
+        // `_withdraw()`).
         uint256 reward = _harvestWithoutReset(harvestPoolId, compoundPoolId);
 
-        // Stake to pool zero using special staking method, which will add liquidity using rewards
-        // harvested from the provided pool.
+        // Stake to the compoundable pool using special staking method, which will add liquidity
+        // using rewards harvested from the provided pool.
         _stake(compoundPoolId, msg.sender, reward, StakeType.COMPOUND_TO, slippage);
     }
 
@@ -315,8 +316,8 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
 
     /**
      * @notice External function to exit from a pool by forgoing the stake and rewards.
-     * @dev This is an extreme emergency function, used only to save pool zero from perpetually
-     *      remaining locked if there is a DOS on the staking token.
+     * @dev This is an extreme emergency function, used only to save compoundable pool from
+     *      perpetually remaining locked if there is a DOS on the staking token.
      * @param poolId The identifier of the pool to exit from.
      * @param confirmation Prevents naive users from calling this function by mistake.
      */
@@ -434,7 +435,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
      * @param amount The amount of staking tokens to deposit when stakeType is REGULAR.
      *               It should be zero when the stakeType is COMPOUND.
      *               The reward token to pair when stakeType is COMPOUND_TO.
-     * @param stakeType The staking method (i.e.: staking, compounding, compounding to pool zero).
+     * @param stakeType The staking method (i.e.: staking, compounding, compounding to).
      * @param slippage A struct defining the minimum and maximum amounts of tokens that can be
      *                 paired with reward token.
      */
@@ -470,7 +471,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
             // Rewards are not harvested. Therefore stash the rewards.
             user.stashedRewards = uint96(reward);
             reward = 0;
-            // Staking into pool zero using harvested rewards from another pool.
+            // Staking into the compoundable pool using harvested rewards from another pool.
         } else if (stakeType == StakeType.COMPOUND_TO) {
             // Add liquidity using the rewards of another pool.
             amount = _addLiquidity(pool, amount, slippage);
@@ -555,8 +556,8 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // Update pool summations that govern the reward distribution from pool to users.
         _updateRewardSummations(poolId, pool);
 
-        // Ensure pool zero is not locked.
-        // Decrement lock count on pool zero if this pool was locking it.
+        // Ensure compoundable pool is not locked.
+        // Decrement lock count on compoundable pool if this pool was locking it.
         _decrementLock(user, poolId);
 
         // Get position balance and ensure sufficient balance exists.
@@ -637,7 +638,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // Update pool summations that govern the reward distribution from pool to users.
         _updateRewardSummations(harvestPoolId, pool);
 
-        // Increment lock count on pool zero if this pool was not already locking it.
+        // Increment lock count on compoundable pool if this pool was not already locking it.
         _incrementLock(harvestPoolId, compoundPoolId);
 
         // Get the rewards accrued by the user, then delete the user stash.
@@ -745,7 +746,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         // Ensure pool is ERC20 type.
         _onlyERC20Pool(pool);
 
-        // Decrement lock count on pool zero if this pool was locking it.
+        // Decrement lock count on compoundable pool if this pool was locking it.
         _decrementLock(user, poolId);
 
         // Create storage pointers for the value variables.
@@ -788,7 +789,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
     }
 
     /**
-     * @notice Private function increment the lock count on pool zero.
+     * @notice Private function increment the lock count on compoundable pool.
      * @param harvestPoolId The identifier of the pool the user is harvesting the rewards from.
      * @param compoundPoolId The identifier of the pool that the rewards will be compounded to.
      */
@@ -801,7 +802,7 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
     }
 
     /**
-     * @notice Private function ensure pool zero is not locked and decrement the lock count.
+     * @notice Private function to ensure compound pool is not locked and decrement the lock count.
      * @param user The properties of a pool’s user that is decrementing the lock. The user
      *        properties of the pool must belong to the caller.
      * @param withdrawPoolId The identifier of the aforementioned pool.
@@ -1041,12 +1042,13 @@ contract PangoChef is PangoChefFunding, ReentrancyGuard {
         returns (uint256)
     {
         // Refer to the Combined Position section of the Proofs on why and how this formula works.
+        uint256 userLastUpdate = user.lastUpdate;
         return
-            user.lastUpdate == 0
+            userLastUpdate == 0
                 ? 0
                 : user.stashedRewards +
                     ((((deltaRewardSummations.idealPosition -
-                        (deltaRewardSummations.rewardPerValue * user.lastUpdate)) *
+                        (deltaRewardSummations.rewardPerValue * userLastUpdate)) *
                         user.valueVariables.balance) +
                         (deltaRewardSummations.rewardPerValue * user.previousValues)) / PRECISION);
     }
