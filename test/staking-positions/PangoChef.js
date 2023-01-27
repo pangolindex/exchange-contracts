@@ -28,6 +28,7 @@ describe("PangoChef.sol", function () {
     this.Wavax = await ethers.getContractFactory("WAVAX");
     this.Pair = await ethers.getContractFactory("PangolinPair");
     this.Router = await ethers.getContractFactory("PangolinRouter");
+    this.Rewarder = await ethers.getContractFactory("RewarderViaMultiplierForPangoChef");
   });
 
   beforeEach(async function () {
@@ -361,7 +362,7 @@ describe("PangoChef.sol", function () {
   //////////////////////////////
   //     compoundToPoolZero
   //////////////////////////////
-  describe("compoundToPoolZero", function () {
+  describe("compoundTo & locking mechanism invariant tests", function () {
     it("compounds to pool zero using AVAX", async function () {
       // Fund the contract.
       expect(await this.chef.addReward(ethers.utils.parseEther("1000000"))).to.emit(this.chef, "RewardAdded")
@@ -379,7 +380,40 @@ describe("PangoChef.sol", function () {
       // Compound with practically unlimited slippage.
       const maxPairAmount = ethers.utils.parseEther("10000000000000");
       const slippage = { minPairAmount: 0, maxPairAmount: maxPairAmount };
-      expect(await this.chef.compoundToPoolZero("1", slippage, {value: maxPairAmount})).to.emit(this.chef, "Staked");
+      expect(await this.chef.compoundTo("1", "0", slippage, {value: maxPairAmount})).to.emit(this.chef, "Staked");
+
+      // Compound twice to check there is not double lock.
+      await network.provider.send("evm_increaseTime", [3600]);
+      expect(await this.chef.compoundTo("1", "0", slippage, {value: maxPairAmount})).to.emit(this.chef, "Staked");
+
+      // check lock count
+      expect((await this.chef.getUser("0", this.admin.address)).lockCount).to.equal("1");
+      expect((await this.chef.getUser("1", this.admin.address)).lockCount).to.equal("0");
+
+      const lockedPoolsOfPool0Before = await this.chef.getLockedPools("0", this.admin.address);
+      expect(lockedPoolsOfPool0Before.length).to.equal(0);
+
+      const lockedPoolsOfPool1Before = await this.chef.getLockedPools("1", this.admin.address);
+      expect(lockedPoolsOfPool1Before.length).to.equal(1);
+      expect(lockedPoolsOfPool1Before[0]).to.equal("0");
+
+      // cannot withdraw locked pool
+      await expect(this.chef.withdraw("0", this.pgl_amount)).to.be.revertedWith("Locked");
+
+      // can withdraw pool one
+      await this.chef.withdraw("1", this.pgl_amount);
+
+      // can withdraw pool zero after unlock
+      expect((await this.chef.getUser("0", this.admin.address)).lockCount).to.equal("0");
+      expect((await this.chef.getUser("1", this.admin.address)).lockCount).to.equal("0");
+
+      const lockedPoolsOfPool0After = await this.chef.getLockedPools("0", this.admin.address);
+      expect(lockedPoolsOfPool0After.length).to.equal(0);
+
+      const lockedPoolsOfPool1After = await this.chef.getLockedPools("1", this.admin.address);
+      expect(lockedPoolsOfPool1After.length).to.equal(0);
+
+      await this.chef.withdraw("0", "1");
     });
 
     it("compounds to pool zero using WAVAX", async function () {
@@ -399,7 +433,160 @@ describe("PangoChef.sol", function () {
       // Compound with practically unlimited slippage.
       const maxPairAmount = ethers.utils.parseEther("10000000000000");
       const slippage = { minPairAmount: 0, maxPairAmount: maxPairAmount };
-      expect(await this.chef.compoundToPoolZero("1", slippage, {value: "0"})).to.emit(this.chef, "Staked");
+      expect(await this.chef.compoundTo("1", "0", slippage, {value: "0"})).to.emit(this.chef, "Staked");
+
+      // check lock count
+      expect((await this.chef.getUser("0", this.admin.address)).lockCount).to.equal("1");
+      expect((await this.chef.getUser("1", this.admin.address)).lockCount).to.equal("0");
+
+      const lockedPoolsOfPool0 = await this.chef.getLockedPools("0", this.admin.address);
+      expect(lockedPoolsOfPool0.length).to.equal(0);
+
+      const lockedPoolsOfPool1 = await this.chef.getLockedPools("1", this.admin.address);
+      expect(lockedPoolsOfPool1.length).to.equal(1);
+      expect(lockedPoolsOfPool1[0]).to.equal("0");
+
+      // cannot withdraw locked pool
+      await expect(this.chef.withdraw("0", this.pgl_amount)).to.be.revertedWith("Locked");
+
+      // can withdraw pool one
+      await this.chef.withdraw("1", this.pgl_amount);
+
+      // can withdraw pool zero after unlock
+      expect((await this.chef.getUser("0", this.admin.address)).lockCount).to.equal("0");
+      expect((await this.chef.getUser("1", this.admin.address)).lockCount).to.equal("0");
+
+      const lockedPoolsOfPool0After = await this.chef.getLockedPools("0", this.admin.address);
+      expect(lockedPoolsOfPool0After.length).to.equal(0);
+
+      const lockedPoolsOfPool1After = await this.chef.getLockedPools("1", this.admin.address);
+      expect(lockedPoolsOfPool1After.length).to.equal(0);
+
+      await this.chef.withdraw("0", "1");
+    });
+
+    it("compounds from two pools to pool zero", async function () {
+      // Fund the contract.
+      expect(await this.chef.addReward(ethers.utils.parseEther("1000000"))).to.emit(this.chef, "RewardAdded")
+
+      // Initialize the second & third pool. And add weight to the second pool.
+      expect(await this.chef.initializePool(this.another_pgl.address, "1")).to.emit(this.chef, "PoolInitialized");
+      expect(await this.chef.initializePool(this.another_pgl.address, "1")).to.emit(this.chef, "PoolInitialized");
+      expect(await this.chef.setWeights(["1", "2"], ["500", "500"])).to.emit(this.chef, "WeightSet");
+
+      // Stake to the second & third pool.
+      expect(await this.chef.stake("1", this.pgl_amount)).to.emit(this.chef, "Staked");
+      expect(await this.chef.stake("2", this.pgl_amount)).to.emit(this.chef, "Staked");
+
+      // Wait a bit before compounding.
+      await network.provider.send("evm_increaseTime", [3600]);
+
+      // Compound with practically unlimited slippage.
+      const maxPairAmount = ethers.utils.parseEther("10000000000000");
+      const slippage = { minPairAmount: 0, maxPairAmount: maxPairAmount };
+      expect(await this.chef.compoundTo("1", "0", slippage, {value: "0"})).to.emit(this.chef, "Staked");
+      expect(await this.chef.compoundTo("2", "0", slippage, {value: "0"})).to.emit(this.chef, "Staked");
+
+      // check lock count
+      expect((await this.chef.getUser("0", this.admin.address)).lockCount).to.equal("2");
+      expect((await this.chef.getUser("1", this.admin.address)).lockCount).to.equal("0");
+      expect((await this.chef.getUser("2", this.admin.address)).lockCount).to.equal("0");
+
+      const lockedPoolsOfPool0Before = await this.chef.getLockedPools("0", this.admin.address);
+      expect(lockedPoolsOfPool0Before.length).to.equal(0);
+
+      const lockedPoolsOfPool1Before = await this.chef.getLockedPools("1", this.admin.address);
+      expect(lockedPoolsOfPool1Before.length).to.equal(1);
+      expect(lockedPoolsOfPool1Before[0]).to.equal("0");
+
+      const lockedPoolsOfPool2Before = await this.chef.getLockedPools("2", this.admin.address);
+      expect(lockedPoolsOfPool2Before.length).to.equal(1);
+      expect(lockedPoolsOfPool2Before[0]).to.equal("0");
+
+      // cannot withdraw locked pool
+      await expect(this.chef.withdraw("0", this.pgl_amount)).to.be.revertedWith("Locked");
+
+      // can withdraw other pools
+      await this.chef.withdraw("1", this.pgl_amount);
+      await this.chef.withdraw("2", this.pgl_amount);
+
+      // can withdraw pool zero after unlock
+      expect((await this.chef.getUser("0", this.admin.address)).lockCount).to.equal("0");
+      expect((await this.chef.getUser("1", this.admin.address)).lockCount).to.equal("0");
+      expect((await this.chef.getUser("2", this.admin.address)).lockCount).to.equal("0");
+
+      const lockedPoolsOfPool0After = await this.chef.getLockedPools("0", this.admin.address);
+      expect(lockedPoolsOfPool0After.length).to.equal(0);
+      const lockedPoolsOfPool1After = await this.chef.getLockedPools("1", this.admin.address);
+      expect(lockedPoolsOfPool1After.length).to.equal(0);
+      const lockedPoolsOfPool2After = await this.chef.getLockedPools("2", this.admin.address);
+      expect(lockedPoolsOfPool2After.length).to.equal(0);
+
+      await this.chef.withdraw("0", "1");
+    });
+
+    it("compounds from one pool to two pools", async function () {
+      // Fund the contract.
+      expect(await this.chef.addReward(ethers.utils.parseEther("1000000"))).to.emit(this.chef, "RewardAdded")
+
+      // Initialize the second & third pool. And add weight to the second pool.
+      expect(await this.chef.initializePool(this.pgl.address, "1")).to.emit(this.chef, "PoolInitialized");
+      expect(await this.chef.initializePool(this.another_pgl.address, "1")).to.emit(this.chef, "PoolInitialized");
+      expect(await this.chef.setWeights(["1", "2"], ["500", "500"])).to.emit(this.chef, "WeightSet");
+
+      // Stake to the second & third pool.
+      expect(await this.chef.stake("1", this.pgl_amount)).to.emit(this.chef, "Staked");
+      expect(await this.chef.stake("2", this.pgl_amount)).to.emit(this.chef, "Staked");
+
+      // Wait a bit before compounding.
+      await network.provider.send("evm_increaseTime", [3600]);
+
+      // Compound with practically unlimited slippage.
+      const maxPairAmount = ethers.utils.parseEther("10000000000000");
+      const slippage = { minPairAmount: 0, maxPairAmount: maxPairAmount };
+      expect(await this.chef.compoundTo("2", "0", slippage, {value: "0"})).to.emit(this.chef, "Staked");
+
+      // Wait a bit before compounding.
+      await network.provider.send("evm_increaseTime", [3600]);
+      expect(await this.chef.compoundTo("2", "1", slippage, {value: "0"})).to.emit(this.chef, "Staked");
+
+      // check lock count
+      expect((await this.chef.getUser("0", this.admin.address)).lockCount).to.equal("1");
+      expect((await this.chef.getUser("1", this.admin.address)).lockCount).to.equal("1");
+      expect((await this.chef.getUser("2", this.admin.address)).lockCount).to.equal("0");
+
+      const lockedPoolsOfPool0 = await this.chef.getLockedPools("0", this.admin.address);
+      expect(lockedPoolsOfPool0.length).to.equal(0);
+
+      const lockedPoolsOfPool1 = await this.chef.getLockedPools("1", this.admin.address);
+      expect(lockedPoolsOfPool1.length).to.equal(0);
+
+      const lockedPoolsOfPool2 = await this.chef.getLockedPools("2", this.admin.address);
+      expect(lockedPoolsOfPool2.length).to.equal(2);
+      expect(lockedPoolsOfPool2[0]).to.equal("0");
+      expect(lockedPoolsOfPool2[1]).to.equal("1");
+
+      // cannot withdraw locked pools
+      await expect(this.chef.withdraw("0", this.pgl_amount)).to.be.revertedWith("Locked");
+      await expect(this.chef.withdraw("1", this.pgl_amount)).to.be.revertedWith("Locked");
+
+      // can withdraw other pools
+      await this.chef.withdraw("2", this.pgl_amount);
+
+      // can withdraw pools after unlock
+      expect((await this.chef.getUser("0", this.admin.address)).lockCount).to.equal("0");
+      expect((await this.chef.getUser("1", this.admin.address)).lockCount).to.equal("0");
+      expect((await this.chef.getUser("2", this.admin.address)).lockCount).to.equal("0");
+
+      const lockedPoolsOfPool0After = await this.chef.getLockedPools("0", this.admin.address);
+      expect(lockedPoolsOfPool0After.length).to.equal(0);
+      const lockedPoolsOfPool1After = await this.chef.getLockedPools("1", this.admin.address);
+      expect(lockedPoolsOfPool1After.length).to.equal(0);
+      const lockedPoolsOfPool2After = await this.chef.getLockedPools("2", this.admin.address);
+      expect(lockedPoolsOfPool2After.length).to.equal(0);
+
+      await this.chef.withdraw("0", "1");
+      await this.chef.withdraw("1", this.pgl_amount);
     });
   });
 
@@ -493,8 +680,43 @@ describe("PangoChef.sol", function () {
       expect(await this.chef.addReward(ethers.utils.parseEther("1000000"))).to.emit(this.chef, "RewardAdded")
       await network.provider.send("evm_increaseTime", [3600]);
 
+      const confirmation = ethers.utils.solidityKeccak256(["string", "address"], ["I am ready to lose everything in this pool. Let me go.", this.admin.address]);
+
       // Try claiming with rewards.
-      await this.chef.emergencyExitLevel2("0");
+      await this.chef.emergencyExitLevel2("0", confirmation);
+    });
+
+    it("exits when rewarder is set", async function () {
+      const amount = this.pgl_amount.div("4");
+      expect(await this.chef.stake("0", amount)).to.emit(this.chef, "Staked");
+      expect(await this.chef.stake("0", amount)).to.emit(this.chef, "Staked");
+
+      // Add rewards and pass time.
+      expect(await this.chef.addReward(ethers.utils.parseEther("1000000"))).to.emit(this.chef, "RewardAdded")
+      await network.provider.send("evm_increaseTime", [3600]);
+
+      this.rewarder = await this.Rewarder.deploy([ this.another_token.address ], [ ethers.utils.parseEther("1") ], '18', this.chef.address);
+      await this.rewarder.deployed();
+      await this.another_token.transfer(this.rewarder.address, ethers.utils.parseEther("50000"));
+      expect(await this.chef.setRewarder("0", this.rewarder.address)).to.emit(this.chef, "RewarderSet");
+
+      // Try claiming with rewards.
+      await this.chef.emergencyExitLevel1("0");
+    });
+
+    it("exits when EOA rewarder is set", async function () {
+      const amount = this.pgl_amount.div("4");
+      expect(await this.chef.stake("0", amount)).to.emit(this.chef, "Staked");
+      expect(await this.chef.stake("0", amount)).to.emit(this.chef, "Staked");
+
+      // Add rewards and pass time.
+      expect(await this.chef.addReward(ethers.utils.parseEther("1000000"))).to.emit(this.chef, "RewardAdded")
+      await network.provider.send("evm_increaseTime", [3600]);
+
+      expect(await this.chef.setRewarder("0", this.admin.address)).to.emit(this.chef, "RewarderSet");
+
+      // Try claiming with rewards.
+      await this.chef.emergencyExitLevel1("0");
     });
   });
 
