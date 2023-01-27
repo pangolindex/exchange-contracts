@@ -695,7 +695,8 @@ contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsF
     function _beforeTokenTransfer(
         address from,
         address to,
-        uint256 tokenId
+        uint256 tokenId,
+        uint256 batchSize
     ) internal override {
         // Ignore approvals for a period following a destructive action.
         if (msg.sender != from) {
@@ -703,7 +704,7 @@ contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsF
             if (block.timestamp <= pausedUntil) revert TooEarly();
         }
 
-        super._beforeTokenTransfer(from, to, tokenId);
+        super._beforeTokenTransfer(from, to, tokenId, batchSize);
     }
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
