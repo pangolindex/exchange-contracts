@@ -1,3 +1,4 @@
+const { Deployer } = require("@matterlabs/hardhat-zksync-deploy");
 const { ethers } = require("hardhat");
 const fs = require("fs");
 const { FOUNDATION_MULTISIG } = require("../constants/shared.js");
@@ -129,8 +130,7 @@ async function main() {
     } else {
         var foundation = await deploy("MultiSigWallet", [
             FOUNDATION_MULTISIG.owners,
-            FOUNDATION_MULTISIG.threshold,
-            0,
+            FOUNDATION_MULTISIG.threshold
         ]);
     }
 
