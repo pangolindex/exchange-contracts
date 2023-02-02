@@ -95,7 +95,7 @@ async function main() {
     }
 
     async function deploy(factory, args) {
-        await delay(5000);
+        //await delay(5000);
         var contract;
         if (isZksync) {
             var artifact = await zksyncDeployer.loadArtifact(factory);
@@ -122,7 +122,7 @@ async function main() {
     }
 
     // Deploy Multicall
-    await deploy("Multicall2", []);
+    const multicall = await deploy("Multicall2", []);
 
     /**************
      * GOVERNANCE *
@@ -183,6 +183,11 @@ async function main() {
         stakingMetadata.address
     ]);
     const stakingFundForwarder = await deploy("RewardFundingForwarder", [staking.address]);
+
+    const emissionDiversion = await deploy("EmissionDiversionFromPangoChefToPangolinStakingPositions", [
+        chef.address,
+        staking.address
+    ]);
 
     // Deploy Airdrop
     const airdrop = await deploy("MerkledropToStaking", [
@@ -316,6 +321,10 @@ async function main() {
     await factory.setFeeToSetter(foundation.address);
     await confirmTransactionCount();
     console.log("Transferred PangolinFactory ownership to Multisig.");
+
+    await chef.initializePool(emissionDiversion.address, 2);
+    await confirmTransactionCount();
+    console.log("Set emission diversion (SSS) as the first pool (pid == 1).");
 
     /*******************
      * PANGOCHEF ROLES *

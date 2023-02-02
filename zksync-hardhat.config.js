@@ -1,5 +1,6 @@
 require("@matterlabs/hardhat-zksync-deploy");
 require("@matterlabs/hardhat-zksync-solc");
+require("dotenv").config();
 
 var exports = require('./hardhat.config.js');
 const soliditySettings = exports.solidity;
@@ -9,7 +10,6 @@ const path = require("path");
 
 const ignoreList = [
   "MiniChefV2Zapper.sol",
-  "WAVAX.sol",
 ]
 
 subtask(
@@ -36,6 +36,7 @@ module.exports = {
   solidity: soliditySettings,
   networks: {
     "zksync-goerli": {
+      accounts: [process.env.PRIVATE_KEY],
       url: "https://zksync2-testnet.zksync.dev",
       ethNetwork: "goerli",
       zksync: true,
