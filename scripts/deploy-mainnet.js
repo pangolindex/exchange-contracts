@@ -1,3 +1,4 @@
+const { utils, Wallet } = require("zksync-web3");
 const { Deployer } = require("@matterlabs/hardhat-zksync-deploy");
 const { ethers } = require("hardhat");
 const fs = require("fs");
@@ -19,6 +20,8 @@ const {
     TIMELOCK_DELAY,
     WETH_PNG_FARM_ALLOCATION
 } = require(`../constants/${network.name}.js`);
+require("dotenv").config();
+require("hardhat/types"); // hre
 if (USE_GNOSIS_SAFE) {
     var { EthersAdapter, SafeFactory } = require("@gnosis.pm/safe-core-sdk");
 }
@@ -31,6 +34,7 @@ const PAUSE_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("PAUSE_ROLE")
 const RECOVERY_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("RECOVERY_ROLE"));
 const GOVERNOR_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("GOVERNOR_ROLE"));
 const DEFAULT_ADMIN_ROLE = "0x0000000000000000000000000000000000000000000000000000000000000000";
+const isZksync = network.zksync === true;
 
 var contracts = [];
 
@@ -43,6 +47,13 @@ function delay(timeout) {
 async function main() {
     const [deployer] = await ethers.getSigners();
     console.log("\nDeployer:", deployer.address);
+
+    var zksyncWallet;
+    var zksyncDeployer;
+    if (isZksync) {
+        zksyncWallet = new Wallet(process.env.PRIVATE_KEY);
+        zksyncDeployer = new Deployer(hre, zksyncWallet);
+    }
 
     const initBalance = await deployer.getBalance();
     console.log("Balance:", ethers.utils.formatEther(initBalance) + "\n");
@@ -85,9 +96,15 @@ async function main() {
 
     async function deploy(factory, args) {
         await delay(5000);
-        var ContractFactory = await ethers.getContractFactory(factory);
-        var contract = await ContractFactory.deploy(...args);
-        await contract.deployed();
+        var contract;
+        if (isZksync) {
+            var artifact = await zksyncDeployer.loadArtifact(factory);
+            contract = await zksyncDeployer.deploy(artifact, args);
+        } else {
+            var ContractFactory = await ethers.getContractFactory(factory);
+            contract = await ContractFactory.deploy(...args);
+            await contract.deployed();
+        }
         contracts.push({ address: contract.address, args: args });
         await confirmTransactionCount();
         console.log(contract.address, ":", factory);
@@ -103,6 +120,9 @@ async function main() {
         var nativeToken = WRAPPED_NATIVE_TOKEN;
         console.log(nativeToken, ": WAVAX");
     }
+
+    // Deploy Multicall
+    await deploy("Multicall2", []);
 
     /**************
      * GOVERNANCE *

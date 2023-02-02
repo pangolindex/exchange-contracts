@@ -15,7 +15,9 @@
 
 // Contract name, token name, and token symbol modified by Ava Labs 2020
 
-pragma solidity >=0.4.22 <0.6;
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+pragma solidity ^0.6.0;
 
 contract WAVAX {
     string public name     = "Wrapped AVAX";
@@ -30,7 +32,7 @@ contract WAVAX {
     mapping (address => uint)                       public  balanceOf;
     mapping (address => mapping (address => uint))  public  allowance;
 
-    function() external payable {
+    receive() external payable {
         deposit();
     }
     function deposit() public payable {
