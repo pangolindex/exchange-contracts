@@ -127,7 +127,7 @@ async function main() {
         foundation.address = foundation.getAddress();
         console.log(foundation.address, ": Gnosis");
     } else {
-        var foundation = await deploy("MultiSigWalletWithDailyLimit", [
+        var foundation = await deploy("MultiSigWallet", [
             FOUNDATION_MULTISIG.owners,
             FOUNDATION_MULTISIG.threshold,
             0,
