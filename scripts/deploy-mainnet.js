@@ -95,7 +95,7 @@ async function main() {
     }
 
     async function deploy(factory, args) {
-        //await delay(5000);
+        await delay(5000);
         var contract;
         if (isZksync) {
             var artifact = await zksyncDeployer.loadArtifact(factory);
