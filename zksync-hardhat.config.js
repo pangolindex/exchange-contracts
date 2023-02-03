@@ -1,5 +1,6 @@
 require("@matterlabs/hardhat-zksync-deploy");
 require("@matterlabs/hardhat-zksync-solc");
+require("@matterlabs/hardhat-zksync-verify");
 require("dotenv").config();
 
 var exports = require('./hardhat.config.js');
@@ -32,14 +33,15 @@ module.exports = {
     compilerSource: "binary",
     settings: {},
   },
-  defaultNetwork: "zksync-goerli",
+  defaultNetwork: "zksync_testnet_goerli",
   solidity: soliditySettings,
   networks: {
-    "zksync-goerli": {
+    "zksync_testnet_goerli": {
       accounts: [process.env.PRIVATE_KEY],
       url: "https://zksync2-testnet.zksync.dev",
       ethNetwork: "goerli",
       zksync: true,
+      verifyURL: 'https://zksync2-testnet-explorer.zksync.dev/contract_verification'
     },
   },
 };
