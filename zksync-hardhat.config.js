@@ -29,9 +29,11 @@ subtask(
 
 module.exports = {
   zksolc: {
-    version: "1.2.2",
+    version: "1.3.1",
     compilerSource: "binary",
-    settings: {},
+    settings: {
+      isSystem: true,
+    },
   },
   defaultNetwork: "zksync_testnet_goerli",
   solidity: soliditySettings,
