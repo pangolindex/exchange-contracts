@@ -19,7 +19,8 @@ async function main() {
 
     const wethFactory = await ethers.getContractFactory("WAVAX");
 
-    const CHAINID = ethers.provider.network.chainId == 31337 ? 43113 : ethers.provider.network.chainId;
+    const hardhatChainId = ethers.provider.network.chainId;
+    const CHAINID = hardhatChainId == 31337 || hardhatChainId == 43112 ? 43113 : hardhatChainId;
     const WETH = await wethFactory.attach(CHAINS[CHAINID].contracts.wrapped_native_token);
 
     const factoryFactory = await ethers.getContractFactory('PangolinV2Factory');
