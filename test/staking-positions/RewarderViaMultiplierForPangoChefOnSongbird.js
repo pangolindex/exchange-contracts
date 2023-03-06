@@ -5,10 +5,10 @@ const { ethers, network } = require("hardhat");
 const PNG_SUPPLY = ethers.utils.parseUnits("500000000", 18);
 const ZERO_ADDRESS = ethers.constants.AddressZero;
 
-console.log("Before running this test, set `onReward()` hook boolean (destructiveAuction) to `true` in `harvestWithoutReset()` function of PangoChef. That parameters was wrongly set in Songbird. Make that change such that this actually tests the behaviour of Pangochef as deployed on Songbird.");
+console.log("Before running this test, set `onReward()` hook boolean (destructiveAuction) to `true` in `harvestWithoutReset()` function of PangoChef. That parameters was wrongly set in Songbird. Make that change such that this actually tests the behaviour of Pangochef as deployed on Songbird. Or better, run this test by forking Songbird.");
 
 // Start test block
-describe("RewarderViaMultiplierForPangoChefOnSongbird.sol", function () {
+describe.skip("RewarderViaMultiplierForPangoChefOnSongbird.sol", function () {
   before(async function () {
     // Get all signers
     this.signers = await ethers.getSigners();
