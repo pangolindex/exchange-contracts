@@ -126,6 +126,7 @@ contract SwapRouter is
             SwapCallbackData({path: abi.encodePacked(params.tokenIn, params.fee, params.tokenOut), payer: msg.sender})
         );
         require(amountOut >= params.amountOutMinimum, 'Too little received');
+        _refundETH();
     }
 
     /// @inheritdoc ISwapRouter
@@ -163,6 +164,7 @@ contract SwapRouter is
         }
 
         require(amountOut >= params.amountOutMinimum, 'Too little received');
+        _refundETH();
     }
 
     /// @dev Performs a single exact output swap
