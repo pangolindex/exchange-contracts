@@ -29,7 +29,7 @@ subtask(
 
 module.exports = {
   zksolc: {
-    version: "1.3.1",
+    version: "1.3.8",
     compilerSource: "binary",
     settings: {
       isSystem: true,

@@ -77,7 +77,7 @@ interface MockInterface {
  */
 contract MockContract is MockInterface {
 	enum MockType { Return, Revert, OutOfGas }
-	
+
 	bytes32 public constant MOCKS_LIST_START = hex"01";
 	bytes public constant MOCKS_LIST_END = "0xff";
 	bytes32 public constant MOCKS_LIST_END_HASH = keccak256(MOCKS_LIST_END);
@@ -138,7 +138,7 @@ contract MockContract is MockInterface {
 	}
 
 	function givenAnyReturnUint(uint response) override external {
-		_givenAnyReturn(uintToBytes(response));	
+		_givenAnyReturn(uintToBytes(response));
 	}
 
 	function givenAnyReturnAddress(address response) override external {
@@ -186,7 +186,7 @@ contract MockContract is MockInterface {
 		bytes4 method = bytesToBytes4(call);
 		methodIdMockTypes[method] = MockType.Return;
 		methodIdExpectations[method] = response;
-		trackMethodIdMock(method);		
+		trackMethodIdMock(method);
 	}
 
 	function givenMethodReturn(bytes calldata call, bytes calldata response) override external {
@@ -215,7 +215,7 @@ contract MockContract is MockInterface {
 	function givenMethodRevert(bytes calldata call) override external {
 		bytes4 method = bytesToBytes4(call);
 		methodIdMockTypes[method] = MockType.Revert;
-		trackMethodIdMock(method);		
+		trackMethodIdMock(method);
 	}
 
 	function givenCalldataRevertWithMessage(bytes calldata call, string calldata message) override external {
@@ -228,7 +228,7 @@ contract MockContract is MockInterface {
 		bytes4 method = bytesToBytes4(call);
 		methodIdMockTypes[method] = MockType.Revert;
 		methodIdRevertMessages[method] = message;
-		trackMethodIdMock(method);		
+		trackMethodIdMock(method);
 	}
 
 	function givenCalldataRunOutOfGas(bytes calldata call) override external {
@@ -239,7 +239,7 @@ contract MockContract is MockInterface {
 	function givenMethodRunOutOfGas(bytes calldata call) override external {
 		bytes4 method = bytesToBytes4(call);
 		methodIdMockTypes[method] = MockType.OutOfGas;
-		trackMethodIdMock(method);	
+		trackMethodIdMock(method);
 	}
 
 	function invocationCount() override external returns (uint) {
@@ -365,7 +365,7 @@ contract MockContract is MockInterface {
 		// Record invocation as separate call so we don't rollback in case we are called with STATICCALL
 		(, bytes memory r) = address(this).call{gas: 100000}(abi.encodeWithSignature("updateInvocationCount(bytes4,bytes)", methodId, msg.data));
 		assert(r.length == 0);
-		
+
 		assembly {
 			return(add(0x20, result), mload(result))
 		}
