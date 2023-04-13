@@ -1,6 +1,7 @@
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-etherscan");
+require('hardhat-contract-sizer');
 const { CHAINS } = require("@pangolindex/sdk");
 require("dotenv").config();
 const fs = require("fs");
@@ -81,7 +82,7 @@ module.exports = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 700,
+            runs: 800,
           },
         },
       },
@@ -112,6 +113,15 @@ module.exports = {
           },
         },
       },
+      {
+        version: "0.8.19",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 2000,
+          },
+        },
+      },
     ],
     overrides: {
       "contracts/mini-chef-zapper/MiniChefV2Zapper.sol": {
@@ -125,6 +135,15 @@ module.exports = {
             "*": {
               "*": ["storageLayout"],
             },
+          },
+        },
+      },
+      "contracts/pangolinv2-periphery/NonfungiblePositionManager.sol": {
+        version: "0.7.6",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 20,
           },
         },
       },

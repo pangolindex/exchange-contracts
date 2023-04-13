@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.7.6;
 
+import 'openzeppelin-contracts-solc-0.7/proxy/Clones.sol';
+
 import './interfaces/IPangolinV2Factory.sol';
-
-import './PangolinV2PoolDeployer.sol';
-import './NoDelegateCall.sol';
-
-import './PangolinV2Pool.sol';
+import './interfaces/IPangolinV2Pool.sol';
 
 /// @title Canonical Pangolin V2 factory
 /// @notice Deploys Pangolin V2 pools and manages ownership and control over pool protocol fees
-contract PangolinV2Factory is IPangolinV2Factory, PangolinV2PoolDeployer, NoDelegateCall {
+contract PangolinV2Factory is IPangolinV2Factory {
+    /// @inheritdoc IPangolinV2Factory
+    address public immutable override implementation;
+
     /// @inheritdoc IPangolinV2Factory
     address public override owner;
 
@@ -19,7 +20,9 @@ contract PangolinV2Factory is IPangolinV2Factory, PangolinV2PoolDeployer, NoDele
     /// @inheritdoc IPangolinV2Factory
     mapping(address => mapping(address => mapping(uint24 => address))) public override getPool;
 
-    constructor() {
+    constructor(address _implementation) {
+        implementation = _implementation;
+
         owner = msg.sender;
         emit OwnerChanged(address(0), msg.sender);
 
@@ -36,14 +39,15 @@ contract PangolinV2Factory is IPangolinV2Factory, PangolinV2PoolDeployer, NoDele
         address tokenA,
         address tokenB,
         uint24 fee
-    ) external override noDelegateCall returns (address pool) {
+    ) external override returns (address pool) {
         require(tokenA != tokenB);
         (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         require(token0 != address(0));
         int24 tickSpacing = feeAmountTickSpacing[fee];
         require(tickSpacing != 0);
         require(getPool[token0][token1][fee] == address(0));
-        pool = deploy(address(this), token0, token1, fee, tickSpacing);
+        pool = Clones.cloneDeterministic(implementation, keccak256(abi.encode(token0, token1, fee)));
+        IPangolinV2Pool(pool).initialize(token0, token1, fee, tickSpacing);
         getPool[token0][token1][fee] = pool;
         // populate mapping in the reverse direction, deliberate choice to avoid the cost of comparing addresses
         getPool[token1][token0][fee] = pool;

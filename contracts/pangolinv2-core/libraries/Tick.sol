@@ -34,6 +34,9 @@ library Tick {
         // true iff the tick is initialized, i.e. the value is exactly equivalent to the expression liquidityGross != 0
         // these 8 bits are set to prevent fresh sstores when crossing newly initialized ticks
         bool initialized;
+        // the reward per liquidity, i.e. sum of (reward rate_i * duration_i / liquidity_i) on the _other_ side of this
+        // tick (relative to the current tick)
+        uint192 rewardPerLiquidityOutsideX64;
     }
 
     /// @notice Derives max liquidity per tick from given tick spacing
@@ -118,7 +121,8 @@ library Tick {
         int56 tickCumulative,
         uint32 time,
         bool upper,
-        uint128 maxLiquidity
+        uint128 maxLiquidity,
+        uint192 rewardPerLiquidityCumulativeX64
     ) internal returns (bool flipped) {
         Tick.Info storage info = self[tick];
 
@@ -137,6 +141,7 @@ library Tick {
                 info.secondsPerLiquidityOutsideX128 = secondsPerLiquidityCumulativeX128;
                 info.tickCumulativeOutside = tickCumulative;
                 info.secondsOutside = time;
+                info.rewardPerLiquidityOutsideX64 = rewardPerLiquidityCumulativeX64;
             }
             info.initialized = true;
         }
@@ -172,7 +177,8 @@ library Tick {
         uint256 feeGrowthGlobal1X128,
         uint160 secondsPerLiquidityCumulativeX128,
         int56 tickCumulative,
-        uint32 time
+        uint32 time,
+        uint192 rewardPerLiquidityCumulativeX64
     ) internal returns (int128 liquidityNet) {
         Tick.Info storage info = self[tick];
         info.feeGrowthOutside0X128 = feeGrowthGlobal0X128 - info.feeGrowthOutside0X128;
@@ -180,6 +186,7 @@ library Tick {
         info.secondsPerLiquidityOutsideX128 = secondsPerLiquidityCumulativeX128 - info.secondsPerLiquidityOutsideX128;
         info.tickCumulativeOutside = tickCumulative - info.tickCumulativeOutside;
         info.secondsOutside = time - info.secondsOutside;
+        info.rewardPerLiquidityOutsideX64 = rewardPerLiquidityCumulativeX64 - info.rewardPerLiquidityOutsideX64;
         liquidityNet = info.liquidityNet;
     }
 }

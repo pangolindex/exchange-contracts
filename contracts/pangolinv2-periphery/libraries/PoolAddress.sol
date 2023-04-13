@@ -3,7 +3,11 @@ pragma solidity >=0.5.0 <0.8.0;
 
 /// @title Provides functions for deriving a pool address from the factory, tokens, and the fee
 library PoolAddress {
-    bytes32 internal constant POOL_INIT_CODE_HASH = 0x3fcff66860e53a77b6570a354f8e175e3e01fb76620272df5c59e6cf9bffc577;
+    // For OpenZeppelin Clones, init code hash is derived from the hash of the bytecode
+    // `0x3d602d80600a3d3981f3363d3d373d3d3d363d73A08bD621a8f2a8FD551f080242Cd2DB27dB88C0D5af43d82803e903d91602b57fd5bf3`
+    // if implementation address is `0xA08bD621a8f2a8FD551f080242Cd2DB27dB88C0D`. We get that implementation address
+    // by always using `0xC9AA35dEA67B155fb709BC88A07936fd65EC2652` with nonce 0 as the deployer of the implementation.
+    bytes32 internal constant POOL_INIT_CODE_HASH = 0x000cbf4d86001640860651f244cd69869becc83c6dd9e7210bb7e7ef89c5e3fd;
 
     /// @notice The identifying key of the pool
     struct PoolKey {

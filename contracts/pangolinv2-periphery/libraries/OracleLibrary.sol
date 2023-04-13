@@ -24,7 +24,7 @@ library OracleLibrary {
         secondsAgos[0] = secondsAgo;
         secondsAgos[1] = 0;
 
-        (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s) =
+        (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s, ) =
             IPangolinV2Pool(pool).observe(secondsAgos);
 
         int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
@@ -75,13 +75,13 @@ library OracleLibrary {
         (, , uint16 observationIndex, uint16 observationCardinality, , , ) = IPangolinV2Pool(pool).slot0();
         require(observationCardinality > 0, 'NI');
 
-        (uint32 observationTimestamp, , , bool initialized) =
+        (uint32 observationTimestamp, , , bool initialized,) =
             IPangolinV2Pool(pool).observations((observationIndex + 1) % observationCardinality);
 
         // The next index might not be initialized if the cardinality is in the process of increasing
         // In this case the oldest observation is always in index 0
         if (!initialized) {
-            (observationTimestamp, , , ) = IPangolinV2Pool(pool).observations(0);
+            (observationTimestamp, , , , ) = IPangolinV2Pool(pool).observations(0);
         }
 
         secondsAgo = uint32(block.timestamp) - observationTimestamp;
@@ -99,7 +99,7 @@ library OracleLibrary {
         // If the latest observation occurred in the past, then no tick-changing trades have happened in this block
         // therefore the tick in `slot0` is the same as at the beginning of the current block.
         // We don't need to check if this observation is initialized - it is guaranteed to be.
-        (uint32 observationTimestamp, int56 tickCumulative, uint160 secondsPerLiquidityCumulativeX128, ) =
+        (uint32 observationTimestamp, int56 tickCumulative, uint160 secondsPerLiquidityCumulativeX128, , ) =
             IPangolinV2Pool(pool).observations(observationIndex);
         if (observationTimestamp != uint32(block.timestamp)) {
             return (tick, IPangolinV2Pool(pool).liquidity());
@@ -110,7 +110,7 @@ library OracleLibrary {
             uint32 prevObservationTimestamp,
             int56 prevTickCumulative,
             uint160 prevSecondsPerLiquidityCumulativeX128,
-            bool prevInitialized
+            bool prevInitialized,
         ) = IPangolinV2Pool(pool).observations(prevIndex);
 
         require(prevInitialized, 'ONI');

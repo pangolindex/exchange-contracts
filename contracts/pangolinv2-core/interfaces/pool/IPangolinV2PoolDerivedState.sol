@@ -18,7 +18,11 @@ interface IPangolinV2PoolDerivedState {
     function observe(uint32[] calldata secondsAgos)
         external
         view
-        returns (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s);
+        returns (
+            int56[] memory tickCumulatives,
+            uint160[] memory secondsPerLiquidityCumulativeX128s,
+            uint192[] memory rewardPerLiquidityCumulativeX64s
+        );
 
     /// @notice Returns a snapshot of the tick cumulative, seconds per liquidity and seconds inside a tick range
     /// @dev Snapshots must only be compared to other snapshots, taken over a period for which a position existed.
@@ -35,6 +39,7 @@ interface IPangolinV2PoolDerivedState {
         returns (
             int56 tickCumulativeInside,
             uint160 secondsPerLiquidityInsideX128,
-            uint32 secondsInside
+            uint32 secondsInside,
+            uint192 rewardPerLiquidityInsideX64
         );
 }

@@ -31,6 +31,15 @@ interface IPangolinV2PoolState {
             bool unlocked
         );
 
+    /// @notice The rewardSlot storage slot in the pool stores variables necessary to update
+    /// Oracle.Observation.rewardPerLiquidityCumulativeX64 accumulator.
+    /// @dev Both of the variables can be set arbitrarily by the owner. The pool does not set any restrictions on the
+    /// values other than their variable types. The factory owner should relegate the setting of these variables to a
+    /// reward contract that will update these variables based on a proper reward distribution logic.
+    /// @return rewardPerSecondX48 The rewards per second promised to be distributed to the pool as a Q96.48 value
+    /// rewardRateEffectiveUntil The timestamp when the rewardPerSecondX48 is no longer effective
+    function rewardSlot() external view returns (uint144 rewardPerSecondX48, uint32 rewardRateEffectiveUntil);
+
     /// @notice The fee growth as a Q128.128 fees of token0 collected per unit of liquidity for the entire life of the pool
     /// @dev This value can overflow the uint256
     function feeGrowthGlobal0X128() external view returns (uint256);
@@ -72,7 +81,8 @@ interface IPangolinV2PoolState {
             int56 tickCumulativeOutside,
             uint160 secondsPerLiquidityOutsideX128,
             uint32 secondsOutside,
-            bool initialized
+            bool initialized,
+            uint192 rewardPerLiquidityOutsideX64
         );
 
     /// @notice Returns 256 packed tick initialized boolean values. See TickBitmap for more information
@@ -104,6 +114,7 @@ interface IPangolinV2PoolState {
     /// Returns tickCumulative the tick multiplied by seconds elapsed for the life of the pool as of the observation timestamp,
     /// Returns secondsPerLiquidityCumulativeX128 the seconds per in range liquidity for the life of the pool as of the observation timestamp,
     /// Returns initialized whether the observation has been initialized and the values are safe to use
+    /// Returns rewardPerLiquidityCumulativeX64 reward per liquidity
     function observations(uint256 index)
         external
         view
@@ -111,6 +122,7 @@ interface IPangolinV2PoolState {
             uint32 blockTimestamp,
             int56 tickCumulative,
             uint160 secondsPerLiquidityCumulativeX128,
-            bool initialized
+            bool initialized,
+	          uint192 rewardPerLiquidityCumulativeX64
         );
 }

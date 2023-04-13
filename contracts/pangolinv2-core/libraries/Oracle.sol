@@ -18,6 +18,8 @@ library Oracle {
         uint160 secondsPerLiquidityCumulativeX128;
         // whether or not the observation is initialized
         bool initialized;
+        // the reward per liquidity, i.e. sum of (reward rate_i * duration_i / liquidity_i) since the pool was first initialized
+	      uint192 rewardPerLiquidityCumulativeX64; // Q128X64
     }
 
     /// @notice Transforms a previous observation into a new observation, given the passage of time and the current tick and liquidity values
@@ -26,21 +28,41 @@ library Oracle {
     /// @param blockTimestamp The timestamp of the new observation
     /// @param tick The active tick at the time of the new observation
     /// @param liquidity The total in-range liquidity at the time of the new observation
+    /// @param rewardPerSecondX48 The reward rate at the time of the new observation
+    /// @param rewardRateEffectiveUntil The timestamp after which the reward rate is zero
     /// @return Observation The newly populated observation
     function transform(
         Observation memory last,
         uint32 blockTimestamp,
         int24 tick,
-        uint128 liquidity
-    ) private pure returns (Observation memory) {
+        uint128 liquidity,
+        uint144 rewardPerSecondX48,
+        uint32 rewardRateEffectiveUntil
+    ) private view returns (Observation memory) {
         uint32 delta = blockTimestamp - last.blockTimestamp;
+        liquidity = liquidity > 0 ? liquidity : 1;
+        // Use actual block timestamp because overflowing timestamp is not usable for this case because
+        // we do not know chronological relation of rewardRateEffectiveUntil and blockTimestamp
+        // rewardRateEffectiveUntil must be checked on adding rewards to be less than 32 bits
+        // End rewards when we are over 32 bits: this will lose rewards between last.blockTimestamp
+        // and current timestamp when we pass 32 bits, but it is not a huge concern. We have to do this
+        // because we cannot know if last.blockTimestamp has an overflow after timestamp exceeds 32 bits
+        uint32 rewardRateEffectiveDelta = block.timestamp > type(uint32).max
+            ? 0
+            : rewardRateEffectiveUntil < block.timestamp
+                ? rewardRateEffectiveUntil <= last.blockTimestamp
+                    ? 0
+                    : rewardRateEffectiveUntil - last.blockTimestamp
+                : delta;
         return
             Observation({
                 blockTimestamp: blockTimestamp,
                 tickCumulative: last.tickCumulative + int56(tick) * delta,
                 secondsPerLiquidityCumulativeX128: last.secondsPerLiquidityCumulativeX128 +
-                    ((uint160(delta) << 128) / (liquidity > 0 ? liquidity : 1)),
-                initialized: true
+                    ((uint160(delta) << 128) / liquidity),
+                initialized: true,
+                rewardPerLiquidityCumulativeX64: last.rewardPerLiquidityCumulativeX64 +
+                    ((uint192(rewardPerSecondX48) << 16) * rewardRateEffectiveDelta / liquidity)
             });
     }
 
@@ -57,7 +79,8 @@ library Oracle {
             blockTimestamp: time,
             tickCumulative: 0,
             secondsPerLiquidityCumulativeX128: 0,
-            initialized: true
+            initialized: true,
+            rewardPerLiquidityCumulativeX64: 0
         });
         return (1, 1);
     }
@@ -71,6 +94,8 @@ library Oracle {
     /// @param blockTimestamp The timestamp of the new observation
     /// @param tick The active tick at the time of the new observation
     /// @param liquidity The total in-range liquidity at the time of the new observation
+    /// @param rewardPerSecondX48 The reward rate at the time of the new observation
+    /// @param rewardRateEffectiveUntil The timestamp after which the reward rate is zero
     /// @param cardinality The number of populated elements in the oracle array
     /// @param cardinalityNext The new length of the oracle array, independent of population
     /// @return indexUpdated The new index of the most recently written element in the oracle array
@@ -81,6 +106,8 @@ library Oracle {
         uint32 blockTimestamp,
         int24 tick,
         uint128 liquidity,
+        uint144 rewardPerSecondX48,
+        uint32 rewardRateEffectiveUntil,
         uint16 cardinality,
         uint16 cardinalityNext
     ) internal returns (uint16 indexUpdated, uint16 cardinalityUpdated) {
@@ -97,7 +124,14 @@ library Oracle {
         }
 
         indexUpdated = (index + 1) % cardinalityUpdated;
-        self[indexUpdated] = transform(last, blockTimestamp, tick, liquidity);
+        self[indexUpdated] = transform(
+            last,
+            blockTimestamp,
+            tick,
+            liquidity,
+            rewardPerSecondX48,
+            rewardRateEffectiveUntil
+        );
     }
 
     /// @notice Prepares the oracle array to store up to `next` observations
@@ -192,6 +226,8 @@ library Oracle {
     /// @param tick The active tick at the time of the returned or simulated observation
     /// @param index The index of the observation that was most recently written to the observations array
     /// @param liquidity The total pool liquidity at the time of the call
+    /// @param rewardPerSecondX48 The reward rate at the time of the call
+    /// @param rewardRateEffectiveUntil The timestamp after which the reward rate is zero
     /// @param cardinality The number of populated elements in the oracle array
     /// @return beforeOrAt The observation which occurred at, or before, the given timestamp
     /// @return atOrAfter The observation which occurred at, or after, the given timestamp
@@ -202,6 +238,8 @@ library Oracle {
         int24 tick,
         uint16 index,
         uint128 liquidity,
+        uint144 rewardPerSecondX48,
+        uint32 rewardRateEffectiveUntil,
         uint16 cardinality
     ) private view returns (Observation memory beforeOrAt, Observation memory atOrAfter) {
         // optimistically set before to the newest observation
@@ -214,7 +252,10 @@ library Oracle {
                 return (beforeOrAt, atOrAfter);
             } else {
                 // otherwise, we need to transform
-                return (beforeOrAt, transform(beforeOrAt, target, tick, liquidity));
+                return (
+                    beforeOrAt,
+                    transform(beforeOrAt, target, tick, liquidity, rewardPerSecondX48, rewardRateEffectiveUntil)
+                );
             }
         }
 
@@ -239,9 +280,12 @@ library Oracle {
     /// @param tick The current tick
     /// @param index The index of the observation that was most recently written to the observations array
     /// @param liquidity The current in-range pool liquidity
+    /// @param rewardPerSecondX48 The reward rate at the time of the call
+    /// @param rewardRateEffectiveUntil The timestamp after which the reward rate is zero
     /// @param cardinality The number of populated elements in the oracle array
     /// @return tickCumulative The tick * time elapsed since the pool was first initialized, as of `secondsAgo`
     /// @return secondsPerLiquidityCumulativeX128 The time elapsed / max(1, liquidity) since the pool was first initialized, as of `secondsAgo`
+    /// @return rewardPerLiquidityCumulativeX64 reward per liquidity, as of `secondsAgo`
     function observeSingle(
         Observation[65535] storage self,
         uint32 time,
@@ -249,12 +293,29 @@ library Oracle {
         int24 tick,
         uint16 index,
         uint128 liquidity,
+        uint144 rewardPerSecondX48,
+        uint32 rewardRateEffectiveUntil,
         uint16 cardinality
-    ) internal view returns (int56 tickCumulative, uint160 secondsPerLiquidityCumulativeX128) {
+    ) internal view returns (
+        int56 tickCumulative,
+        uint160 secondsPerLiquidityCumulativeX128,
+        uint192 rewardPerLiquidityCumulativeX64
+    ) {
         if (secondsAgo == 0) {
             Observation memory last = self[index];
-            if (last.blockTimestamp != time) last = transform(last, time, tick, liquidity);
-            return (last.tickCumulative, last.secondsPerLiquidityCumulativeX128);
+            if (last.blockTimestamp != time) last = transform(
+                last,
+                time,
+                tick,
+                liquidity,
+                rewardPerSecondX48,
+                rewardRateEffectiveUntil
+            );
+            return (
+                last.tickCumulative,
+                last.secondsPerLiquidityCumulativeX128,
+                last.rewardPerLiquidityCumulativeX64
+            );
         }
 
         uint32 target = time - secondsAgo;
@@ -266,15 +327,25 @@ library Oracle {
             tick,
             index,
             liquidity,
+            rewardPerSecondX48,
+            rewardRateEffectiveUntil,
             cardinality
         );
 
         if (target == beforeOrAt.blockTimestamp) {
             // we're at the left boundary
-            return (beforeOrAt.tickCumulative, beforeOrAt.secondsPerLiquidityCumulativeX128);
+            return (
+                beforeOrAt.tickCumulative,
+                beforeOrAt.secondsPerLiquidityCumulativeX128,
+                beforeOrAt.rewardPerLiquidityCumulativeX64
+            );
         } else if (target == atOrAfter.blockTimestamp) {
             // we're at the right boundary
-            return (atOrAfter.tickCumulative, atOrAfter.secondsPerLiquidityCumulativeX128);
+            return (
+                atOrAfter.tickCumulative,
+                atOrAfter.secondsPerLiquidityCumulativeX128,
+                atOrAfter.rewardPerLiquidityCumulativeX64
+            );
         } else {
             // we're in the middle
             uint32 observationTimeDelta = atOrAfter.blockTimestamp - beforeOrAt.blockTimestamp;
@@ -288,7 +359,10 @@ library Oracle {
                         (uint256(
                             atOrAfter.secondsPerLiquidityCumulativeX128 - beforeOrAt.secondsPerLiquidityCumulativeX128
                         ) * targetDelta) / observationTimeDelta
-                    )
+                    ),
+                beforeOrAt.rewardPerLiquidityCumulativeX64 +
+                    ((atOrAfter.rewardPerLiquidityCumulativeX64 - beforeOrAt.rewardPerLiquidityCumulativeX64) /
+                    observationTimeDelta) * targetDelta
             );
         }
     }
@@ -301,6 +375,8 @@ library Oracle {
     /// @param tick The current tick
     /// @param index The index of the observation that was most recently written to the observations array
     /// @param liquidity The current in-range pool liquidity
+    /// @param rewardPerSecondX48 The reward rate at the time of the call
+    /// @param rewardRateEffectiveUntil The timestamp after which the reward rate is zero
     /// @param cardinality The number of populated elements in the oracle array
     /// @return tickCumulatives The tick * time elapsed since the pool was first initialized, as of each `secondsAgo`
     /// @return secondsPerLiquidityCumulativeX128s The cumulative seconds / max(1, liquidity) since the pool was first initialized, as of each `secondsAgo`
@@ -311,20 +387,33 @@ library Oracle {
         int24 tick,
         uint16 index,
         uint128 liquidity,
+        uint144 rewardPerSecondX48,
+        uint32 rewardRateEffectiveUntil,
         uint16 cardinality
-    ) internal view returns (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s) {
+    ) internal view returns (
+        int56[] memory tickCumulatives,
+        uint160[] memory secondsPerLiquidityCumulativeX128s,
+        uint192[] memory rewardPerLiquidityCumulativeX64s
+    ) {
         require(cardinality > 0, 'I');
 
         tickCumulatives = new int56[](secondsAgos.length);
         secondsPerLiquidityCumulativeX128s = new uint160[](secondsAgos.length);
+        rewardPerLiquidityCumulativeX64s = new uint192[](secondsAgos.length);
         for (uint256 i = 0; i < secondsAgos.length; i++) {
-            (tickCumulatives[i], secondsPerLiquidityCumulativeX128s[i]) = observeSingle(
+            (
+                tickCumulatives[i],
+                secondsPerLiquidityCumulativeX128s[i],
+                rewardPerLiquidityCumulativeX64s[i]
+            ) = observeSingle(
                 self,
                 time,
                 secondsAgos[i],
                 tick,
                 index,
                 liquidity,
+                rewardPerSecondX48,
+                rewardRateEffectiveUntil,
                 cardinality
             );
         }

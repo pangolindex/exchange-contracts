@@ -6,6 +6,7 @@ import '../pangolinv2-core/interfaces/IPangolinV2Pool.sol';
 import '../pangolinv2-core/libraries/FixedPoint128.sol';
 import '../pangolinv2-core/libraries/FullMath.sol';
 
+import './interfaces/IElixir.sol';
 import './interfaces/INonfungiblePositionManager.sol';
 import './interfaces/INonfungibleTokenPositionDescriptor.sol';
 import './libraries/PositionKey.sol';
@@ -14,7 +15,6 @@ import './base/LiquidityManagement.sol';
 import './base/PeripheryImmutableState.sol';
 import './base/Multicall.sol';
 import './base/ERC721Permit.sol';
-import './base/PeripheryValidation.sol';
 import './base/SelfPermit.sol';
 import './base/PoolInitializer.sol';
 
@@ -27,7 +27,6 @@ contract NonfungiblePositionManager is
     PeripheryImmutableState,
     PoolInitializer,
     LiquidityManagement,
-    PeripheryValidation,
     SelfPermit
 {
     // details about the pangolin position
@@ -49,6 +48,11 @@ contract NonfungiblePositionManager is
         // how many uncollected tokens are owed to the position, as of the last computation
         uint128 tokensOwed0;
         uint128 tokensOwed1;
+        // reward stuff
+        uint192 rewardPerLiquidityInsideLastX64;
+        uint32 rewardLastUpdated;
+        uint32 rewardLastCollected;
+        uint256 rewardOwed;
     }
 
     /// @dev IDs of pools assigned by this contract
@@ -66,14 +70,19 @@ contract NonfungiblePositionManager is
     uint80 private _nextPoolId = 1;
 
     /// @dev The address of the token descriptor contract, which handles generating token URIs for position tokens
-    address private immutable _tokenDescriptor;
+    address private _tokenDescriptor;
+
+    /// @dev The address that will send rewards to the user based on the amount in `claimReward` function
+    address private _elixir;
 
     constructor(
         address _factory,
         address _WETH9,
-        address _tokenDescriptor_
+        address _tokenDescriptor_,
+        address _elixir_
     ) ERC721Permit('Pangolin V2 Positions NFT-V1', 'PNG-V2-POS', '1') PeripheryImmutableState(_factory, _WETH9) {
         _tokenDescriptor = _tokenDescriptor_;
+        _elixir = _elixir_;
     }
 
     /// @inheritdoc INonfungiblePositionManager
@@ -112,6 +121,28 @@ contract NonfungiblePositionManager is
             position.feeGrowthInside1LastX128,
             position.tokensOwed0,
             position.tokensOwed1
+        );
+    }
+
+    /// @inheritdoc INonfungiblePositionManager
+    function positionReward(uint256 tokenId)
+        external
+        view
+        override
+        returns (
+            uint192 rewardPerLiquidityInsideLastX64,
+            uint32 rewardLastUpdated,
+            uint32 rewardLastCollected,
+            uint256 rewardOwed
+        )
+    {
+        Position memory position = _positions[tokenId];
+        require(position.poolId != 0, 'Invalid token ID');
+        return (
+            position.rewardPerLiquidityInsideLastX64,
+            position.rewardLastUpdated,
+            position.rewardLastCollected,
+            position.rewardOwed
         );
     }
 
@@ -175,14 +206,29 @@ contract NonfungiblePositionManager is
             feeGrowthInside0LastX128: feeGrowthInside0LastX128,
             feeGrowthInside1LastX128: feeGrowthInside1LastX128,
             tokensOwed0: 0,
-            tokensOwed1: 0
+            tokensOwed1: 0,
+            rewardPerLiquidityInsideLastX64: 0,
+            rewardLastUpdated: 0,
+            rewardLastCollected: 0,
+            rewardOwed: 0
         });
 
         emit IncreaseLiquidity(tokenId, liquidity, amount0, amount1);
     }
 
-    modifier isAuthorizedForToken(uint256 tokenId) {
+    function _isAuthorizedForToken(uint256 tokenId) internal view {
         require(_isApprovedOrOwner(msg.sender, tokenId), 'Not approved');
+    }
+    modifier isAuthorizedForToken(uint256 tokenId) {
+        _isAuthorizedForToken(tokenId);
+        _;
+    }
+
+    function _onlyFactoryOwner() internal view {
+        require(msg.sender == IPangolinV2Factory(factory).owner());
+    }
+    modifier onlyFactoryOwner() {
+        _onlyFactoryOwner();
         _;
     }
 
@@ -246,6 +292,8 @@ contract NonfungiblePositionManager is
             )
         );
 
+        _updateReward(position, pool); // must use position.liquidity before update
+
         position.feeGrowthInside0LastX128 = feeGrowthInside0LastX128;
         position.feeGrowthInside1LastX128 = feeGrowthInside1LastX128;
         position.liquidity += liquidity;
@@ -296,6 +344,8 @@ contract NonfungiblePositionManager is
                     FixedPoint128.Q128
                 )
             );
+
+        _updateReward(position, pool); // must use position.liquidity before update
 
         position.feeGrowthInside0LastX128 = feeGrowthInside0LastX128;
         position.feeGrowthInside1LastX128 = feeGrowthInside1LastX128;
@@ -374,11 +424,73 @@ contract NonfungiblePositionManager is
     }
 
     /// @inheritdoc INonfungiblePositionManager
+    function claimReward(uint256 tokenId, address recipient) external payable override isAuthorizedForToken(tokenId) {
+        require(recipient != address(0));
+
+        Position storage position = _positions[tokenId];
+        IElixir(_elixir).claimReward(
+            recipient,
+            position.rewardOwed,
+            tokenId,
+            PoolAddress.computeAddress(factory, _poolIdToPoolKey[position.poolId]),
+            position.rewardLastUpdated,
+            position.rewardLastCollected
+        );
+
+        position.rewardLastCollected = _clampedTimestamp();
+        position.rewardOwed = 0;
+    }
+
+    /// @inheritdoc INonfungiblePositionManager
+    function forgoReward(uint256 tokenId) external payable override isAuthorizedForToken(tokenId) {
+        Position storage position = _positions[tokenId];
+        position.rewardLastCollected = _clampedTimestamp();
+        position.rewardOwed = 0;
+    }
+
+    /// @inheritdoc INonfungiblePositionManager
     function burn(uint256 tokenId) external payable override isAuthorizedForToken(tokenId) {
         Position storage position = _positions[tokenId];
-        require(position.liquidity == 0 && position.tokensOwed0 == 0 && position.tokensOwed1 == 0, 'Not cleared');
+        require(
+            position.liquidity == 0 &&
+            position.tokensOwed0 == 0 &&
+            position.tokensOwed1 == 0 &&
+            position.rewardOwed == 0
+        );
         delete _positions[tokenId];
         _burn(tokenId);
+    }
+
+    function updateTokenDescriptor(address _tokenDescriptor_) external payable override onlyFactoryOwner {
+        _tokenDescriptor = _tokenDescriptor_;
+    }
+
+    function updateRewardManager(address _elixir_) external payable override onlyFactoryOwner {
+        _elixir = _elixir_;
+    }
+
+    function _clampedTimestamp() internal view returns (uint32) {
+        return block.timestamp > type(uint32).max ? type(uint32).max : uint32(block.timestamp);
+    }
+
+    function _updateReward(Position storage position, IPangolinV2Pool pool) internal {
+        (, , , uint192 rewardPerLiquidityInsideCurrentX64) =
+            pool.snapshotCumulativesInside(position.tickLower, position.tickUpper);
+
+        if (position.rewardPerLiquidityInsideLastX64 >= rewardPerLiquidityInsideCurrentX64) {
+            return;
+        }
+
+        if (position.rewardLastUpdated != 0) {
+            position.rewardOwed += FullMath.mulDiv(
+                rewardPerLiquidityInsideCurrentX64 - position.rewardPerLiquidityInsideLastX64,
+                position.liquidity,
+                2**64
+            );
+        }
+
+        position.rewardPerLiquidityInsideLastX64 = rewardPerLiquidityInsideCurrentX64;
+        position.rewardLastUpdated = _clampedTimestamp();
     }
 
     function _getAndIncrementNonce(uint256 tokenId) internal override returns (uint256) {
@@ -387,7 +499,7 @@ contract NonfungiblePositionManager is
 
     /// @inheritdoc IERC721
     function getApproved(uint256 tokenId) public view override(ERC721, IERC721) returns (address) {
-        require(_exists(tokenId), 'ERC721: approved query for nonexistent token');
+        require(_exists(tokenId), 'ERC721: nonexistent token');
 
         return _positions[tokenId].operator;
     }

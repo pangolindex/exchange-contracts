@@ -3,8 +3,6 @@ pragma solidity =0.7.6;
 
 import './interfaces/IPangolinV2Pool.sol';
 
-import './NoDelegateCall.sol';
-
 import './libraries/LowGasSafeMath.sol';
 import './libraries/SafeCast.sol';
 import './libraries/Tick.sol';
@@ -20,14 +18,13 @@ import './libraries/LiquidityMath.sol';
 import './libraries/SqrtPriceMath.sol';
 import './libraries/SwapMath.sol';
 
-import './interfaces/IPangolinV2PoolDeployer.sol';
 import './interfaces/IPangolinV2Factory.sol';
 import './interfaces/IERC20Minimal.sol';
 import './interfaces/callback/IPangolinV2MintCallback.sol';
 import './interfaces/callback/IPangolinV2SwapCallback.sol';
 import './interfaces/callback/IPangolinV2FlashCallback.sol';
 
-contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
+contract PangolinV2Pool is IPangolinV2Pool {
     using LowGasSafeMath for uint256;
     using LowGasSafeMath for int256;
     using SafeCast for uint256;
@@ -39,19 +36,19 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
     using Oracle for Oracle.Observation[65535];
 
     /// @inheritdoc IPangolinV2PoolImmutables
-    address public immutable override factory;
+    address public override factory;
     /// @inheritdoc IPangolinV2PoolImmutables
-    address public immutable override token0;
+    address public override token0;
     /// @inheritdoc IPangolinV2PoolImmutables
-    address public immutable override token1;
+    address public override token1;
     /// @inheritdoc IPangolinV2PoolImmutables
-    uint24 public immutable override fee;
+    uint24 public override fee;
 
     /// @inheritdoc IPangolinV2PoolImmutables
-    int24 public immutable override tickSpacing;
+    int24 public override tickSpacing;
 
     /// @inheritdoc IPangolinV2PoolImmutables
-    uint128 public immutable override maxLiquidityPerTick;
+    uint128 public override maxLiquidityPerTick;
 
     struct Slot0 {
         // the current price
@@ -72,6 +69,13 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
     }
     /// @inheritdoc IPangolinV2PoolState
     Slot0 public override slot0;
+
+    struct RewardSlot {
+        uint144 rewardPerSecondX48;
+        uint32 rewardRateEffectiveUntil;
+    }
+    /// @inheritdoc IPangolinV2PoolState
+    RewardSlot public override rewardSlot;
 
     /// @inheritdoc IPangolinV2PoolState
     uint256 public override feeGrowthGlobal0X128;
@@ -114,11 +118,15 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
         _;
     }
 
-    constructor() {
-        int24 _tickSpacing;
-        (factory, token0, token1, fee, _tickSpacing) = IPangolinV2PoolDeployer(msg.sender).parameters();
-        tickSpacing = _tickSpacing;
+    /// @inheritdoc IPangolinV2PoolOwnerActions
+    function initialize(address _token0, address _token1, uint24 _fee, int24 _tickSpacing) external override {
+        require(factory == address(0));
 
+        factory = msg.sender;
+        token0 = _token0;
+        token1 = _token1;
+        fee = _fee;
+        tickSpacing = _tickSpacing;
         maxLiquidityPerTick = Tick.tickSpacingToMaxLiquidityPerTick(_tickSpacing);
     }
 
@@ -134,26 +142,23 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
         return uint32(block.timestamp); // truncation is desired
     }
 
-    /// @dev Get the pool's balance of token0
+    /// @dev Get the pool's balance of token
     /// @dev This function is gas optimized to avoid a redundant extcodesize check in addition to the returndatasize
     /// check
-    function balance0() private view returns (uint256) {
-        (bool success, bytes memory data) = token0.staticcall(
+    function balance(address token) private view returns (uint256) {
+        (bool success, bytes memory data) = token.staticcall(
             abi.encodeWithSelector(IERC20Minimal.balanceOf.selector, address(this))
         );
         require(success && data.length >= 32);
         return abi.decode(data, (uint256));
     }
 
-    /// @dev Get the pool's balance of token1
-    /// @dev This function is gas optimized to avoid a redundant extcodesize check in addition to the returndatasize
-    /// check
-    function balance1() private view returns (uint256) {
-        (bool success, bytes memory data) = token1.staticcall(
-            abi.encodeWithSelector(IERC20Minimal.balanceOf.selector, address(this))
-        );
-        require(success && data.length >= 32);
-        return abi.decode(data, (uint256));
+    struct SnapshotCache {
+        int56 tickCumulative;
+        uint160 secondsPerLiquidityOutsideX128;
+        uint32 secondsOutside;
+        uint192 rewardPerLiquidityOutsideX64;
+        bool initialized;
     }
 
     /// @inheritdoc IPangolinV2PoolDerivedState
@@ -161,74 +166,93 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
         external
         view
         override
-        noDelegateCall
         returns (
             int56 tickCumulativeInside,
             uint160 secondsPerLiquidityInsideX128,
-            uint32 secondsInside
+            uint32 secondsInside,
+            uint192 rewardPerLiquidityInsideX64
         )
     {
         checkTicks(tickLower, tickUpper);
 
-        int56 tickCumulativeLower;
-        int56 tickCumulativeUpper;
-        uint160 secondsPerLiquidityOutsideLowerX128;
-        uint160 secondsPerLiquidityOutsideUpperX128;
-        uint32 secondsOutsideLower;
-        uint32 secondsOutsideUpper;
+        SnapshotCache memory cacheLower;
+        SnapshotCache memory cacheUpper;
 
         {
             Tick.Info storage lower = ticks[tickLower];
             Tick.Info storage upper = ticks[tickUpper];
-            bool initializedLower;
-            (tickCumulativeLower, secondsPerLiquidityOutsideLowerX128, secondsOutsideLower, initializedLower) = (
+            (
+                cacheLower.tickCumulative,
+                cacheLower.secondsPerLiquidityOutsideX128,
+                cacheLower.secondsOutside,
+                cacheLower.rewardPerLiquidityOutsideX64,
+                cacheLower.initialized
+            ) = (
                 lower.tickCumulativeOutside,
                 lower.secondsPerLiquidityOutsideX128,
                 lower.secondsOutside,
+                lower.rewardPerLiquidityOutsideX64,
                 lower.initialized
             );
-            require(initializedLower);
+            require(cacheLower.initialized);
 
-            bool initializedUpper;
-            (tickCumulativeUpper, secondsPerLiquidityOutsideUpperX128, secondsOutsideUpper, initializedUpper) = (
+            (
+                cacheUpper.tickCumulative,
+                cacheUpper.secondsPerLiquidityOutsideX128,
+                cacheUpper.secondsOutside,
+                cacheUpper.rewardPerLiquidityOutsideX64,
+                cacheUpper.initialized
+            ) = (
                 upper.tickCumulativeOutside,
                 upper.secondsPerLiquidityOutsideX128,
                 upper.secondsOutside,
+                upper.rewardPerLiquidityOutsideX64,
                 upper.initialized
             );
-            require(initializedUpper);
+            require(cacheUpper.initialized);
         }
 
         Slot0 memory _slot0 = slot0;
 
         if (_slot0.tick < tickLower) {
             return (
-                tickCumulativeLower - tickCumulativeUpper,
-                secondsPerLiquidityOutsideLowerX128 - secondsPerLiquidityOutsideUpperX128,
-                secondsOutsideLower - secondsOutsideUpper
+                cacheLower.tickCumulative - cacheUpper.tickCumulative,
+                cacheLower.secondsPerLiquidityOutsideX128 - cacheUpper.secondsPerLiquidityOutsideX128,
+                cacheLower.secondsOutside - cacheUpper.secondsOutside,
+                cacheLower.rewardPerLiquidityOutsideX64 - cacheUpper.rewardPerLiquidityOutsideX64
             );
         } else if (_slot0.tick < tickUpper) {
             uint32 time = _blockTimestamp();
-            (int56 tickCumulative, uint160 secondsPerLiquidityCumulativeX128) = observations.observeSingle(
+            (
+                int56 tickCumulative,
+                uint160 secondsPerLiquidityCumulativeX128,
+                uint192 rewardPerLiquidityCumulativeX64
+            ) = observations.observeSingle(
                 time,
                 0,
                 _slot0.tick,
                 _slot0.observationIndex,
                 liquidity,
+                rewardSlot.rewardPerSecondX48,
+                rewardSlot.rewardRateEffectiveUntil,
                 _slot0.observationCardinality
             );
             return (
-                tickCumulative - tickCumulativeLower - tickCumulativeUpper,
+                tickCumulative - cacheLower.tickCumulative - cacheUpper.tickCumulative,
                 secondsPerLiquidityCumulativeX128 -
-                    secondsPerLiquidityOutsideLowerX128 -
-                    secondsPerLiquidityOutsideUpperX128,
-                time - secondsOutsideLower - secondsOutsideUpper
+                    cacheLower.secondsPerLiquidityOutsideX128 -
+                    cacheUpper.secondsPerLiquidityOutsideX128,
+                time - cacheLower.secondsOutside - cacheUpper.secondsOutside,
+                rewardPerLiquidityCumulativeX64 -
+                    cacheLower.rewardPerLiquidityOutsideX64 -
+                    cacheUpper.rewardPerLiquidityOutsideX64
             );
         } else {
             return (
-                tickCumulativeUpper - tickCumulativeLower,
-                secondsPerLiquidityOutsideUpperX128 - secondsPerLiquidityOutsideLowerX128,
-                secondsOutsideUpper - secondsOutsideLower
+                cacheUpper.tickCumulative - cacheLower.tickCumulative,
+                cacheUpper.secondsPerLiquidityOutsideX128 - cacheLower.secondsPerLiquidityOutsideX128,
+                cacheUpper.secondsOutside - cacheLower.secondsOutside,
+                cacheUpper.rewardPerLiquidityOutsideX64 - cacheLower.rewardPerLiquidityOutsideX64
             );
         }
     }
@@ -238,8 +262,11 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
         external
         view
         override
-        noDelegateCall
-        returns (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s)
+        returns (
+            int56[] memory tickCumulatives,
+            uint160[] memory secondsPerLiquidityCumulativeX128s,
+            uint192[] memory rewardPerLiquidityCumulativeX64s
+        )
     {
         return
             observations.observe(
@@ -248,6 +275,8 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
                 slot0.tick,
                 slot0.observationIndex,
                 liquidity,
+                rewardSlot.rewardPerSecondX48,
+                rewardSlot.rewardRateEffectiveUntil,
                 slot0.observationCardinality
             );
     }
@@ -257,7 +286,6 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
         external
         override
         lock
-        noDelegateCall
     {
         uint16 observationCardinalityNextOld = slot0.observationCardinalityNext; // for the event
         uint16 observationCardinalityNextNew = observations.grow(
@@ -308,7 +336,6 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
     /// @return amount1 the amount of token1 owed to the pool, negative if the pool should pay the recipient
     function _modifyPosition(ModifyPositionParams memory params)
         private
-        noDelegateCall
         returns (
             Position.Info storage position,
             int256 amount0,
@@ -346,6 +373,8 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
                     _blockTimestamp(),
                     _slot0.tick,
                     liquidityBefore,
+                    rewardSlot.rewardPerSecondX48,
+                    rewardSlot.rewardRateEffectiveUntil,
                     _slot0.observationCardinality,
                     _slot0.observationCardinalityNext
                 );
@@ -396,15 +425,22 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
         bool flippedUpper;
         if (liquidityDelta != 0) {
             uint32 time = _blockTimestamp();
-            (int56 tickCumulative, uint160 secondsPerLiquidityCumulativeX128) = observations.observeSingle(
+            (
+                int56 tickCumulative,
+                uint160 secondsPerLiquidityCumulativeX128,
+                uint192 rewardPerLiquidityCumulativeX64
+            ) = observations.observeSingle(
                 time,
                 0,
                 slot0.tick,
                 slot0.observationIndex,
                 liquidity,
+                rewardSlot.rewardPerSecondX48,
+                rewardSlot.rewardRateEffectiveUntil,
                 slot0.observationCardinality
             );
 
+            uint128 _maxLiquidityPerTick = maxLiquidityPerTick; // SLOAD for gas optimization
             flippedLower = ticks.update(
                 tickLower,
                 tick,
@@ -415,7 +451,8 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
                 tickCumulative,
                 time,
                 false,
-                maxLiquidityPerTick
+                _maxLiquidityPerTick,
+                rewardPerLiquidityCumulativeX64
             );
             flippedUpper = ticks.update(
                 tickUpper,
@@ -427,14 +464,16 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
                 tickCumulative,
                 time,
                 true,
-                maxLiquidityPerTick
+                _maxLiquidityPerTick,
+                rewardPerLiquidityCumulativeX64
             );
 
+            int24 _tickSpacing = tickSpacing; // SLOAD for gas optimization
             if (flippedLower) {
-                tickBitmap.flipTick(tickLower, tickSpacing);
+                tickBitmap.flipTick(tickLower, _tickSpacing);
             }
             if (flippedUpper) {
-                tickBitmap.flipTick(tickUpper, tickSpacing);
+                tickBitmap.flipTick(tickUpper, _tickSpacing);
             }
         }
 
@@ -460,7 +499,6 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
     }
 
     /// @inheritdoc IPangolinV2PoolActions
-    /// @dev noDelegateCall is applied indirectly via _modifyPosition
     function mint(
         address recipient,
         int24 tickLower,
@@ -483,11 +521,13 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
 
         uint256 balance0Before;
         uint256 balance1Before;
-        if (amount0 > 0) balance0Before = balance0();
-        if (amount1 > 0) balance1Before = balance1();
+        address _token0 = token0;
+        address _token1 = token1;
+        if (amount0 > 0) balance0Before = balance(_token0);
+        if (amount1 > 0) balance1Before = balance(_token1);
         IPangolinV2MintCallback(msg.sender).pangolinV2MintCallback(amount0, amount1, data);
-        if (amount0 > 0) require(balance0Before.add(amount0) <= balance0(), 'M0');
-        if (amount1 > 0) require(balance1Before.add(amount1) <= balance1(), 'M1');
+        if (amount0 > 0) require(balance0Before.add(amount0) <= balance(_token0), 'M0');
+        if (amount1 > 0) require(balance1Before.add(amount1) <= balance(_token1), 'M1');
 
         emit Mint(msg.sender, recipient, tickLower, tickUpper, amount, amount0, amount1);
     }
@@ -519,7 +559,6 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
     }
 
     /// @inheritdoc IPangolinV2PoolActions
-    /// @dev noDelegateCall is applied indirectly via _modifyPosition
     function burn(
         int24 tickLower,
         int24 tickUpper,
@@ -560,6 +599,16 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
         uint160 secondsPerLiquidityCumulativeX128;
         // whether we've computed and cached the above two accumulators
         bool computedLatestObservation;
+        // the reward per liquidity, i.e. sum of (reward rate_i * duration_i / liquidity_i) since the pool was first initialized
+	      uint192 rewardPerLiquidityCumulativeX64; // Q128X64
+        // the pool's fee in hundredths of a bip, i.e. 1e-6
+        uint24 fee;
+        // the pool tick spacing
+        int24 tickSpacing;
+        // the first of the two tokens of the pool, sorted by address
+        address token0;
+        // the second of the two tokens of the pool, sorted by address
+        address token1;
     }
 
     // the top level state of the swap, the results of which are recorded in storage at the end
@@ -604,7 +653,7 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
         int256 amountSpecified,
         uint160 sqrtPriceLimitX96,
         bytes calldata data
-    ) external override noDelegateCall returns (int256 amount0, int256 amount1) {
+    ) external override returns (int256 amount0, int256 amount1) {
         require(amountSpecified != 0, 'AS');
 
         Slot0 memory slot0Start = slot0;
@@ -625,7 +674,12 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
             feeProtocol: zeroForOne ? (slot0Start.feeProtocol % 16) : (slot0Start.feeProtocol >> 4),
             secondsPerLiquidityCumulativeX128: 0,
             tickCumulative: 0,
-            computedLatestObservation: false
+            computedLatestObservation: false,
+            rewardPerLiquidityCumulativeX64: 0,
+            fee: fee,
+            tickSpacing: tickSpacing,
+            token0: token0,
+            token1: token1
         });
 
         bool exactInput = amountSpecified > 0;
@@ -648,7 +702,7 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
 
             (step.tickNext, step.initialized) = tickBitmap.nextInitializedTickWithinOneWord(
                 state.tick,
-                tickSpacing,
+                cache.tickSpacing,
                 zeroForOne
             );
 
@@ -670,7 +724,7 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
                     : step.sqrtPriceNextX96,
                 state.liquidity,
                 state.amountSpecifiedRemaining,
-                fee
+                cache.fee
             );
 
             if (exactInput) {
@@ -699,12 +753,18 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
                     // check for the placeholder value, which we replace with the actual value the first time the swap
                     // crosses an initialized tick
                     if (!cache.computedLatestObservation) {
-                        (cache.tickCumulative, cache.secondsPerLiquidityCumulativeX128) = observations.observeSingle(
+                        (
+                            cache.tickCumulative,
+                            cache.secondsPerLiquidityCumulativeX128,
+                            cache.rewardPerLiquidityCumulativeX64
+                        ) = observations.observeSingle(
                             cache.blockTimestamp,
                             0,
                             slot0Start.tick,
                             slot0Start.observationIndex,
                             cache.liquidityStart,
+                            rewardSlot.rewardPerSecondX48,
+                            rewardSlot.rewardRateEffectiveUntil,
                             slot0Start.observationCardinality
                         );
                         cache.computedLatestObservation = true;
@@ -715,7 +775,8 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
                         (zeroForOne ? feeGrowthGlobal1X128 : state.feeGrowthGlobalX128),
                         cache.secondsPerLiquidityCumulativeX128,
                         cache.tickCumulative,
-                        cache.blockTimestamp
+                        cache.blockTimestamp,
+                        cache.rewardPerLiquidityCumulativeX64
                     );
                     // if we're moving leftward, we interpret liquidityNet as the opposite sign
                     // safe because liquidityNet cannot be type(int128).min
@@ -738,6 +799,8 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
                 cache.blockTimestamp,
                 slot0Start.tick,
                 cache.liquidityStart,
+                rewardSlot.rewardPerSecondX48,
+                rewardSlot.rewardRateEffectiveUntil,
                 slot0Start.observationCardinality,
                 slot0Start.observationCardinalityNext
             );
@@ -771,21 +834,34 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
 
         // do the transfers and collect payment
         if (zeroForOne) {
-            if (amount1 < 0) TransferHelper.safeTransfer(token1, recipient, uint256(-amount1));
+            if (amount1 < 0) TransferHelper.safeTransfer(cache.token1, recipient, uint256(-amount1));
 
-            uint256 balance0Before = balance0();
+            uint256 balance0Before = balance(cache.token0);
             IPangolinV2SwapCallback(msg.sender).pangolinV2SwapCallback(amount0, amount1, data);
-            require(balance0Before.add(uint256(amount0)) <= balance0(), 'IIA');
+            require(balance0Before.add(uint256(amount0)) <= balance(cache.token0), 'IIA');
         } else {
-            if (amount0 < 0) TransferHelper.safeTransfer(token0, recipient, uint256(-amount0));
+            if (amount0 < 0) TransferHelper.safeTransfer(cache.token0, recipient, uint256(-amount0));
 
-            uint256 balance1Before = balance1();
+            uint256 balance1Before = balance(cache.token1);
             IPangolinV2SwapCallback(msg.sender).pangolinV2SwapCallback(amount0, amount1, data);
-            require(balance1Before.add(uint256(amount1)) <= balance1(), 'IIA');
+            require(balance1Before.add(uint256(amount1)) <= balance(cache.token1), 'IIA');
         }
 
         emit Swap(msg.sender, recipient, amount0, amount1, state.sqrtPriceX96, state.liquidity, state.tick);
         slot0.unlocked = true;
+    }
+
+    struct FlashCache {
+        // the first of the two tokens of the pool, sorted by address
+        address token0;
+        // the second of the two tokens of the pool, sorted by address
+        address token1;
+        // the pool's fee in hundredths of a bip, i.e. 1e-6
+        uint24 fee;
+        // the fee amount that will be taken from the first token
+        uint256 fee0;
+        // the fee amount that will be taken from the second token
+        uint256 fee1;
     }
 
     /// @inheritdoc IPangolinV2PoolActions
@@ -794,25 +870,33 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
         uint256 amount0,
         uint256 amount1,
         bytes calldata data
-    ) external override lock noDelegateCall {
+    ) external override lock {
         uint128 _liquidity = liquidity;
         require(_liquidity > 0, 'L');
 
-        uint256 fee0 = FullMath.mulDivRoundingUp(amount0, fee, 1e6);
-        uint256 fee1 = FullMath.mulDivRoundingUp(amount1, fee, 1e6);
-        uint256 balance0Before = balance0();
-        uint256 balance1Before = balance1();
+        FlashCache memory cache = FlashCache({
+            token0: token0,
+            token1: token1,
+            fee: fee,
+            fee0: 0,
+            fee1: 0
+        });
 
-        if (amount0 > 0) TransferHelper.safeTransfer(token0, recipient, amount0);
-        if (amount1 > 0) TransferHelper.safeTransfer(token1, recipient, amount1);
+        cache.fee0 = FullMath.mulDivRoundingUp(amount0, cache.fee, 1e6);
+        cache.fee1 = FullMath.mulDivRoundingUp(amount1, cache.fee, 1e6);
+        uint256 balance0Before = balance(cache.token0);
+        uint256 balance1Before = balance(cache.token1);
 
-        IPangolinV2FlashCallback(msg.sender).pangolinV2FlashCallback(fee0, fee1, data);
+        if (amount0 > 0) TransferHelper.safeTransfer(cache.token0, recipient, amount0);
+        if (amount1 > 0) TransferHelper.safeTransfer(cache.token1, recipient, amount1);
 
-        uint256 balance0After = balance0();
-        uint256 balance1After = balance1();
+        IPangolinV2FlashCallback(msg.sender).pangolinV2FlashCallback(cache.fee0, cache.fee1, data);
 
-        require(balance0Before.add(fee0) <= balance0After, 'F0');
-        require(balance1Before.add(fee1) <= balance1After, 'F1');
+        uint256 balance0After = balance(cache.token0);
+        uint256 balance1After = balance(cache.token1);
+
+        require(balance0Before.add(cache.fee0) <= balance0After, 'F0');
+        require(balance1Before.add(cache.fee1) <= balance1After, 'F1');
 
         // sub is safe because we know balanceAfter is gt balanceBefore by at least fee
         uint256 paid0 = balance0After - balance0Before;
@@ -866,5 +950,30 @@ contract PangolinV2Pool is IPangolinV2Pool, NoDelegateCall {
         }
 
         emit CollectProtocol(msg.sender, recipient, amount0, amount1);
+    }
+
+    /// @inheritdoc IPangolinV2PoolOwnerActions
+    function setRewardRate(
+        uint144 rewardPerSecondX48,
+        uint32 rewardRateEffectiveUntil
+    ) external override lock onlyFactoryOwner {
+        require(rewardRateEffectiveUntil >= block.timestamp);
+
+        (slot0.observationIndex, slot0.observationCardinality) = observations.write(
+            slot0.observationIndex,
+            _blockTimestamp(),
+            slot0.tick,
+            liquidity,
+            rewardSlot.rewardPerSecondX48,
+            rewardSlot.rewardRateEffectiveUntil,
+            slot0.observationCardinality,
+            slot0.observationCardinalityNext
+        );
+        rewardSlot = RewardSlot({
+            rewardPerSecondX48: rewardPerSecondX48,
+            rewardRateEffectiveUntil: rewardRateEffectiveUntil
+        });
+
+        emit SetRewardRate(rewardPerSecondX48, rewardRateEffectiveUntil);
     }
 }

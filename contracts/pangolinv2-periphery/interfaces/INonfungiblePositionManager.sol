@@ -42,6 +42,13 @@ interface INonfungiblePositionManager is
     /// @param amount0 The amount of token0 owed to the position that was collected
     /// @param amount1 The amount of token1 owed to the position that was collected
     event Collect(uint256 indexed tokenId, address recipient, uint256 amount0, uint256 amount1);
+    /// @notice Emitted when Elixir (reward manager) is called and notified of the reward amount
+    /// @dev This only notifies that the Elixir is called. Except some edge cases (which will be documented
+    /// in Elixir), this event is a good indicator of the rewards being claimed. However, it is not certain
+    /// as it depends on Elixir implementation to decide whether to send the rewards.
+    /// @param tokenId The ID of the token for which the reward is being claimed
+    /// @param recipient The address of the account that received the reward
+    event ClaimReward(uint256 indexed tokenId, address recipient);
 
     /// @notice Returns the position information associated with a given token ID.
     /// @dev Throws if the token ID is not valid.
@@ -74,6 +81,23 @@ interface INonfungiblePositionManager is
             uint256 feeGrowthInside1LastX128,
             uint128 tokensOwed0,
             uint128 tokensOwed1
+        );
+
+    /// @notice Returns the position reward information associated with a given token ID.
+    /// @dev Throws if the token ID is not valid.
+    /// @param tokenId The ID of the token that represents the position
+    /// @return rewardPerLiquidityInsideLastX64 The snapshot of liquidity inside the ticks at last operation
+    /// @return rewardLastUpdated The timestamp of the last operation that updated rewardPerLiquidityInsideLastX64
+    /// @return rewardLastCollected The timestamp of the last time user claimed the rewards of the position
+    /// @return rewardOwed The uncollected amount of reward token owed to the position as of the last computation
+    function positionReward(uint256 tokenId)
+        external
+        view
+        returns (
+            uint192 rewardPerLiquidityInsideLastX64,
+            uint32 rewardLastUpdated,
+            uint32 rewardLastCollected,
+            uint256 rewardOwed
         );
 
     struct MintParams {
@@ -173,8 +197,28 @@ interface INonfungiblePositionManager is
     /// @return amount1 The amount of fees collected in token1
     function collect(CollectParams calldata params) external payable returns (uint256 amount0, uint256 amount1);
 
+    /// @notice Notifies rewards manager contract the amount of unclaimed rewards and then deletes the reward debt
+    /// @param tokenId The ID of the NFT for which reward is being collected,
+    /// recipient The account that should receive the reward tokens
+    function claimReward(uint256 tokenId, address recipient) external payable;
+
+    /// @notice Deletes reward debt of the token
+    /// @dev Because of (1) `burn` prevents burning the tokenId if there is any reward debt and (2) `claimReward` can
+    /// be DOSed by an improper reward manager implementation or a reward token, we have this separate function to
+    /// forgo rewards if user really needs to burn the tokenId and does not care about the rewards
+    /// @param tokenId The ID of the NFT to forgo the rewards
+    function forgoReward(uint256 tokenId) external payable;
+
     /// @notice Burns a token ID, which deletes it from the NFT contract. The token must have 0 liquidity and all tokens
     /// must be collected first.
     /// @param tokenId The ID of the token that is being burned
     function burn(uint256 tokenId) external payable;
+
+    /// @notice Restricted function to update address that generates tokenURI
+    /// @param tokenDescriptor_ The address of the new token descriptor
+    function updateTokenDescriptor(address tokenDescriptor_) external payable;
+
+    /// @notice Restricted function to update the reward manager contract address
+    /// @param rewardManager_ The contract that will distribute rewards during `claimReward`
+    function updateRewardManager(address rewardManager_) external payable;
 }

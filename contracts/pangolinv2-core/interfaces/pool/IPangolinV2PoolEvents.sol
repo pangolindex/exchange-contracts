@@ -118,4 +118,9 @@ interface IPangolinV2PoolEvents {
     /// @param amount0 The amount of token0 protocol fees that is withdrawn
     /// @param amount0 The amount of token1 protocol fees that is withdrawn
     event CollectProtocol(address indexed sender, address indexed recipient, uint128 amount0, uint128 amount1);
+
+    /// @notice Emitted when the reward rate is changed by the owner
+    /// @param rewardPerSecondX48 The new reward rate per second (in Q48)
+    /// @param rewardRateEffectiveUntil The timestamp when the new reward rate will expire
+    event SetRewardRate(uint144 rewardPerSecondX48, uint32 rewardRateEffectiveUntil);
 }
