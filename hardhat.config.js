@@ -138,7 +138,18 @@ module.exports = {
           },
         },
       },
-      "contracts/pangolinv2-periphery/NonfungiblePositionManager.sol": {
+      "contracts/WAVAX.sol": {
+        version: "0.5.17",
+        settings: {
+          // For mocking
+          outputSelection: {
+            "*": {
+              "*": ["storageLayout"],
+            },
+          },
+        },
+      },
+      "contracts/elixir-periphery/NonfungiblePositionManager.sol": {
         version: "0.7.6",
         settings: {
           optimizer: {
