@@ -428,17 +428,21 @@ contract NonfungiblePositionManager is
         require(recipient != address(0));
 
         Position storage position = _positions[tokenId];
+
+        uint256 rewardOwed = position.rewardOwed;
+        uint32 rewardLastCollected = _clampedTimestamp();
+
+        position.rewardOwed = 0;
+        position.rewardLastCollected = _clampedTimestamp();
+
         IElixirRewarder(_elixirRewarder).claimReward(
             recipient,
-            position.rewardOwed,
+            rewardOwed,
             tokenId,
             PoolAddress.computeAddress(factory, _poolIdToPoolKey[position.poolId]),
             position.rewardLastUpdated,
-            position.rewardLastCollected
+            rewardLastCollected
         );
-
-        position.rewardLastCollected = _clampedTimestamp();
-        position.rewardOwed = 0;
     }
 
     /// @inheritdoc INonfungiblePositionManager
