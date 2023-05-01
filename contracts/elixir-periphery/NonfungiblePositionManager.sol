@@ -433,7 +433,7 @@ contract NonfungiblePositionManager is
         uint32 rewardLastCollected = _clampedTimestamp();
 
         position.rewardOwed = 0;
-        position.rewardLastCollected = _clampedTimestamp();
+        position.rewardLastCollected = rewardLastCollected;
 
         IElixirRewarder(_elixirRewarder).claimReward(
             recipient,
