@@ -3,6 +3,7 @@ import { ethers, waffle } from "hardhat";
 import { PangolinV2Factory } from "../../typechain/PangolinV2Factory";
 import { expect } from "./shared/expect";
 import snapshotGasCost from "./shared/snapshotGasCost";
+import "dotenv/config";
 
 import {
   FeeAmount,
@@ -17,6 +18,8 @@ const TEST_ADDRESSES: [string, string] = [
   "0x2000000000000000000000000000000000000000",
 ];
 
+const POOL_IMPLEMENTATION = "0x5cB5539A18591947C82f5D840B05ed79f6395491";
+
 const createFixtureLoader = waffle.createFixtureLoader;
 
 describe("PangolinV2Factory", () => {
@@ -26,7 +29,9 @@ describe("PangolinV2Factory", () => {
   let poolBytecode: string;
   const fixture = async () => {
     const factoryFactory = await ethers.getContractFactory("PangolinV2Factory");
-    return (await factoryFactory.deploy()) as PangolinV2Factory;
+    return (await factoryFactory.deploy(
+      POOL_IMPLEMENTATION
+    )) as PangolinV2Factory;
   };
 
   let loadFixture: ReturnType<typeof createFixtureLoader>;
