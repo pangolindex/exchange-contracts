@@ -19,7 +19,7 @@ library Oracle {
         // whether or not the observation is initialized
         bool initialized;
         // the reward per liquidity, i.e. sum of (reward rate_i * duration_i / liquidity_i) since the pool was first initialized
-	      uint192 rewardPerLiquidityCumulativeX64; // Q128X64
+        uint192 rewardPerLiquidityCumulativeX64; // Q128X64
     }
 
     /// @notice Transforms a previous observation into a new observation, given the passage of time and the current tick and liquidity values
@@ -50,19 +50,22 @@ library Oracle {
         uint32 rewardRateEffectiveDelta = block.timestamp > type(uint32).max
             ? 0
             : rewardRateEffectiveUntil < block.timestamp
-                ? rewardRateEffectiveUntil <= last.blockTimestamp
-                    ? 0
-                    : rewardRateEffectiveUntil - last.blockTimestamp
-                : delta;
+            ? rewardRateEffectiveUntil <= last.blockTimestamp
+                ? 0
+                : rewardRateEffectiveUntil - last.blockTimestamp
+            : delta;
         return
             Observation({
                 blockTimestamp: blockTimestamp,
                 tickCumulative: last.tickCumulative + int56(tick) * delta,
-                secondsPerLiquidityCumulativeX128: last.secondsPerLiquidityCumulativeX128 +
+                secondsPerLiquidityCumulativeX128: last
+                    .secondsPerLiquidityCumulativeX128 +
                     ((uint160(delta) << 128) / liquidity),
                 initialized: true,
-                rewardPerLiquidityCumulativeX64: last.rewardPerLiquidityCumulativeX64 +
-                    ((uint192(rewardPerSecondX48) << 16) * rewardRateEffectiveDelta / liquidity)
+                rewardPerLiquidityCumulativeX64: last
+                    .rewardPerLiquidityCumulativeX64 +
+                    (((uint192(rewardPerSecondX48) << 16) *
+                        rewardRateEffectiveDelta) / liquidity)
             });
     }
 
@@ -71,10 +74,10 @@ library Oracle {
     /// @param time The time of the oracle initialization, via block.timestamp truncated to uint32
     /// @return cardinality The number of populated elements in the oracle array
     /// @return cardinalityNext The new length of the oracle array, independent of population
-    function initialize(Observation[65535] storage self, uint32 time)
-        internal
-        returns (uint16 cardinality, uint16 cardinalityNext)
-    {
+    function initialize(
+        Observation[65535] storage self,
+        uint32 time
+    ) internal returns (uint16 cardinality, uint16 cardinalityNext) {
         self[0] = Observation({
             blockTimestamp: time,
             tickCumulative: 0,
@@ -144,7 +147,7 @@ library Oracle {
         uint16 current,
         uint16 next
     ) internal returns (uint16) {
-        require(current > 0, 'I');
+        require(current > 0, "I");
         // no-op if the passed next value isn't greater than the current next value
         if (next <= current) return current;
         // store in each slot to prevent fresh SSTOREs in swaps
@@ -159,16 +162,12 @@ library Oracle {
     /// @param a A comparison timestamp from which to determine the relative position of `time`
     /// @param b From which to determine the relative position of `time`
     /// @return bool Whether `a` is chronologically <= `b`
-    function lte(
-        uint32 time,
-        uint32 a,
-        uint32 b
-    ) private pure returns (bool) {
+    function lte(uint32 time, uint32 a, uint32 b) private pure returns (bool) {
         // if there hasn't been overflow, no need to adjust
         if (a <= time && b <= time) return a <= b;
 
-        uint256 aAdjusted = a > time ? a : a + 2**32;
-        uint256 bAdjusted = b > time ? b : b + 2**32;
+        uint256 aAdjusted = a > time ? a : a + 2 ** 32;
+        uint256 bAdjusted = b > time ? b : b + 2 ** 32;
 
         return aAdjusted <= bAdjusted;
     }
@@ -190,7 +189,11 @@ library Oracle {
         uint32 target,
         uint16 index,
         uint16 cardinality
-    ) private view returns (Observation memory beforeOrAt, Observation memory atOrAfter) {
+    )
+        private
+        view
+        returns (Observation memory beforeOrAt, Observation memory atOrAfter)
+    {
         uint256 l = (index + 1) % cardinality; // oldest observation
         uint256 r = l + cardinality - 1; // newest observation
         uint256 i;
@@ -210,7 +213,8 @@ library Oracle {
             bool targetAtOrAfter = lte(time, beforeOrAt.blockTimestamp, target);
 
             // check if we've found the answer!
-            if (targetAtOrAfter && lte(time, target, atOrAfter.blockTimestamp)) break;
+            if (targetAtOrAfter && lte(time, target, atOrAfter.blockTimestamp))
+                break;
 
             if (!targetAtOrAfter) r = i - 1;
             else l = i + 1;
@@ -241,7 +245,11 @@ library Oracle {
         uint144 rewardPerSecondX48,
         uint32 rewardRateEffectiveUntil,
         uint16 cardinality
-    ) private view returns (Observation memory beforeOrAt, Observation memory atOrAfter) {
+    )
+        private
+        view
+        returns (Observation memory beforeOrAt, Observation memory atOrAfter)
+    {
         // optimistically set before to the newest observation
         beforeOrAt = self[index];
 
@@ -254,7 +262,14 @@ library Oracle {
                 // otherwise, we need to transform
                 return (
                     beforeOrAt,
-                    transform(beforeOrAt, target, tick, liquidity, rewardPerSecondX48, rewardRateEffectiveUntil)
+                    transform(
+                        beforeOrAt,
+                        target,
+                        tick,
+                        liquidity,
+                        rewardPerSecondX48,
+                        rewardRateEffectiveUntil
+                    )
                 );
             }
         }
@@ -264,7 +279,7 @@ library Oracle {
         if (!beforeOrAt.initialized) beforeOrAt = self[0];
 
         // ensure that the target is chronologically at or after the oldest observation
-        require(lte(time, beforeOrAt.blockTimestamp, target), 'OLD');
+        require(lte(time, beforeOrAt.blockTimestamp, target), "OLD");
 
         // if we've reached this point, we have to binary search
         return binarySearch(self, time, target, index, cardinality);
@@ -296,21 +311,26 @@ library Oracle {
         uint144 rewardPerSecondX48,
         uint32 rewardRateEffectiveUntil,
         uint16 cardinality
-    ) internal view returns (
-        int56 tickCumulative,
-        uint160 secondsPerLiquidityCumulativeX128,
-        uint192 rewardPerLiquidityCumulativeX64
-    ) {
+    )
+        internal
+        view
+        returns (
+            int56 tickCumulative,
+            uint160 secondsPerLiquidityCumulativeX128,
+            uint192 rewardPerLiquidityCumulativeX64
+        )
+    {
         if (secondsAgo == 0) {
             Observation memory last = self[index];
-            if (last.blockTimestamp != time) last = transform(
-                last,
-                time,
-                tick,
-                liquidity,
-                rewardPerSecondX48,
-                rewardRateEffectiveUntil
-            );
+            if (last.blockTimestamp != time)
+                last = transform(
+                    last,
+                    time,
+                    tick,
+                    liquidity,
+                    rewardPerSecondX48,
+                    rewardRateEffectiveUntil
+                );
             return (
                 last.tickCumulative,
                 last.secondsPerLiquidityCumulativeX128,
@@ -320,17 +340,20 @@ library Oracle {
 
         uint32 target = time - secondsAgo;
 
-        (Observation memory beforeOrAt, Observation memory atOrAfter) = getSurroundingObservations(
-            self,
-            time,
-            target,
-            tick,
-            index,
-            liquidity,
-            rewardPerSecondX48,
-            rewardRateEffectiveUntil,
-            cardinality
-        );
+        (
+            Observation memory beforeOrAt,
+            Observation memory atOrAfter
+        ) = getSurroundingObservations(
+                self,
+                time,
+                target,
+                tick,
+                index,
+                liquidity,
+                rewardPerSecondX48,
+                rewardRateEffectiveUntil,
+                cardinality
+            );
 
         if (target == beforeOrAt.blockTimestamp) {
             // we're at the left boundary
@@ -348,21 +371,26 @@ library Oracle {
             );
         } else {
             // we're in the middle
-            uint32 observationTimeDelta = atOrAfter.blockTimestamp - beforeOrAt.blockTimestamp;
+            uint32 observationTimeDelta = atOrAfter.blockTimestamp -
+                beforeOrAt.blockTimestamp;
             uint32 targetDelta = target - beforeOrAt.blockTimestamp;
             return (
                 beforeOrAt.tickCumulative +
-                    ((atOrAfter.tickCumulative - beforeOrAt.tickCumulative) / observationTimeDelta) *
+                    ((atOrAfter.tickCumulative - beforeOrAt.tickCumulative) /
+                        observationTimeDelta) *
                     targetDelta,
                 beforeOrAt.secondsPerLiquidityCumulativeX128 +
                     uint160(
                         (uint256(
-                            atOrAfter.secondsPerLiquidityCumulativeX128 - beforeOrAt.secondsPerLiquidityCumulativeX128
+                            atOrAfter.secondsPerLiquidityCumulativeX128 -
+                                beforeOrAt.secondsPerLiquidityCumulativeX128
                         ) * targetDelta) / observationTimeDelta
                     ),
                 beforeOrAt.rewardPerLiquidityCumulativeX64 +
-                    ((atOrAfter.rewardPerLiquidityCumulativeX64 - beforeOrAt.rewardPerLiquidityCumulativeX64) /
-                    observationTimeDelta) * targetDelta
+                    ((atOrAfter.rewardPerLiquidityCumulativeX64 -
+                        beforeOrAt.rewardPerLiquidityCumulativeX64) /
+                        observationTimeDelta) *
+                    targetDelta
             );
         }
     }
@@ -390,12 +418,16 @@ library Oracle {
         uint144 rewardPerSecondX48,
         uint32 rewardRateEffectiveUntil,
         uint16 cardinality
-    ) internal view returns (
-        int56[] memory tickCumulatives,
-        uint160[] memory secondsPerLiquidityCumulativeX128s,
-        uint192[] memory rewardPerLiquidityCumulativeX64s
-    ) {
-        require(cardinality > 0, 'I');
+    )
+        internal
+        view
+        returns (
+            int56[] memory tickCumulatives,
+            uint160[] memory secondsPerLiquidityCumulativeX128s,
+            uint192[] memory rewardPerLiquidityCumulativeX64s
+        )
+    {
+        require(cardinality > 0, "I");
 
         tickCumulatives = new int56[](secondsAgos.length);
         secondsPerLiquidityCumulativeX128s = new uint160[](secondsAgos.length);
