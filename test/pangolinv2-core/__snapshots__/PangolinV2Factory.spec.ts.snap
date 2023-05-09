@@ -1,7 +1,0 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
-
-exports[`PangolinV2Factory #createPool gas 1`] = `116454`;
-
-exports[`PangolinV2Factory factory bytecode size 1`] = `1766`;
-
-exports[`PangolinV2Factory pool bytecode size 1`] = `0`;

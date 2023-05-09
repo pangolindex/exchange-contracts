@@ -109,7 +109,7 @@ module.exports = {
           },
         },
       },
-      "contracts/pangolinv2-periphery/NonfungiblePositionManager.sol": {
+      "contracts/Elixir-periphery/NonfungiblePositionManager.sol": {
         version: "0.7.6",
         settings: {
           optimizer: {
