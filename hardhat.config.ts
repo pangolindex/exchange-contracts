@@ -7,6 +7,44 @@ require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
 
+const CUSTOM_OPTIMIZER_COMPILER_SETTINGS = {
+  version: "0.7.6",
+  settings: {
+    optimizer: {
+      enabled: true,
+      runs: 20,
+    },
+  },
+};
+
+const LOW_OPTIMIZER_COMPILER_SETTINGS = {
+  version: "0.7.6",
+  settings: {
+    evmVersion: "istanbul",
+    optimizer: {
+      enabled: true,
+      runs: 2_000,
+    },
+    metadata: {
+      bytecodeHash: "none",
+    },
+  },
+};
+
+const LOWEST_OPTIMIZER_COMPILER_SETTINGS = {
+  version: "0.7.6",
+  settings: {
+    evmVersion: "istanbul",
+    optimizer: {
+      enabled: true,
+      runs: 1_000,
+    },
+    metadata: {
+      bytecodeHash: "none",
+    },
+  },
+};
+
 // Create hardhat networks from @pangolindex/sdk
 let networksFromSdk: any = {};
 for (const chain of Object.values(CHAINS)) {
@@ -109,15 +147,23 @@ module.exports = {
           },
         },
       },
-      "contracts/Elixir-periphery/NonfungiblePositionManager.sol": {
-        version: "0.7.6",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 20,
-          },
-        },
-      },
+      "contracts/elixir-periphery/NonfungiblePositionManager.sol":
+        CUSTOM_OPTIMIZER_COMPILER_SETTINGS,
+      "contracts/elixir-periphery/test/MockTimeNonfungiblePositionManager.sol":
+        CUSTOM_OPTIMIZER_COMPILER_SETTINGS,
+      "contracts/elixir-periphery/test/NFTDescriptorTest.sol":
+        LOWEST_OPTIMIZER_COMPILER_SETTINGS,
+      "contracts/elixir-periphery/NonfungibleTokenPositionDescriptor.sol":
+        LOWEST_OPTIMIZER_COMPILER_SETTINGS,
+      "contracts/elixir-periphery/libraries/NFTDescriptor.sol":
+        LOWEST_OPTIMIZER_COMPILER_SETTINGS,
+    },
+  },
+  watcher: {
+    test: {
+      tasks: [{ command: "test", params: { testFiles: ["{path}"] } }],
+      files: ["./test/**/*"],
+      verbose: true,
     },
   },
   networks: networksFromSdk,
