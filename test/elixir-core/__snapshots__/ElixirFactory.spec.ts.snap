@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`ElixirFactory #createPool gas 1`] = `116454`;
+exports[`ElixirFactory #createPool gas 1`] = `205955`;
 
 exports[`ElixirFactory factory bytecode size 1`] = `1766`;
 

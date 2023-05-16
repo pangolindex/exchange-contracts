@@ -25,7 +25,11 @@ abstract contract TestElixirSwapPay is IElixirSwapCallback {
         );
     }
 
-    function ElixirSwapCallback(int256, int256, bytes calldata data) external {
+    function elixirSwapCallback(
+        int256,
+        int256,
+        bytes calldata data
+    ) external override {
         (address sender, uint256 pay0, uint256 pay1) = abi.decode(
             data,
             (address, uint256, uint256)

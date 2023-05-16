@@ -26,51 +26,55 @@ const POOL_INIT_CODE_HASH =
 const createFixtureLoader = waffle.createFixtureLoader;
 
 describe("ElixirFactory", () => {
-  let deployer: Wallet, wallet: Wallet, other: Wallet;
+  let wallet: Wallet, other: Wallet;
 
   let factory: ElixirFactory;
   let poolBytecode: string;
   const fixture = async () => {
+    //  impersonating poolDeployer's account
+    const poolDeployerAddress = "0x427207B1Cdb6F2Ab8B1D21Ab77600f00b0a639a7";
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [poolDeployerAddress],
+    });
+
+    const poolDeployer = await (ethers as any).getSigner(poolDeployerAddress);
+
+    //  fund the impersonated account
+    await wallet.sendTransaction({
+      to: poolDeployerAddress,
+      value: ethers.utils.parseEther("100"),
+    });
+
+    const poolFactory = await ethers.getContractFactory("ElixirPool");
+    const poolImplementation = await poolFactory.connect(poolDeployer).deploy();
+
     const factoryFactory = await ethers.getContractFactory("ElixirFactory");
-    return (await factoryFactory
-      .connect(deployer)
-      .deploy(POOL_IMPLEMENTATION)) as ElixirFactory;
+    const factory = await factoryFactory.deploy(POOL_IMPLEMENTATION);
+    return factory as ElixirFactory;
   };
 
   let loadFixture: ReturnType<typeof createFixtureLoader>;
   before("create fixture loader", async () => {
-    //  impersonating deployer's account
-    const deployerAddress = "0x427207B1Cdb6F2Ab8B1D21Ab77600f00b0a639a7";
-    await network.provider.request({
-      method: "hardhat_impersonateAccount",
-      params: [deployerAddress],
-    });
-
-    deployer = await (ethers as any).getSigner(deployerAddress);
-
     [wallet, other] = await (ethers as any).getSigners();
 
-    //  fund the impersonated account
-    await wallet.sendTransaction({
-      to: deployerAddress,
-      value: ethers.utils.parseEther("100"),
-    });
-
-    loadFixture = createFixtureLoader([deployer, wallet, other]);
+    loadFixture = createFixtureLoader([wallet, other]);
   });
 
   before("load pool bytecode", async () => {
-    poolBytecode = (await ethers.getContractFactory("ElixirPool")).connect(
-      deployer
-    ).bytecode;
+    poolBytecode = (await ethers.getContractFactory("ElixirPool")).bytecode;
   });
 
   beforeEach("deploy factory", async () => {
     factory = await loadFixture(fixture);
   });
 
+  it("implementation address", async () => {
+    expect(await factory.implementation()).to.be.eq(POOL_IMPLEMENTATION);
+  });
+
   it("owner is deployer", async () => {
-    expect(await factory.owner()).to.eq(deployer.address);
+    expect(await factory.owner()).to.eq(wallet.address);
   });
 
   it("factory bytecode size", async () => {
@@ -80,10 +84,11 @@ describe("ElixirFactory", () => {
   });
 
   it("pool bytecode size", async () => {
-    console.log(factory.functions);
-    await factory
-      .connect(deployer)
-      .createPool(TEST_ADDRESSES[0], TEST_ADDRESSES[1], FeeAmount.MEDIUM);
+    await factory.createPool(
+      TEST_ADDRESSES[0],
+      TEST_ADDRESSES[1],
+      FeeAmount.MEDIUM
+    );
     const poolAddress = getCreate2Address(
       factory.address,
       TEST_ADDRESSES,
@@ -145,6 +150,7 @@ describe("ElixirFactory", () => {
 
     const poolContractFactory = await ethers.getContractFactory("ElixirPool");
     const pool = poolContractFactory.attach(create2Address);
+
     expect(await pool.factory(), "pool factory address").to.eq(factory.address);
     expect(await pool.token0(), "pool token0").to.eq(TEST_ADDRESSES[0]);
     expect(await pool.token1(), "pool token1").to.eq(TEST_ADDRESSES[1]);

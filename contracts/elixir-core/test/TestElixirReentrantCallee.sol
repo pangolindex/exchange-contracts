@@ -7,7 +7,7 @@ import "../interfaces/callback/IElixirSwapCallback.sol";
 
 import "../interfaces/IElixirPool.sol";
 
-abstract contract TestElixirReentrantCallee is IElixirSwapCallback {
+contract TestElixirReentrantCallee is IElixirSwapCallback {
     string private constant expectedReason = "LOK";
 
     function swapToReenter(address pool) external {
@@ -20,7 +20,11 @@ abstract contract TestElixirReentrantCallee is IElixirSwapCallback {
         );
     }
 
-    function ElixirSwapCallback(int256, int256, bytes calldata) external {
+    function elixirSwapCallback(
+        int256,
+        int256,
+        bytes calldata
+    ) external override {
         // try to reenter swap
         try
             IElixirPool(msg.sender).swap(address(0), false, 1, 0, new bytes(0))

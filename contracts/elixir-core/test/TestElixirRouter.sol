@@ -8,7 +8,7 @@ import "../interfaces/IERC20Minimal.sol";
 import "../interfaces/callback/IElixirSwapCallback.sol";
 import "../interfaces/IElixirPool.sol";
 
-abstract contract TestElixirRouter is IElixirSwapCallback {
+contract TestElixirRouter is IElixirSwapCallback {
     using SafeCast for uint256;
 
     // flash swaps for an exact amount of token0 in the output pool
@@ -49,11 +49,11 @@ abstract contract TestElixirRouter is IElixirSwapCallback {
 
     event SwapCallback(int256 amount0Delta, int256 amount1Delta);
 
-    function ElixirSwapCallback(
+    function elixirSwapCallback(
         int256 amount0Delta,
         int256 amount1Delta,
         bytes calldata data
-    ) public {
+    ) public override {
         emit SwapCallback(amount0Delta, amount1Delta);
 
         (address[] memory pools, address payer) = abi.decode(

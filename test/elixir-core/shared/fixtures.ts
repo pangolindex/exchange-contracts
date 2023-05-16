@@ -1,5 +1,5 @@
-import { BigNumber } from "ethers";
-import { ethers } from "hardhat";
+import { Wallet, BigNumber } from "ethers";
+import { ethers, network } from "hardhat";
 import { MockTimeElixirPool } from "../../../typechain/MockTimeElixirPool";
 import { TestERC20 } from "../../../typechain/TestERC20";
 import { ElixirFactory } from "../../../typechain/ElixirFactory";
@@ -13,9 +13,39 @@ interface FactoryFixture {
   factory: ElixirFactory;
 }
 
+async function impersonateDeployer(wallet: Wallet) {
+  //  impersonating poolDeployer's account
+  const poolDeployerAddress = "0x427207B1Cdb6F2Ab8B1D21Ab77600f00b0a639a7";
+  await network.provider.request({
+    method: "hardhat_impersonateAccount",
+    params: [poolDeployerAddress],
+  });
+
+  const poolDeployer = await (ethers as any).getSigner(poolDeployerAddress);
+
+  //  fund the impersonated account
+  await wallet.sendTransaction({
+    to: poolDeployerAddress,
+    value: ethers.utils.parseEther("100"),
+  });
+
+  return poolDeployer;
+}
+
 async function factoryFixture(): Promise<FactoryFixture> {
+  let wallet: Wallet;
+  let poolDeployer: Wallet;
+  [wallet] = await (ethers as any).getSigners();
+
+  poolDeployer = await impersonateDeployer(wallet);
+
+  const poolFactory = await ethers.getContractFactory("ElixirPool");
+  const poolImplementation = await poolFactory.connect(poolDeployer).deploy();
+
   const factoryFactory = await ethers.getContractFactory("ElixirFactory");
-  const factory = (await factoryFactory.deploy()) as ElixirFactory;
+  const factory = (await factoryFactory.deploy(
+    poolImplementation.address
+  )) as ElixirFactory;
   return { factory };
 }
 
@@ -63,15 +93,24 @@ export const TEST_POOL_START_TIME = 1601906400;
 
 export const poolFixture: Fixture<PoolFixture> =
   async function (): Promise<PoolFixture> {
+    let wallet: Wallet;
+    let poolDeployer: Wallet;
+    [wallet] = await (ethers as any).getSigners();
+
     const { factory } = await factoryFixture();
     const { token0, token1, token2 } = await tokensFixture();
 
-    const MockTimeElixirPoolDeployerFactory = await ethers.getContractFactory(
-      "MockTimeElixirPoolDeployer"
-    );
-    const MockTimeElixirPoolFactory = await ethers.getContractFactory(
-      "MockTimeElixirPool"
-    );
+    // const MockTimeElixirPoolDeployerFactory = await ethers.getContractFactory(
+    //   "MockTimeElixirPoolDeployer"
+    // );
+    // const MockTimeElixirPoolFactory = await ethers.getContractFactory(
+    //   "MockTimeElixirPool"
+    // );
+
+    poolDeployer = await impersonateDeployer(wallet);
+
+    const poolFactory = await ethers.getContractFactory("ElixirPool");
+    const poolImplementation = await poolFactory.connect(poolDeployer).deploy();
 
     const calleeContractFactory = await ethers.getContractFactory(
       "TestElixirCallee"

@@ -12,7 +12,7 @@ import "../interfaces/callback/IElixirFlashCallback.sol";
 
 import "../interfaces/IElixirPool.sol";
 
-abstract contract TestElixirCallee is
+contract TestElixirCallee is
     IElixirMintCallback,
     IElixirSwapCallback,
     IElixirFlashCallback
@@ -109,11 +109,11 @@ abstract contract TestElixirCallee is
 
     event SwapCallback(int256 amount0Delta, int256 amount1Delta);
 
-    function ElixirSwapCallback(
+    function elixirSwapCallback(
         int256 amount0Delta,
         int256 amount1Delta,
         bytes calldata data
-    ) external {
+    ) external override {
         address sender = abi.decode(data, (address));
 
         emit SwapCallback(amount0Delta, amount1Delta);
@@ -154,11 +154,11 @@ abstract contract TestElixirCallee is
 
     event MintCallback(uint256 amount0Owed, uint256 amount1Owed);
 
-    function ElixirMintCallback(
+    function elixirMintCallback(
         uint256 amount0Owed,
         uint256 amount1Owed,
         bytes calldata data
-    ) external {
+    ) external override {
         address sender = abi.decode(data, (address));
 
         emit MintCallback(amount0Owed, amount1Owed);
@@ -194,11 +194,11 @@ abstract contract TestElixirCallee is
         );
     }
 
-    function ElixirFlashCallback(
+    function elixirFlashCallback(
         uint256 fee0,
         uint256 fee1,
         bytes calldata data
-    ) external {
+    ) external override {
         emit FlashCallback(fee0, fee1);
 
         (address sender, uint256 pay0, uint256 pay1) = abi.decode(
