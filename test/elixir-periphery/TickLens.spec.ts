@@ -7,7 +7,7 @@ import {
   ContractTransaction,
   Wallet,
 } from "ethers";
-import { ethers, waffle } from "hardhat";
+import { ethers, waffle, network } from "hardhat";
 import {
   MockTimeNonfungiblePositionManager,
   TestERC20,
@@ -30,6 +30,26 @@ describe("TickLens", () => {
     tokens: [TestERC20, TestERC20, TestERC20];
   }> = async (wallets, provider) => {
     const { factory, tokens, nft } = await completeFixture(wallets, provider);
+
+    ////// POOL IMPLEMENTATION DEPLOYMENT
+    //  impersonating poolDeployer's account
+    const poolDeployerAddress = "0x427207B1Cdb6F2Ab8B1D21Ab77600f00b0a639a7";
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [poolDeployerAddress],
+    });
+
+    const poolDeployer = await (ethers as any).getSigner(poolDeployerAddress);
+
+    //  fund the impersonated account
+    await wallets[0].sendTransaction({
+      to: poolDeployerAddress,
+      value: ethers.utils.parseEther("100"),
+    });
+
+    const poolFactory = await ethers.getContractFactory("ElixirPool");
+    const poolImplementation = await poolFactory.connect(poolDeployer).deploy();
+    //////
 
     for (const token of tokens) {
       await token.approve(nft.address, constants.MaxUint256);
@@ -83,7 +103,7 @@ describe("TickLens", () => {
         amount1Desired: 1000000,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 1,
+        deadline: 1633850000,
       };
 
       return nft.mint(liquidityParams);
@@ -105,7 +125,7 @@ describe("TickLens", () => {
         amount0Min: 0,
         amount1Min: 0,
         recipient: wallets[0].address,
-        deadline: 1,
+        deadline: 1633850000,
       };
 
       const { liquidity } = await nft.callStatic.mint(mintParams);

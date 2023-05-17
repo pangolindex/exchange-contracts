@@ -1,4 +1,4 @@
-import { waffle, ethers } from "hardhat";
+import { waffle, ethers, network } from "hardhat";
 import { constants, BigNumberish, Contract } from "ethers";
 import { Fixture } from "ethereum-waffle";
 import {
@@ -35,6 +35,27 @@ describe("PositionValue", async () => {
       wallets,
       provider
     );
+
+    ////// POOL IMPLEMENTATION DEPLOYMENT
+    //  impersonating poolDeployer's account
+    const poolDeployerAddress = "0x427207B1Cdb6F2Ab8B1D21Ab77600f00b0a639a7";
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [poolDeployerAddress],
+    });
+
+    const poolDeployer = await (ethers as any).getSigner(poolDeployerAddress);
+
+    //  fund the impersonated account
+    await wallets[0].sendTransaction({
+      to: poolDeployerAddress,
+      value: ethers.utils.parseEther("100"),
+    });
+
+    const poolFactory = await ethers.getContractFactory("ElixirPool");
+    const poolImplementation = await poolFactory.connect(poolDeployer).deploy();
+    //////
+
     const positionValueFactory = await ethers.getContractFactory(
       "PositionValueTest"
     );
@@ -109,7 +130,7 @@ describe("PositionValue", async () => {
         amount1Desired: amountDesired,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 10,
+        deadline: 1633850010,
       });
 
       const swapAmount = expandTo18Decimals(1_000);
@@ -119,7 +140,7 @@ describe("PositionValue", async () => {
       // accmuluate token0 fees
       await router.exactInput({
         recipient: wallets[0].address,
-        deadline: 1,
+        deadline: 1633850000,
         path: encodePath(
           [tokens[0].address, tokens[1].address],
           [FeeAmount.MEDIUM]
@@ -131,7 +152,7 @@ describe("PositionValue", async () => {
       // accmuluate token1 fees
       await router.exactInput({
         recipient: wallets[0].address,
-        deadline: 1,
+        deadline: 1633850000,
         path: encodePath(
           [tokens[1].address, tokens[0].address],
           [FeeAmount.MEDIUM]
@@ -183,7 +204,7 @@ describe("PositionValue", async () => {
         amount1Desired: amountDesired,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 10,
+        deadline: 1633850010,
       });
 
       const principal = await positionValue.principal(
@@ -207,7 +228,7 @@ describe("PositionValue", async () => {
         amount1Desired: amountDesired,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 10,
+        deadline: 1633850010,
       });
 
       const principal = await positionValue.principal(
@@ -231,7 +252,7 @@ describe("PositionValue", async () => {
         amount1Desired: amountDesired,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 10,
+        deadline: 1633850010,
       });
 
       const principal = await positionValue.principal(
@@ -255,7 +276,7 @@ describe("PositionValue", async () => {
         amount1Desired: amountDesired,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 10,
+        deadline: 1633850010,
       });
 
       const principal = await positionValue.principal(
@@ -279,7 +300,7 @@ describe("PositionValue", async () => {
         amount1Desired: amountDesired,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 10,
+        deadline: 1633850010,
       });
 
       const principal = await positionValue.principal(
@@ -303,7 +324,7 @@ describe("PositionValue", async () => {
         amount1Desired: amountDesired,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 10,
+        deadline: 1633850010,
       });
 
       await snapshotGasCost(
@@ -330,7 +351,7 @@ describe("PositionValue", async () => {
         amount1Desired: amountDesired,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 10,
+        deadline: 1633850010,
       });
     });
 
@@ -347,7 +368,7 @@ describe("PositionValue", async () => {
           amount1Desired: amountDesired,
           amount0Min: 0,
           amount1Min: 0,
-          deadline: 10,
+          deadline: 1633850010,
         });
 
         const swapAmount = expandTo18Decimals(1_000);
@@ -357,7 +378,7 @@ describe("PositionValue", async () => {
         // accmuluate token0 fees
         await router.exactInput({
           recipient: wallets[0].address,
-          deadline: 1,
+          deadline: 1633850000,
           path: encodePath(
             [tokens[0].address, tokens[1].address],
             [FeeAmount.MEDIUM]
@@ -369,7 +390,7 @@ describe("PositionValue", async () => {
         // accmuluate token1 fees
         await router.exactInput({
           recipient: wallets[0].address,
-          deadline: 1,
+          deadline: 1633850000,
           path: encodePath(
             [tokens[1].address, tokens[0].address],
             [FeeAmount.MEDIUM]
@@ -399,7 +420,7 @@ describe("PositionValue", async () => {
           amount1Desired: 100,
           amount0Min: 0,
           amount1Min: 0,
-          deadline: 1,
+          deadline: 1633850000,
         });
 
         const swapAmount = expandTo18Decimals(1_000);
@@ -408,7 +429,7 @@ describe("PositionValue", async () => {
         // accmuluate more token0 fees after clearing initial amount
         await router.exactInput({
           recipient: wallets[0].address,
-          deadline: 1,
+          deadline: 1633850000,
           path: encodePath(
             [tokens[0].address, tokens[1].address],
             [FeeAmount.MEDIUM]
@@ -446,7 +467,7 @@ describe("PositionValue", async () => {
           amount1Desired: expandTo18Decimals(10_000),
           amount0Min: 0,
           amount1Min: 0,
-          deadline: 10,
+          deadline: 1633850010,
         });
 
         await tokens[0].approve(router.address, constants.MaxUint256);
@@ -455,7 +476,7 @@ describe("PositionValue", async () => {
         // accumulate token1 fees
         await router.exactInput({
           recipient: wallets[0].address,
-          deadline: 1,
+          deadline: 1633850000,
           path: encodePath(
             [tokens[1].address, tokens[0].address],
             [FeeAmount.MEDIUM]
@@ -467,7 +488,7 @@ describe("PositionValue", async () => {
         // accumulate token0 fees and push price below tickLower
         await router.exactInput({
           recipient: wallets[0].address,
-          deadline: 1,
+          deadline: 1633850000,
           path: encodePath(
             [tokens[0].address, tokens[1].address],
             [FeeAmount.MEDIUM]
@@ -508,7 +529,7 @@ describe("PositionValue", async () => {
           amount1Desired: expandTo18Decimals(10_000),
           amount0Min: 0,
           amount1Min: 0,
-          deadline: 10,
+          deadline: 1633850010,
         });
 
         await tokens[0].approve(router.address, constants.MaxUint256);
@@ -517,7 +538,7 @@ describe("PositionValue", async () => {
         // accumulate token0 fees
         await router.exactInput({
           recipient: wallets[0].address,
-          deadline: 1,
+          deadline: 1633850000,
           path: encodePath(
             [tokens[0].address, tokens[1].address],
             [FeeAmount.MEDIUM]
@@ -529,7 +550,7 @@ describe("PositionValue", async () => {
         // accumulate token1 fees and push price above tickUpper
         await router.exactInput({
           recipient: wallets[0].address,
-          deadline: 1,
+          deadline: 1633850000,
           path: encodePath(
             [tokens[1].address, tokens[0].address],
             [FeeAmount.MEDIUM]

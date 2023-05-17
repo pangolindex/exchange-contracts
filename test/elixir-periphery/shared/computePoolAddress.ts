@@ -1,7 +1,9 @@
 import { bytecode } from "../../../artifacts/contracts/elixir-core/ElixirPool.sol/ElixirPool.json";
 import { utils } from "ethers";
 
-export const POOL_BYTECODE_HASH = utils.keccak256(bytecode);
+// export const POOL_BYTECODE_HASH = utils.keccak256(bytecode);
+export const POOL_BYTECODE_HASH =
+  "0x41a723f9e6457830b1b7a44df4435fab88581d073226894b33131815dd674c22";
 
 export function computePoolAddress(
   factoryAddress: string,

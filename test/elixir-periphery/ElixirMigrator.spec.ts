@@ -1,6 +1,6 @@
 import { Fixture } from "ethereum-waffle";
 import { constants, Contract, Wallet } from "ethers";
-import { ethers, waffle } from "hardhat";
+import { ethers, waffle, network } from "hardhat";
 import {
   IPangolinPair,
   IElixirFactory,
@@ -35,6 +35,26 @@ describe("ElixirMigrator", () => {
       wallets,
       provider
     );
+
+    ////// POOL IMPLEMENTATION DEPLOYMENT
+    //  impersonating poolDeployer's account
+    const poolDeployerAddress = "0x427207B1Cdb6F2Ab8B1D21Ab77600f00b0a639a7";
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [poolDeployerAddress],
+    });
+
+    const poolDeployer = await (ethers as any).getSigner(poolDeployerAddress);
+
+    //  fund the impersonated account
+    await wallets[0].sendTransaction({
+      to: poolDeployerAddress,
+      value: ethers.utils.parseEther("100"),
+    });
+
+    const poolFactory = await ethers.getContractFactory("ElixirPool");
+    const poolImplementation = await poolFactory.connect(poolDeployer).deploy();
+    //////
 
     const { factory: factoryV2 } = await v2FactoryFixture(wallets, provider);
 
@@ -142,7 +162,7 @@ describe("ElixirMigrator", () => {
           amount0Min: 9000,
           amount1Min: 9000,
           recipient: wallet.address,
-          deadline: 1,
+          deadline: 1633850000,
           refundAsETH: false,
         })
       ).to.be.reverted;
@@ -170,7 +190,7 @@ describe("ElixirMigrator", () => {
         amount0Min: 9000,
         amount1Min: 9000,
         recipient: wallet.address,
-        deadline: 1,
+        deadline: 1633850000,
         refundAsETH: false,
       });
 
@@ -211,7 +231,7 @@ describe("ElixirMigrator", () => {
         amount0Min: 4500,
         amount1Min: 4500,
         recipient: wallet.address,
-        deadline: 1,
+        deadline: 1633850000,
         refundAsETH: false,
       });
 
@@ -258,7 +278,7 @@ describe("ElixirMigrator", () => {
         amount0Min: 4500,
         amount1Min: 8999,
         recipient: wallet.address,
-        deadline: 1,
+        deadline: 1633850000,
         refundAsETH: false,
       });
 
@@ -311,7 +331,7 @@ describe("ElixirMigrator", () => {
         amount0Min: 8999,
         amount1Min: 4500,
         recipient: wallet.address,
-        deadline: 1,
+        deadline: 1633850000,
         refundAsETH: false,
       });
 
@@ -364,7 +384,7 @@ describe("ElixirMigrator", () => {
           amount0Min: 4500,
           amount1Min: 8999,
           recipient: wallet.address,
-          deadline: 1,
+          deadline: 1633850000,
           refundAsETH: true,
         })
       )
@@ -417,7 +437,7 @@ describe("ElixirMigrator", () => {
           amount0Min: 8999,
           amount1Min: 4500,
           recipient: wallet.address,
-          deadline: 1,
+          deadline: 1633850000,
           refundAsETH: true,
         })
       )
@@ -468,7 +488,7 @@ describe("ElixirMigrator", () => {
           amount0Min: 9000,
           amount1Min: 9000,
           recipient: wallet.address,
-          deadline: 1,
+          deadline: 1633850000,
           refundAsETH: false,
         })
       );

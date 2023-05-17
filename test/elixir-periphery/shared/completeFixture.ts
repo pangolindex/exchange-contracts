@@ -9,7 +9,7 @@ import {
   NonfungibleTokenPositionDescriptor,
   TestERC20,
   IElixirFactory,
-} from "../../typechain";
+} from "../../../typechain";
 
 const completeFixture: Fixture<{
   weth9: IWETH9;

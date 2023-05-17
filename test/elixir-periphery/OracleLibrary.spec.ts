@@ -258,6 +258,7 @@ describe("OracleLibrary", () => {
         emptyTickCumulatives,
         emptySPL,
         initializeds,
+        emptySPL,
         emptyTick,
         observationCardinality,
         observationIndex,
@@ -350,6 +351,7 @@ describe("OracleLibrary", () => {
         emptyTickCumulatives,
         emptySPL,
         initializeds,
+        emptySPL,
         emptyTick,
         observationCardinality,
         observationIndex,
@@ -387,6 +389,7 @@ describe("OracleLibrary", () => {
     let tickCumulatives: number[];
     let liquidityValues: BigNumber[];
     let initializeds: boolean[];
+    let rewardValues: BigNumber[];
     let slot0Tick: number;
     let observationCardinality: number;
     let observationIndex: number;
@@ -405,6 +408,7 @@ describe("OracleLibrary", () => {
         tickCumulatives,
         liquidityValues,
         initializeds,
+        rewardValues,
         slot0Tick,
         observationCardinality,
         observationIndex,
@@ -418,6 +422,7 @@ describe("OracleLibrary", () => {
       tickCumulatives = [0, 0, 0, 0];
       liquidityValues = [BN0, BN0, BN0, BN0];
       initializeds = [false, false, false, false];
+      rewardValues = [BN0, BN0, BN0, BN0];
       slot0Tick = 0;
       observationCardinality = 0;
       observationIndex = 0;
@@ -447,6 +452,7 @@ describe("OracleLibrary", () => {
         BN0,
       ];
       initializeds = [true, true, true, false];
+      rewardValues = [BN0, BN0, BN0, BN0];
       observationCardinality = 3;
       observationIndex = 2;
       slot0Tick = 6;
@@ -472,6 +478,7 @@ describe("OracleLibrary", () => {
         BN0,
       ];
       initializeds = [true, false, false, false];
+      rewardValues = [BN0, BN0, BN0, BN0];
       observationCardinality = 1;
       observationIndex = 0;
       slot0Tick = 4;
@@ -496,6 +503,7 @@ describe("OracleLibrary", () => {
         BN0,
       ];
       initializeds = [true, false, false, false];
+      rewardValues = [BN0, BN0, BN0, BN0];
       tickCumulatives = [8, 0, 0, 0];
       slot0Tick = 4;
       lastObservationCurrentTimestamp = true;
@@ -526,6 +534,7 @@ describe("OracleLibrary", () => {
         BigNumber.from("939565063595995342933046073701273770"),
         BN0,
       ];
+      rewardValues = [BN0, BN0, BN0, BN0];
       slot0Tick = 3;
       lastObservationCurrentTimestamp = true;
 

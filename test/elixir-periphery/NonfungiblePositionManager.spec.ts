@@ -1,7 +1,7 @@
 import { abi as IElixirPoolABI } from "../../artifacts/contracts/elixir-core/interfaces/IElixirPool.sol/IElixirPool.json";
 import { Fixture } from "ethereum-waffle";
 import { BigNumberish, constants, Wallet } from "ethers";
-import { ethers, waffle } from "hardhat";
+import { ethers, waffle, network } from "hardhat";
 import {
   IElixirFactory,
   IWETH9,
@@ -36,6 +36,26 @@ describe("NonfungiblePositionManager", () => {
     weth9: IWETH9;
     router: SwapRouter;
   }> = async (wallets, provider) => {
+    ////// POOL IMPLEMENTATION DEPLOYMENT
+    //  impersonating poolDeployer's account
+    const poolDeployerAddress = "0x427207B1Cdb6F2Ab8B1D21Ab77600f00b0a639a7";
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [poolDeployerAddress],
+    });
+
+    const poolDeployer = await (ethers as any).getSigner(poolDeployerAddress);
+
+    //  fund the impersonated account
+    await wallets[0].sendTransaction({
+      to: poolDeployerAddress,
+      value: ethers.utils.parseEther("100"),
+    });
+
+    const poolFactory = await ethers.getContractFactory("ElixirPool");
+    const poolImplementation = await poolFactory.connect(poolDeployer).deploy();
+    //////
+
     const { weth9, factory, tokens, nft, router } = await completeFixture(
       wallets,
       provider
@@ -197,7 +217,7 @@ describe("NonfungiblePositionManager", () => {
           amount0Min: 0,
           amount1Min: 0,
           recipient: wallet.address,
-          deadline: 1,
+          deadline: 1633850000,
           fee: FeeAmount.MEDIUM,
         })
       ).to.be.reverted;
@@ -223,7 +243,7 @@ describe("NonfungiblePositionManager", () => {
           amount0Min: 0,
           amount1Min: 0,
           recipient: wallet.address,
-          deadline: 1,
+          deadline: 1633850000,
         })
       ).to.be.revertedWith("STF");
     });
@@ -247,7 +267,7 @@ describe("NonfungiblePositionManager", () => {
         amount1Desired: 15,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 10,
+        deadline: 1633850010,
       });
       expect(await nft.balanceOf(other.address)).to.eq(1);
       expect(await nft.tokenOfOwnerByIndex(other.address, 0)).to.eq(1);
@@ -303,7 +323,7 @@ describe("NonfungiblePositionManager", () => {
           amount1Desired: 100,
           amount0Min: 0,
           amount1Min: 0,
-          deadline: 1,
+          deadline: 1633850000,
         },
       ]);
 
@@ -345,7 +365,7 @@ describe("NonfungiblePositionManager", () => {
           amount1Desired: 100,
           amount0Min: 0,
           amount1Min: 0,
-          deadline: 10,
+          deadline: 1633850010,
         })
       );
     });
@@ -374,7 +394,7 @@ describe("NonfungiblePositionManager", () => {
                 amount1Desired: 100,
                 amount0Min: 0,
                 amount1Min: 0,
-                deadline: 10,
+                deadline: 1633850010,
               },
             ]),
             nft.interface.encodeFunctionData("refundETH"),
@@ -408,7 +428,7 @@ describe("NonfungiblePositionManager", () => {
                 amount1Desired: 100,
                 amount0Min: 0,
                 amount1Min: 0,
-                deadline: 10,
+                deadline: 1633850010,
               },
             ]),
             nft.interface.encodeFunctionData("refundETH"),
@@ -437,7 +457,7 @@ describe("NonfungiblePositionManager", () => {
         amount1Desired: 100,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 10,
+        deadline: 1633850010,
       });
 
       await snapshotGasCost(
@@ -452,7 +472,7 @@ describe("NonfungiblePositionManager", () => {
           amount1Desired: 100,
           amount0Min: 0,
           amount1Min: 0,
-          deadline: 10,
+          deadline: 1633850010,
         })
       );
     });
@@ -476,7 +496,7 @@ describe("NonfungiblePositionManager", () => {
         amount1Desired: 100,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 10,
+        deadline: 1633850010,
       });
 
       await snapshotGasCost(
@@ -495,7 +515,7 @@ describe("NonfungiblePositionManager", () => {
           amount1Desired: 100,
           amount0Min: 0,
           amount1Min: 0,
-          deadline: 10,
+          deadline: 1633850010,
         })
       );
     });
@@ -522,7 +542,7 @@ describe("NonfungiblePositionManager", () => {
         amount1Desired: 1000,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 1,
+        deadline: 1633850000,
       });
     });
 
@@ -533,7 +553,7 @@ describe("NonfungiblePositionManager", () => {
         amount1Desired: 100,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 1,
+        deadline: 1633850000,
       });
       const { liquidity } = await nft.positions(tokenId);
       expect(liquidity).to.eq(1100);
@@ -565,7 +585,7 @@ describe("NonfungiblePositionManager", () => {
           amount1Desired: 100,
           amount0Min: 0,
           amount1Min: 0,
-          deadline: 1,
+          deadline: 1633850000,
         },
       ]);
       const refundETHData = nft.interface.encodeFunctionData("unwrapWETH9", [
@@ -585,7 +605,7 @@ describe("NonfungiblePositionManager", () => {
             amount1Desired: 100,
             amount0Min: 0,
             amount1Min: 0,
-            deadline: 1,
+            deadline: 1633850000,
           },
         ]
       );
@@ -602,7 +622,7 @@ describe("NonfungiblePositionManager", () => {
           amount1Desired: 100,
           amount0Min: 0,
           amount1Min: 0,
-          deadline: 1,
+          deadline: 1633850000,
         })
       );
     });
@@ -629,7 +649,7 @@ describe("NonfungiblePositionManager", () => {
         amount1Desired: 100,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 1,
+        deadline: 1633850000,
       });
     });
 
@@ -655,7 +675,7 @@ describe("NonfungiblePositionManager", () => {
           liquidity: 50,
           amount0Min: 0,
           amount1Min: 0,
-          deadline: 1,
+          deadline: 1633850000,
         })
       ).to.be.revertedWith("Not approved");
     });
@@ -666,19 +686,23 @@ describe("NonfungiblePositionManager", () => {
         liquidity: 25,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 1,
+        deadline: 1633850000,
       });
       const { liquidity } = await nft.positions(tokenId);
       expect(liquidity).to.eq(75);
     });
 
     it("is payable", async () => {
-      await nft
-        .connect(other)
-        .decreaseLiquidity(
-          { tokenId, liquidity: 25, amount0Min: 0, amount1Min: 0, deadline: 1 },
-          { value: 1 }
-        );
+      await nft.connect(other).decreaseLiquidity(
+        {
+          tokenId,
+          liquidity: 25,
+          amount0Min: 0,
+          amount1Min: 0,
+          deadline: 1633850000,
+        },
+        { value: 1 }
+      );
     });
 
     it("accounts for tokens owed", async () => {
@@ -687,7 +711,7 @@ describe("NonfungiblePositionManager", () => {
         liquidity: 25,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 1,
+        deadline: 1633850000,
       });
       const { tokensOwed0, tokensOwed1 } = await nft.positions(tokenId);
       expect(tokensOwed0).to.eq(24);
@@ -700,7 +724,7 @@ describe("NonfungiblePositionManager", () => {
         liquidity: 100,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 1,
+        deadline: 1633850000,
       });
       const { liquidity } = await nft.positions(tokenId);
       expect(liquidity).to.eq(0);
@@ -713,7 +737,7 @@ describe("NonfungiblePositionManager", () => {
           liquidity: 101,
           amount0Min: 0,
           amount1Min: 0,
-          deadline: 1,
+          deadline: 1633850000,
         })
       ).to.be.reverted;
     });
@@ -730,7 +754,7 @@ describe("NonfungiblePositionManager", () => {
         amount1Desired: 200,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 1,
+        deadline: 1633850000,
       });
       await expect(
         nft.connect(other).decreaseLiquidity({
@@ -738,7 +762,7 @@ describe("NonfungiblePositionManager", () => {
           liquidity: 101,
           amount0Min: 0,
           amount1Min: 0,
-          deadline: 1,
+          deadline: 1633850000,
         })
       ).to.be.reverted;
     });
@@ -750,7 +774,7 @@ describe("NonfungiblePositionManager", () => {
           liquidity: 50,
           amount0Min: 0,
           amount1Min: 0,
-          deadline: 1,
+          deadline: 1633850000,
         })
       );
     });
@@ -762,7 +786,7 @@ describe("NonfungiblePositionManager", () => {
           liquidity: 100,
           amount0Min: 0,
           amount1Min: 0,
-          deadline: 1,
+          deadline: 1633850000,
         })
       );
     });
@@ -789,7 +813,7 @@ describe("NonfungiblePositionManager", () => {
         amount1Desired: 100,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 1,
+        deadline: 1633850000,
       });
     });
 
@@ -836,7 +860,7 @@ describe("NonfungiblePositionManager", () => {
         liquidity: 50,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 1,
+        deadline: 1633850000,
       });
       const poolAddress = computePoolAddress(
         factory.address,
@@ -863,7 +887,7 @@ describe("NonfungiblePositionManager", () => {
         liquidity: 50,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 1,
+        deadline: 1633850000,
       });
       await snapshotGasCost(
         nft.connect(other).collect({
@@ -881,7 +905,7 @@ describe("NonfungiblePositionManager", () => {
         liquidity: 50,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 1,
+        deadline: 1633850000,
       });
       await snapshotGasCost(
         nft.connect(other).collect({
@@ -899,7 +923,7 @@ describe("NonfungiblePositionManager", () => {
         liquidity: 50,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 1,
+        deadline: 1633850000,
       });
       await snapshotGasCost(
         nft.connect(other).collect({
@@ -933,7 +957,7 @@ describe("NonfungiblePositionManager", () => {
         amount1Desired: 100,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 1,
+        deadline: 1633850000,
       });
     });
 
@@ -955,7 +979,7 @@ describe("NonfungiblePositionManager", () => {
         liquidity: 50,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 1,
+        deadline: 1633850000,
       });
       await expect(nft.connect(other).burn(tokenId)).to.be.revertedWith(
         "Not cleared"
@@ -968,7 +992,7 @@ describe("NonfungiblePositionManager", () => {
         liquidity: 100,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 1,
+        deadline: 1633850000,
       });
       await expect(nft.connect(other).burn(tokenId)).to.be.revertedWith(
         "Not cleared"
@@ -981,7 +1005,7 @@ describe("NonfungiblePositionManager", () => {
         liquidity: 100,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 1,
+        deadline: 1633850000,
       });
       await nft.connect(other).collect({
         tokenId,
@@ -1001,7 +1025,7 @@ describe("NonfungiblePositionManager", () => {
         liquidity: 100,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 1,
+        deadline: 1633850000,
       });
       await nft.connect(other).collect({
         tokenId,
@@ -1034,7 +1058,7 @@ describe("NonfungiblePositionManager", () => {
         amount1Desired: 100,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 1,
+        deadline: 1633850000,
       });
     });
 
@@ -1096,7 +1120,7 @@ describe("NonfungiblePositionManager", () => {
           amount1Desired: 100,
           amount0Min: 0,
           amount1Min: 0,
-          deadline: 1,
+          deadline: 1633850000,
         });
       });
 
@@ -1106,9 +1130,9 @@ describe("NonfungiblePositionManager", () => {
           nft,
           wallet.address,
           tokenId,
-          1
+          1633850000
         );
-        await nft.permit(wallet.address, tokenId, 1, v, r, s);
+        await nft.permit(wallet.address, tokenId, 1633850000, v, r, s);
         expect((await nft.positions(tokenId)).nonce).to.eq(1);
         expect((await nft.positions(tokenId)).operator).to.eq(wallet.address);
       });
@@ -1119,11 +1143,11 @@ describe("NonfungiblePositionManager", () => {
           nft,
           wallet.address,
           tokenId,
-          1
+          1633850000
         );
-        await nft.permit(wallet.address, tokenId, 1, v, r, s);
-        await expect(nft.permit(wallet.address, tokenId, 1, v, r, s)).to.be
-          .reverted;
+        await nft.permit(wallet.address, tokenId, 1633850000, v, r, s);
+        await expect(nft.permit(wallet.address, tokenId, 1633850000, v, r, s))
+          .to.be.reverted;
       });
 
       it("fails with invalid signature", async () => {
@@ -1132,10 +1156,10 @@ describe("NonfungiblePositionManager", () => {
           nft,
           wallet.address,
           tokenId,
-          1
+          1633850000
         );
         await expect(
-          nft.permit(wallet.address, tokenId, 1, v + 3, r, s)
+          nft.permit(wallet.address, tokenId, 1633850000, v + 3, r, s)
         ).to.be.revertedWith("Invalid signature");
       });
 
@@ -1145,24 +1169,24 @@ describe("NonfungiblePositionManager", () => {
           nft,
           wallet.address,
           tokenId,
-          1
+          1633850000
         );
         await expect(
-          nft.permit(wallet.address, tokenId, 1, v, r, s)
+          nft.permit(wallet.address, tokenId, 1633850000, v, r, s)
         ).to.be.revertedWith("Unauthorized");
       });
 
       it("fails with expired signature", async () => {
-        await nft.setTime(2);
+        await nft.setTime(1633850010);
         const { v, r, s } = await getPermitNFTSignature(
           other,
           nft,
           wallet.address,
           tokenId,
-          1
+          1633850000
         );
         await expect(
-          nft.permit(wallet.address, tokenId, 1, v, r, s)
+          nft.permit(wallet.address, tokenId, 1633850000, v, r, s)
         ).to.be.revertedWith("Permit expired");
       });
 
@@ -1172,9 +1196,11 @@ describe("NonfungiblePositionManager", () => {
           nft,
           wallet.address,
           tokenId,
-          1
+          1633850000
         );
-        await snapshotGasCost(nft.permit(wallet.address, tokenId, 1, v, r, s));
+        await snapshotGasCost(
+          nft.permit(wallet.address, tokenId, 1633850000, v, r, s)
+        );
       });
     });
     describe("owned by verifying contract", () => {
@@ -1204,7 +1230,7 @@ describe("NonfungiblePositionManager", () => {
           amount1Desired: 100,
           amount0Min: 0,
           amount1Min: 0,
-          deadline: 1,
+          deadline: 1633850000,
         });
       });
 
@@ -1214,10 +1240,10 @@ describe("NonfungiblePositionManager", () => {
           nft,
           wallet.address,
           tokenId,
-          1
+          1633850000
         );
         await testPositionNFTOwner.setOwner(other.address);
-        await nft.permit(wallet.address, tokenId, 1, v, r, s);
+        await nft.permit(wallet.address, tokenId, 1633850000, v, r, s);
         expect((await nft.positions(tokenId)).nonce).to.eq(1);
         expect((await nft.positions(tokenId)).operator).to.eq(wallet.address);
       });
@@ -1228,11 +1254,11 @@ describe("NonfungiblePositionManager", () => {
           nft,
           wallet.address,
           tokenId,
-          1
+          1633850000
         );
         await testPositionNFTOwner.setOwner(wallet.address);
         await expect(
-          nft.permit(wallet.address, tokenId, 1, v, r, s)
+          nft.permit(wallet.address, tokenId, 1633850000, v, r, s)
         ).to.be.revertedWith("Unauthorized");
       });
 
@@ -1242,26 +1268,26 @@ describe("NonfungiblePositionManager", () => {
           nft,
           wallet.address,
           tokenId,
-          1
+          1633850000
         );
         await testPositionNFTOwner.setOwner(other.address);
         await expect(
-          nft.permit(wallet.address, tokenId, 1, v, r, s)
+          nft.permit(wallet.address, tokenId, 1633850000, v, r, s)
         ).to.be.revertedWith("Unauthorized");
       });
 
       it("fails with expired signature", async () => {
-        await nft.setTime(2);
+        await nft.setTime(1633850010);
         const { v, r, s } = await getPermitNFTSignature(
           other,
           nft,
           wallet.address,
           tokenId,
-          1
+          1633850000
         );
         await testPositionNFTOwner.setOwner(other.address);
         await expect(
-          nft.permit(wallet.address, tokenId, 1, v, r, s)
+          nft.permit(wallet.address, tokenId, 1633850000, v, r, s)
         ).to.be.revertedWith("Permit expired");
       });
 
@@ -1271,10 +1297,12 @@ describe("NonfungiblePositionManager", () => {
           nft,
           wallet.address,
           tokenId,
-          1
+          1633850000
         );
         await testPositionNFTOwner.setOwner(other.address);
-        await snapshotGasCost(nft.permit(wallet.address, tokenId, 1, v, r, s));
+        await snapshotGasCost(
+          nft.permit(wallet.address, tokenId, 1633850000, v, r, s)
+        );
       });
     });
   });
@@ -1300,7 +1328,7 @@ describe("NonfungiblePositionManager", () => {
         amount1Desired: 100,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 1,
+        deadline: 1633850000,
       });
     });
 
@@ -1321,7 +1349,7 @@ describe("NonfungiblePositionManager", () => {
     }) {
       const decreaseLiquidityData = nft.interface.encodeFunctionData(
         "decreaseLiquidity",
-        [{ tokenId, liquidity, amount0Min, amount1Min, deadline: 1 }]
+        [{ tokenId, liquidity, amount0Min, amount1Min, deadline: 1633850000 }]
       );
       const collectData = nft.interface.encodeFunctionData("collect", [
         {
@@ -1394,7 +1422,7 @@ describe("NonfungiblePositionManager", () => {
         amount1Desired: 100,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 1,
+        deadline: 1633850000,
       });
     });
 
@@ -1435,7 +1463,7 @@ describe("NonfungiblePositionManager", () => {
         amount1Desired: 100,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 1,
+        deadline: 1633850000,
         recipient: wallet.address,
       });
       // nft 2 earns 75% of fees
@@ -1450,7 +1478,7 @@ describe("NonfungiblePositionManager", () => {
         amount1Desired: 300,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 1,
+        deadline: 1633850000,
         recipient: wallet.address,
       });
     });
@@ -1461,7 +1489,7 @@ describe("NonfungiblePositionManager", () => {
         await tokens[0].approve(router.address, swapAmount);
         await router.exactInput({
           recipient: wallet.address,
-          deadline: 1,
+          deadline: 1633850000,
           path: encodePath(
             [tokens[0].address, tokens[1].address],
             [FeeAmount.MEDIUM]
@@ -1551,7 +1579,7 @@ describe("NonfungiblePositionManager", () => {
         amount1Desired: 15,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 10,
+        deadline: 1633850010,
       });
 
       await snapshotGasCost(positionsGasTest.getGasCostOfPositions(1));

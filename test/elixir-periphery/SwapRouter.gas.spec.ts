@@ -1,7 +1,7 @@
 import { abi as IElixirPoolABI } from "../../artifacts/contracts/elixir-core/interfaces/IElixirPool.sol/IElixirPool.json";
 import { Fixture } from "ethereum-waffle";
 import { BigNumber, constants, ContractTransaction, Wallet } from "ethers";
-import { ethers, waffle } from "hardhat";
+import { ethers, waffle, network } from "hardhat";
 import {
   IElixirPool,
   IWETH9,
@@ -32,6 +32,26 @@ describe("SwapRouter gas tests", function () {
       wallets,
       provider
     );
+
+    ////// POOL IMPLEMENTATION DEPLOYMENT
+    //  impersonating poolDeployer's account
+    const poolDeployerAddress = "0x427207B1Cdb6F2Ab8B1D21Ab77600f00b0a639a7";
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [poolDeployerAddress],
+    });
+
+    const poolDeployer = await (ethers as any).getSigner(poolDeployerAddress);
+
+    //  fund the impersonated account
+    await wallets[0].sendTransaction({
+      to: poolDeployerAddress,
+      value: ethers.utils.parseEther("100"),
+    });
+
+    const poolFactory = await ethers.getContractFactory("ElixirPool");
+    const poolImplementation = await poolFactory.connect(poolDeployer).deploy();
+    //////
 
     // approve & fund wallets
     for (const token of tokens) {
@@ -64,7 +84,7 @@ describe("SwapRouter gas tests", function () {
         amount1Desired: 1000000,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 1,
+        deadline: 1633850000,
       };
 
       return nft.mint(liquidityParams);
@@ -133,7 +153,7 @@ describe("SwapRouter gas tests", function () {
         new Array(tokens.length - 1).fill(FeeAmount.MEDIUM)
       ),
       recipient: outputIsWETH9 ? constants.AddressZero : trader.address,
-      deadline: 1,
+      deadline: 1633850000,
       amountIn,
       amountOutMinimum: outputIsWETH9 ? 0 : amountOutMinimum, // save on calldata,
     };
@@ -171,7 +191,7 @@ describe("SwapRouter gas tests", function () {
       fee: FeeAmount.MEDIUM,
       sqrtPriceLimitX96: sqrtPriceLimitX96 ?? 0,
       recipient: outputIsWETH9 ? constants.AddressZero : trader.address,
-      deadline: 1,
+      deadline: 1633850000,
       amountIn,
       amountOutMinimum: outputIsWETH9 ? 0 : amountOutMinimum, // save on calldata
     };
@@ -208,7 +228,7 @@ describe("SwapRouter gas tests", function () {
         new Array(tokens.length - 1).fill(FeeAmount.MEDIUM)
       ),
       recipient: outputIsWETH9 ? constants.AddressZero : trader.address,
-      deadline: 1,
+      deadline: 1633850000,
       amountOut,
       amountInMaximum,
     };
@@ -244,7 +264,7 @@ describe("SwapRouter gas tests", function () {
       tokenOut,
       fee: FeeAmount.MEDIUM,
       recipient: outputIsWETH9 ? constants.AddressZero : trader.address,
-      deadline: 1,
+      deadline: 1633850000,
       amountOut,
       amountInMaximum,
       sqrtPriceLimitX96: sqrtPriceLimitX96 ?? 0,
@@ -326,7 +346,9 @@ describe("SwapRouter gas tests", function () {
     });
 
     it("0 -> 1 minimal", async () => {
-      const calleeFactory = await ethers.getContractFactory("TestElixirCallee");
+      const calleeFactory = await ethers.getContractFactory(
+        "contracts/elixir-periphery/test/TestElixirCallee.sol:TestElixirCallee"
+      );
       const callee = await calleeFactory.deploy();
 
       await tokens[0]
@@ -375,7 +397,7 @@ describe("SwapRouter gas tests", function () {
           [FeeAmount.MEDIUM]
         ),
         recipient: constants.AddressZero,
-        deadline: 1,
+        deadline: 1633850000,
         amountIn: 3,
         amountOutMinimum: 0, // save on calldata
       };
@@ -386,7 +408,7 @@ describe("SwapRouter gas tests", function () {
           [FeeAmount.MEDIUM]
         ),
         recipient: constants.AddressZero,
-        deadline: 1,
+        deadline: 1633850000,
         amountIn: 3,
         amountOutMinimum: 0, // save on calldata
       };
@@ -413,7 +435,7 @@ describe("SwapRouter gas tests", function () {
           [FeeAmount.MEDIUM]
         ),
         recipient: trader.address,
-        deadline: 1,
+        deadline: 1633850000,
         amountIn: 3,
         amountOutMinimum: 1,
       };
@@ -424,7 +446,7 @@ describe("SwapRouter gas tests", function () {
           [FeeAmount.MEDIUM]
         ),
         recipient: trader.address,
-        deadline: 1,
+        deadline: 1633850000,
         amountIn: 3,
         amountOutMinimum: 1,
       };
@@ -435,7 +457,7 @@ describe("SwapRouter gas tests", function () {
           [FeeAmount.MEDIUM]
         ),
         recipient: trader.address,
-        deadline: 1,
+        deadline: 1633850000,
         amountIn: 3,
         amountOutMinimum: 1,
       };
@@ -456,7 +478,7 @@ describe("SwapRouter gas tests", function () {
     const swap0 = {
       path: encodePath([weth9.address, tokens[0].address], [FeeAmount.MEDIUM]),
       recipient: trader.address,
-      deadline: 1,
+      deadline: 1633850000,
       amountIn: 3,
       amountOutMinimum: 1,
     };
@@ -467,7 +489,7 @@ describe("SwapRouter gas tests", function () {
         [FeeAmount.MEDIUM]
       ),
       recipient: trader.address,
-      deadline: 1,
+      deadline: 1633850000,
       amountIn: 3,
       amountOutMinimum: 1,
     };

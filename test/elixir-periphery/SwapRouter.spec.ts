@@ -6,7 +6,7 @@ import {
   ContractTransaction,
   Wallet,
 } from "ethers";
-import { waffle, ethers } from "hardhat";
+import { waffle, ethers, network } from "hardhat";
 import {
   IWETH9,
   MockTimeNonfungiblePositionManager,
@@ -38,6 +38,26 @@ describe("SwapRouter", function () {
       wallets,
       provider
     );
+
+    ////// POOL IMPLEMENTATION DEPLOYMENT
+    //  impersonating poolDeployer's account
+    const poolDeployerAddress = "0x427207B1Cdb6F2Ab8B1D21Ab77600f00b0a639a7";
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [poolDeployerAddress],
+    });
+
+    const poolDeployer = await (ethers as any).getSigner(poolDeployerAddress);
+
+    //  fund the impersonated account
+    await wallets[0].sendTransaction({
+      to: poolDeployerAddress,
+      value: ethers.utils.parseEther("100"),
+    });
+
+    const poolFactory = await ethers.getContractFactory("ElixirPool");
+    const poolImplementation = await poolFactory.connect(poolDeployer).deploy();
+    //////
 
     // approve & fund wallets
     for (const token of tokens) {
@@ -135,7 +155,7 @@ describe("SwapRouter", function () {
         amount1Desired: 1000000,
         amount0Min: 0,
         amount1Min: 0,
-        deadline: 1,
+        deadline: 1633850000,
       };
 
       return nft.mint(liquidityParams);
@@ -169,7 +189,7 @@ describe("SwapRouter", function () {
             new Array(tokens.length - 1).fill(FeeAmount.MEDIUM)
           ),
           recipient: outputIsWETH9 ? constants.AddressZero : trader.address,
-          deadline: 1,
+          deadline: 1633850000,
           amountIn,
           amountOutMinimum,
         };
@@ -459,7 +479,7 @@ describe("SwapRouter", function () {
                   "1461446703485210103287273052203988822378723970341"
                 ),
           recipient: outputIsWETH9 ? constants.AddressZero : trader.address,
-          deadline: 1,
+          deadline: 1633850000,
           amountIn,
           amountOutMinimum,
         };
@@ -617,7 +637,7 @@ describe("SwapRouter", function () {
             new Array(tokens.length - 1).fill(FeeAmount.MEDIUM)
           ),
           recipient: outputIsWETH9 ? constants.AddressZero : trader.address,
-          deadline: 1,
+          deadline: 1633850000,
           amountOut,
           amountInMaximum,
         };
@@ -901,7 +921,7 @@ describe("SwapRouter", function () {
           tokenOut,
           fee: FeeAmount.MEDIUM,
           recipient: outputIsWETH9 ? constants.AddressZero : trader.address,
-          deadline: 1,
+          deadline: 1633850000,
           amountOut,
           amountInMaximum,
           sqrtPriceLimitX96:
@@ -1058,7 +1078,7 @@ describe("SwapRouter", function () {
             [FeeAmount.MEDIUM]
           ),
           recipient: router.address,
-          deadline: 1,
+          deadline: 1633850000,
           amountIn: 102,
           amountOutMinimum,
         };
@@ -1091,7 +1111,7 @@ describe("SwapRouter", function () {
             [FeeAmount.MEDIUM]
           ),
           recipient: router.address,
-          deadline: 1,
+          deadline: 1633850000,
           amountIn: 102,
           amountOutMinimum,
         };
