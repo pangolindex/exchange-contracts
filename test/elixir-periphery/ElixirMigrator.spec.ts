@@ -7,12 +7,12 @@ import {
   IWETH9,
   MockTimeNonfungiblePositionManager,
   TestERC20,
-  V3Migrator,
+  ElixirMigrator,
 } from "../typechain";
 import completeFixture from "./shared/completeFixture";
 import { v2FactoryFixture } from "./shared/externalFixtures";
 
-import { abi as PAIR_V2_ABI } from "@uniswap/v2-core/build/UniswapV2Pair.json";
+import { abi as PAIR_V2_ABI } from "../../artifacts/contracts/pangolin-core/PangolinPair.sol/PangolinPair.json";
 import { expect } from "chai";
 import { FeeAmount } from "./shared/constants";
 import { encodePriceSqrt } from "./shared/encodePriceSqrt";
@@ -20,7 +20,7 @@ import snapshotGasCost from "./shared/snapshotGasCost";
 import { sortedTokens } from "./shared/tokenSort";
 import { getMaxTick, getMinTick } from "./shared/ticks";
 
-describe("V3Migrator", () => {
+describe("ElixirMigrator", () => {
   let wallet: Wallet;
 
   const migratorFixture: Fixture<{
@@ -29,7 +29,7 @@ describe("V3Migrator", () => {
     token: TestERC20;
     weth9: IWETH9;
     nft: MockTimeNonfungiblePositionManager;
-    migrator: V3Migrator;
+    migrator: ElixirMigrator;
   }> = async (wallets, provider) => {
     const { factory, tokens, nft, weth9 } = await completeFixture(
       wallets,
@@ -45,8 +45,8 @@ describe("V3Migrator", () => {
 
     // deploy the migrator
     const migrator = (await (
-      await ethers.getContractFactory("V3Migrator")
-    ).deploy(factory.address, weth9.address, nft.address)) as V3Migrator;
+      await ethers.getContractFactory("ElixirMigrator")
+    ).deploy(factory.address, weth9.address, nft.address)) as ElixirMigrator;
 
     return {
       factoryV2,
@@ -63,7 +63,7 @@ describe("V3Migrator", () => {
   let token: TestERC20;
   let weth9: IWETH9;
   let nft: MockTimeNonfungiblePositionManager;
-  let migrator: V3Migrator;
+  let migrator: ElixirMigrator;
   let pair: IUniswapV2Pair;
 
   let loadFixture: ReturnType<typeof waffle.createFixtureLoader>;

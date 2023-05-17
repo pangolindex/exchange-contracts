@@ -1,4 +1,4 @@
-import { abi as IElixirPoolABI } from "@uniswap/v3-core/artifacts/contracts/interfaces/IElixirPool.sol/IElixirPool.json";
+import { abi as IElixirPoolABI } from "../../artifacts/contracts/elixir-core/interfaces/IElixirPool.sol/IElixirPool.json";
 import { Fixture } from "ethereum-waffle";
 import { BigNumber, constants, ContractTransaction, Wallet } from "ethers";
 import { ethers, waffle } from "hardhat";
