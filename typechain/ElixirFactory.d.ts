@@ -26,8 +26,8 @@ interface ElixirFactoryInterface extends ethers.utils.Interface {
     "enableFeeAmount(uint24,int24)": FunctionFragment;
     "feeAmountTickSpacing(uint24)": FunctionFragment;
     "getPool(address,address,uint24)": FunctionFragment;
+    "implementation()": FunctionFragment;
     "owner()": FunctionFragment;
-    "parameters()": FunctionFragment;
     "setOwner(address)": FunctionFragment;
   };
 
@@ -47,11 +47,11 @@ interface ElixirFactoryInterface extends ethers.utils.Interface {
     functionFragment: "getPool",
     values: [string, string, BigNumberish]
   ): string;
-  encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "parameters",
+    functionFragment: "implementation",
     values?: undefined
   ): string;
+  encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(functionFragment: "setOwner", values: [string]): string;
 
   decodeFunctionResult(functionFragment: "createPool", data: BytesLike): Result;
@@ -64,8 +64,11 @@ interface ElixirFactoryInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "getPool", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "implementation",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "parameters", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "setOwner", data: BytesLike): Result;
 
   events: {
@@ -151,38 +154,20 @@ export class ElixirFactory extends Contract {
       0: string;
     }>;
 
+    implementation(overrides?: CallOverrides): Promise<{
+      0: string;
+    }>;
+
+    "implementation()"(overrides?: CallOverrides): Promise<{
+      0: string;
+    }>;
+
     owner(overrides?: CallOverrides): Promise<{
       0: string;
     }>;
 
     "owner()"(overrides?: CallOverrides): Promise<{
       0: string;
-    }>;
-
-    parameters(overrides?: CallOverrides): Promise<{
-      factory: string;
-      token0: string;
-      token1: string;
-      fee: number;
-      tickSpacing: number;
-      0: string;
-      1: string;
-      2: string;
-      3: number;
-      4: number;
-    }>;
-
-    "parameters()"(overrides?: CallOverrides): Promise<{
-      factory: string;
-      token0: string;
-      token1: string;
-      fee: number;
-      tickSpacing: number;
-      0: string;
-      1: string;
-      2: string;
-      3: number;
-      4: number;
     }>;
 
     setOwner(
@@ -246,35 +231,13 @@ export class ElixirFactory extends Contract {
     overrides?: CallOverrides
   ): Promise<string>;
 
+  implementation(overrides?: CallOverrides): Promise<string>;
+
+  "implementation()"(overrides?: CallOverrides): Promise<string>;
+
   owner(overrides?: CallOverrides): Promise<string>;
 
   "owner()"(overrides?: CallOverrides): Promise<string>;
-
-  parameters(overrides?: CallOverrides): Promise<{
-    factory: string;
-    token0: string;
-    token1: string;
-    fee: number;
-    tickSpacing: number;
-    0: string;
-    1: string;
-    2: string;
-    3: number;
-    4: number;
-  }>;
-
-  "parameters()"(overrides?: CallOverrides): Promise<{
-    factory: string;
-    token0: string;
-    token1: string;
-    fee: number;
-    tickSpacing: number;
-    0: string;
-    1: string;
-    2: string;
-    3: number;
-    4: number;
-  }>;
 
   setOwner(_owner: string, overrides?: Overrides): Promise<ContractTransaction>;
 
@@ -334,35 +297,13 @@ export class ElixirFactory extends Contract {
       overrides?: CallOverrides
     ): Promise<string>;
 
+    implementation(overrides?: CallOverrides): Promise<string>;
+
+    "implementation()"(overrides?: CallOverrides): Promise<string>;
+
     owner(overrides?: CallOverrides): Promise<string>;
 
     "owner()"(overrides?: CallOverrides): Promise<string>;
-
-    parameters(overrides?: CallOverrides): Promise<{
-      factory: string;
-      token0: string;
-      token1: string;
-      fee: number;
-      tickSpacing: number;
-      0: string;
-      1: string;
-      2: string;
-      3: number;
-      4: number;
-    }>;
-
-    "parameters()"(overrides?: CallOverrides): Promise<{
-      factory: string;
-      token0: string;
-      token1: string;
-      fee: number;
-      tickSpacing: number;
-      0: string;
-      1: string;
-      2: string;
-      3: number;
-      4: number;
-    }>;
 
     setOwner(_owner: string, overrides?: CallOverrides): Promise<void>;
 
@@ -440,13 +381,13 @@ export class ElixirFactory extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    implementation(overrides?: CallOverrides): Promise<BigNumber>;
+
+    "implementation()"(overrides?: CallOverrides): Promise<BigNumber>;
+
     owner(overrides?: CallOverrides): Promise<BigNumber>;
 
     "owner()"(overrides?: CallOverrides): Promise<BigNumber>;
-
-    parameters(overrides?: CallOverrides): Promise<BigNumber>;
-
-    "parameters()"(overrides?: CallOverrides): Promise<BigNumber>;
 
     setOwner(_owner: string, overrides?: Overrides): Promise<BigNumber>;
 
@@ -507,13 +448,15 @@ export class ElixirFactory extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
+    implementation(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    "implementation()"(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
     owner(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     "owner()"(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    parameters(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    "parameters()"(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     setOwner(
       _owner: string,

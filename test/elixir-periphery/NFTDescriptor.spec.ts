@@ -2,7 +2,7 @@ import { BigNumber, constants, Wallet } from "ethers";
 import { encodePriceSqrt } from "./shared/encodePriceSqrt";
 import { waffle, ethers } from "hardhat";
 import { expect } from "./shared/expect";
-import { TestERC20Metadata, NFTDescriptorTest } from "../typechain";
+import { TestERC20Metadata, NFTDescriptorTest } from "../../typechain";
 import { Fixture } from "ethereum-waffle";
 import { FeeAmount, TICK_SPACINGS } from "./shared/constants";
 import snapshotGasCost from "./shared/snapshotGasCost";

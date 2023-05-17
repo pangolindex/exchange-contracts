@@ -96,27 +96,19 @@ export class TickMathTest extends Contract {
   interface: TickMathTestInterface;
 
   functions: {
-    MAX_SQRT_RATIO(
-      overrides?: CallOverrides
-    ): Promise<{
+    MAX_SQRT_RATIO(overrides?: CallOverrides): Promise<{
       0: BigNumber;
     }>;
 
-    "MAX_SQRT_RATIO()"(
-      overrides?: CallOverrides
-    ): Promise<{
+    "MAX_SQRT_RATIO()"(overrides?: CallOverrides): Promise<{
       0: BigNumber;
     }>;
 
-    MIN_SQRT_RATIO(
-      overrides?: CallOverrides
-    ): Promise<{
+    MIN_SQRT_RATIO(overrides?: CallOverrides): Promise<{
       0: BigNumber;
     }>;
 
-    "MIN_SQRT_RATIO()"(
-      overrides?: CallOverrides
-    ): Promise<{
+    "MIN_SQRT_RATIO()"(overrides?: CallOverrides): Promise<{
       0: BigNumber;
     }>;
 

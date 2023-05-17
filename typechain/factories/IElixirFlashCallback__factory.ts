@@ -39,7 +39,7 @@ const _abi = [
         type: "bytes",
       },
     ],
-    name: "ElixirFlashCallback",
+    name: "elixirFlashCallback",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",

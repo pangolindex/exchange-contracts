@@ -88,6 +88,7 @@ interface TickTestInterface extends ethers.utils.Interface {
       BigNumberish,
       BigNumberish,
       boolean,
+      BigNumberish,
       BigNumberish
     ]
   ): string;
@@ -199,7 +200,7 @@ export class TickTest extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>;
 
-    "setTick(int24,tuple)"(
+    "setTick(int24,(uint128,int128,uint256,uint256,int56,uint160,uint32,bool,uint192))"(
       tick: BigNumberish,
       info: {
         liquidityGross: BigNumberish;
@@ -241,6 +242,7 @@ export class TickTest extends Contract {
       secondsPerLiquidityOutsideX128: BigNumber;
       secondsOutside: number;
       initialized: boolean;
+      rewardPerLiquidityOutsideX64: BigNumber;
       0: BigNumber;
       1: BigNumber;
       2: BigNumber;
@@ -249,6 +251,7 @@ export class TickTest extends Contract {
       5: BigNumber;
       6: number;
       7: boolean;
+      8: BigNumber;
     }>;
 
     "ticks(int24)"(
@@ -263,6 +266,7 @@ export class TickTest extends Contract {
       secondsPerLiquidityOutsideX128: BigNumber;
       secondsOutside: number;
       initialized: boolean;
+      rewardPerLiquidityOutsideX64: BigNumber;
       0: BigNumber;
       1: BigNumber;
       2: BigNumber;
@@ -271,6 +275,7 @@ export class TickTest extends Contract {
       5: BigNumber;
       6: number;
       7: boolean;
+      8: BigNumber;
     }>;
 
     update(
@@ -284,10 +289,11 @@ export class TickTest extends Contract {
       time: BigNumberish,
       upper: boolean,
       maxLiquidity: BigNumberish,
+      rewardPerLiquidityCumulativeX64: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
 
-    "update(int24,int24,int128,uint256,uint256,uint160,int56,uint32,bool,uint128)"(
+    "update(int24,int24,int128,uint256,uint256,uint160,int56,uint32,bool,uint128,uint192)"(
       tick: BigNumberish,
       tickCurrent: BigNumberish,
       liquidityDelta: BigNumberish,
@@ -298,6 +304,7 @@ export class TickTest extends Contract {
       time: BigNumberish,
       upper: boolean,
       maxLiquidity: BigNumberish,
+      rewardPerLiquidityCumulativeX64: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
   };
@@ -378,7 +385,7 @@ export class TickTest extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
-  "setTick(int24,tuple)"(
+  "setTick(int24,(uint128,int128,uint256,uint256,int56,uint160,uint32,bool,uint192))"(
     tick: BigNumberish,
     info: {
       liquidityGross: BigNumberish;
@@ -416,6 +423,7 @@ export class TickTest extends Contract {
     secondsPerLiquidityOutsideX128: BigNumber;
     secondsOutside: number;
     initialized: boolean;
+    rewardPerLiquidityOutsideX64: BigNumber;
     0: BigNumber;
     1: BigNumber;
     2: BigNumber;
@@ -424,6 +432,7 @@ export class TickTest extends Contract {
     5: BigNumber;
     6: number;
     7: boolean;
+    8: BigNumber;
   }>;
 
   "ticks(int24)"(
@@ -438,6 +447,7 @@ export class TickTest extends Contract {
     secondsPerLiquidityOutsideX128: BigNumber;
     secondsOutside: number;
     initialized: boolean;
+    rewardPerLiquidityOutsideX64: BigNumber;
     0: BigNumber;
     1: BigNumber;
     2: BigNumber;
@@ -446,6 +456,7 @@ export class TickTest extends Contract {
     5: BigNumber;
     6: number;
     7: boolean;
+    8: BigNumber;
   }>;
 
   update(
@@ -552,7 +563,7 @@ export class TickTest extends Contract {
       overrides?: CallOverrides
     ): Promise<void>;
 
-    "setTick(int24,tuple)"(
+    "setTick(int24,(uint128,int128,uint256,uint256,int56,uint160,uint32,bool,uint192))"(
       tick: BigNumberish,
       info: {
         liquidityGross: BigNumberish;
@@ -590,6 +601,7 @@ export class TickTest extends Contract {
       secondsPerLiquidityOutsideX128: BigNumber;
       secondsOutside: number;
       initialized: boolean;
+      rewardPerLiquidityOutsideX64: BigNumber;
       0: BigNumber;
       1: BigNumber;
       2: BigNumber;
@@ -598,6 +610,7 @@ export class TickTest extends Contract {
       5: BigNumber;
       6: number;
       7: boolean;
+      8: BigNumber;
     }>;
 
     "ticks(int24)"(
@@ -612,6 +625,7 @@ export class TickTest extends Contract {
       secondsPerLiquidityOutsideX128: BigNumber;
       secondsOutside: number;
       initialized: boolean;
+      rewardPerLiquidityOutsideX64: BigNumber;
       0: BigNumber;
       1: BigNumber;
       2: BigNumber;
@@ -620,6 +634,7 @@ export class TickTest extends Contract {
       5: BigNumber;
       6: number;
       7: boolean;
+      8: BigNumber;
     }>;
 
     update(
@@ -719,7 +734,7 @@ export class TickTest extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>;
 
-    "setTick(int24,tuple)"(
+    "setTick(int24,(uint128,int128,uint256,uint256,int56,uint160,uint32,bool,uint192))"(
       tick: BigNumberish,
       info: {
         liquidityGross: BigNumberish;
@@ -850,7 +865,7 @@ export class TickTest extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
 
-    "setTick(int24,tuple)"(
+    "setTick(int24,(uint128,int128,uint256,uint256,int56,uint160,uint32,bool,uint192))"(
       tick: BigNumberish,
       info: {
         liquidityGross: BigNumberish;

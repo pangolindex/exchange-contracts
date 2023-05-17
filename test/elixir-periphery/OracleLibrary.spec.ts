@@ -7,7 +7,7 @@ import {
   ContractFactory,
   Contract,
 } from "ethers";
-import { OracleTest, TestERC20 } from "../typechain";
+import { OracleTest, TestERC20 } from "../../typechain";
 import { expandTo18Decimals } from "./shared/expandTo18Decimals";
 import snapshotGasCost from "./shared/snapshotGasCost";
 

@@ -22,25 +22,25 @@ import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 
 interface TestElixirReentrantCalleeInterface extends ethers.utils.Interface {
   functions: {
+    "elixirSwapCallback(int256,int256,bytes)": FunctionFragment;
     "swapToReenter(address)": FunctionFragment;
-    "ElixirSwapCallback(int256,int256,bytes)": FunctionFragment;
   };
 
+  encodeFunctionData(
+    functionFragment: "elixirSwapCallback",
+    values: [BigNumberish, BigNumberish, BytesLike]
+  ): string;
   encodeFunctionData(
     functionFragment: "swapToReenter",
     values: [string]
   ): string;
-  encodeFunctionData(
-    functionFragment: "ElixirSwapCallback",
-    values: [BigNumberish, BigNumberish, BytesLike]
-  ): string;
 
   decodeFunctionResult(
-    functionFragment: "swapToReenter",
+    functionFragment: "elixirSwapCallback",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "ElixirSwapCallback",
+    functionFragment: "swapToReenter",
     data: BytesLike
   ): Result;
 
@@ -61,6 +61,20 @@ export class TestElixirReentrantCallee extends Contract {
   interface: TestElixirReentrantCalleeInterface;
 
   functions: {
+    elixirSwapCallback(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      arg2: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
+
+    "elixirSwapCallback(int256,int256,bytes)"(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      arg2: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
+
     swapToReenter(
       pool: string,
       overrides?: Overrides
@@ -70,21 +84,21 @@ export class TestElixirReentrantCallee extends Contract {
       pool: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
-
-    ElixirSwapCallback(
-      arg0: BigNumberish,
-      arg1: BigNumberish,
-      arg2: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
-
-    "ElixirSwapCallback(int256,int256,bytes)"(
-      arg0: BigNumberish,
-      arg1: BigNumberish,
-      arg2: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
   };
+
+  elixirSwapCallback(
+    arg0: BigNumberish,
+    arg1: BigNumberish,
+    arg2: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
+
+  "elixirSwapCallback(int256,int256,bytes)"(
+    arg0: BigNumberish,
+    arg1: BigNumberish,
+    arg2: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
 
   swapToReenter(
     pool: string,
@@ -96,39 +110,25 @@ export class TestElixirReentrantCallee extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
-  ElixirSwapCallback(
-    arg0: BigNumberish,
-    arg1: BigNumberish,
-    arg2: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
-
-  "ElixirSwapCallback(int256,int256,bytes)"(
-    arg0: BigNumberish,
-    arg1: BigNumberish,
-    arg2: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
-
   callStatic: {
+    elixirSwapCallback(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      arg2: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    "elixirSwapCallback(int256,int256,bytes)"(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      arg2: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
     swapToReenter(pool: string, overrides?: CallOverrides): Promise<void>;
 
     "swapToReenter(address)"(
       pool: string,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    ElixirSwapCallback(
-      arg0: BigNumberish,
-      arg1: BigNumberish,
-      arg2: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    "ElixirSwapCallback(int256,int256,bytes)"(
-      arg0: BigNumberish,
-      arg1: BigNumberish,
-      arg2: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>;
   };
@@ -136,29 +136,43 @@ export class TestElixirReentrantCallee extends Contract {
   filters: {};
 
   estimateGas: {
+    elixirSwapCallback(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      arg2: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>;
+
+    "elixirSwapCallback(int256,int256,bytes)"(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      arg2: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>;
+
     swapToReenter(pool: string, overrides?: Overrides): Promise<BigNumber>;
 
     "swapToReenter(address)"(
       pool: string,
       overrides?: Overrides
     ): Promise<BigNumber>;
-
-    ElixirSwapCallback(
-      arg0: BigNumberish,
-      arg1: BigNumberish,
-      arg2: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    "ElixirSwapCallback(int256,int256,bytes)"(
-      arg0: BigNumberish,
-      arg1: BigNumberish,
-      arg2: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>;
   };
 
   populateTransaction: {
+    elixirSwapCallback(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      arg2: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
+    "elixirSwapCallback(int256,int256,bytes)"(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      arg2: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
     swapToReenter(
       pool: string,
       overrides?: Overrides
@@ -166,20 +180,6 @@ export class TestElixirReentrantCallee extends Contract {
 
     "swapToReenter(address)"(
       pool: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    ElixirSwapCallback(
-      arg0: BigNumberish,
-      arg1: BigNumberish,
-      arg2: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    "ElixirSwapCallback(int256,int256,bytes)"(
-      arg0: BigNumberish,
-      arg1: BigNumberish,
-      arg2: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
   };

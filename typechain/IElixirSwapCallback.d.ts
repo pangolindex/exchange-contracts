@@ -22,16 +22,16 @@ import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 
 interface IElixirSwapCallbackInterface extends ethers.utils.Interface {
   functions: {
-    "ElixirSwapCallback(int256,int256,bytes)": FunctionFragment;
+    "elixirSwapCallback(int256,int256,bytes)": FunctionFragment;
   };
 
   encodeFunctionData(
-    functionFragment: "ElixirSwapCallback",
+    functionFragment: "elixirSwapCallback",
     values: [BigNumberish, BigNumberish, BytesLike]
   ): string;
 
   decodeFunctionResult(
-    functionFragment: "ElixirSwapCallback",
+    functionFragment: "elixirSwapCallback",
     data: BytesLike
   ): Result;
 
@@ -52,14 +52,14 @@ export class IElixirSwapCallback extends Contract {
   interface: IElixirSwapCallbackInterface;
 
   functions: {
-    ElixirSwapCallback(
+    elixirSwapCallback(
       amount0Delta: BigNumberish,
       amount1Delta: BigNumberish,
       data: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
 
-    "ElixirSwapCallback(int256,int256,bytes)"(
+    "elixirSwapCallback(int256,int256,bytes)"(
       amount0Delta: BigNumberish,
       amount1Delta: BigNumberish,
       data: BytesLike,
@@ -67,14 +67,14 @@ export class IElixirSwapCallback extends Contract {
     ): Promise<ContractTransaction>;
   };
 
-  ElixirSwapCallback(
+  elixirSwapCallback(
     amount0Delta: BigNumberish,
     amount1Delta: BigNumberish,
     data: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
-  "ElixirSwapCallback(int256,int256,bytes)"(
+  "elixirSwapCallback(int256,int256,bytes)"(
     amount0Delta: BigNumberish,
     amount1Delta: BigNumberish,
     data: BytesLike,
@@ -82,14 +82,14 @@ export class IElixirSwapCallback extends Contract {
   ): Promise<ContractTransaction>;
 
   callStatic: {
-    ElixirSwapCallback(
+    elixirSwapCallback(
       amount0Delta: BigNumberish,
       amount1Delta: BigNumberish,
       data: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>;
 
-    "ElixirSwapCallback(int256,int256,bytes)"(
+    "elixirSwapCallback(int256,int256,bytes)"(
       amount0Delta: BigNumberish,
       amount1Delta: BigNumberish,
       data: BytesLike,
@@ -100,14 +100,14 @@ export class IElixirSwapCallback extends Contract {
   filters: {};
 
   estimateGas: {
-    ElixirSwapCallback(
+    elixirSwapCallback(
       amount0Delta: BigNumberish,
       amount1Delta: BigNumberish,
       data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>;
 
-    "ElixirSwapCallback(int256,int256,bytes)"(
+    "elixirSwapCallback(int256,int256,bytes)"(
       amount0Delta: BigNumberish,
       amount1Delta: BigNumberish,
       data: BytesLike,
@@ -116,14 +116,14 @@ export class IElixirSwapCallback extends Contract {
   };
 
   populateTransaction: {
-    ElixirSwapCallback(
+    elixirSwapCallback(
       amount0Delta: BigNumberish,
       amount1Delta: BigNumberish,
       data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
 
-    "ElixirSwapCallback(int256,int256,bytes)"(
+    "elixirSwapCallback(int256,int256,bytes)"(
       amount0Delta: BigNumberish,
       amount1Delta: BigNumberish,
       data: BytesLike,

@@ -299,6 +299,25 @@ const _abi = [
     anonymous: false,
     inputs: [
       {
+        indexed: false,
+        internalType: "uint144",
+        name: "rewardPerSecondX48",
+        type: "uint144",
+      },
+      {
+        indexed: false,
+        internalType: "uint32",
+        name: "rewardRateEffectiveUntil",
+        type: "uint32",
+      },
+    ],
+    name: "SetRewardRate",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
         indexed: true,
         internalType: "address",
         name: "sender",

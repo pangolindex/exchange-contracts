@@ -159,21 +159,15 @@ export class OracleEchidnaTest extends Contract {
       0: void;
     }>;
 
-    echidna_AlwaysInitialized(
-      overrides?: CallOverrides
-    ): Promise<{
+    echidna_AlwaysInitialized(overrides?: CallOverrides): Promise<{
       0: boolean;
     }>;
 
-    "echidna_AlwaysInitialized()"(
-      overrides?: CallOverrides
-    ): Promise<{
+    "echidna_AlwaysInitialized()"(overrides?: CallOverrides): Promise<{
       0: boolean;
     }>;
 
-    echidna_canAlwaysObserve0IfInitialized(
-      overrides?: CallOverrides
-    ): Promise<{
+    echidna_canAlwaysObserve0IfInitialized(overrides?: CallOverrides): Promise<{
       0: boolean;
     }>;
 
@@ -183,27 +177,19 @@ export class OracleEchidnaTest extends Contract {
       0: boolean;
     }>;
 
-    echidna_cardinalityAlwaysLteNext(
-      overrides?: CallOverrides
-    ): Promise<{
+    echidna_cardinalityAlwaysLteNext(overrides?: CallOverrides): Promise<{
       0: boolean;
     }>;
 
-    "echidna_cardinalityAlwaysLteNext()"(
-      overrides?: CallOverrides
-    ): Promise<{
+    "echidna_cardinalityAlwaysLteNext()"(overrides?: CallOverrides): Promise<{
       0: boolean;
     }>;
 
-    echidna_indexAlwaysLtCardinality(
-      overrides?: CallOverrides
-    ): Promise<{
+    echidna_indexAlwaysLtCardinality(overrides?: CallOverrides): Promise<{
       0: boolean;
     }>;
 
-    "echidna_indexAlwaysLtCardinality()"(
-      overrides?: CallOverrides
-    ): Promise<{
+    "echidna_indexAlwaysLtCardinality()"(overrides?: CallOverrides): Promise<{
       0: boolean;
     }>;
 

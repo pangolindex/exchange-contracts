@@ -8,7 +8,7 @@ import {
   IElixirPool,
   TestERC20,
   IElixirFactory,
-} from "../typechain";
+} from "../../typechain";
 import { FeeAmount, MaxUint128, TICK_SPACINGS } from "./shared/constants";
 import { getMaxTick, getMinTick } from "./shared/ticks";
 import { encodePriceSqrt } from "./shared/encodePriceSqrt";

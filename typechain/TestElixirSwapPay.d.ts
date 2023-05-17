@@ -22,10 +22,14 @@ import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 
 interface TestElixirSwapPayInterface extends ethers.utils.Interface {
   functions: {
+    "elixirSwapCallback(int256,int256,bytes)": FunctionFragment;
     "swap(address,address,bool,uint160,int256,uint256,uint256)": FunctionFragment;
-    "ElixirSwapCallback(int256,int256,bytes)": FunctionFragment;
   };
 
+  encodeFunctionData(
+    functionFragment: "elixirSwapCallback",
+    values: [BigNumberish, BigNumberish, BytesLike]
+  ): string;
   encodeFunctionData(
     functionFragment: "swap",
     values: [
@@ -38,16 +42,12 @@ interface TestElixirSwapPayInterface extends ethers.utils.Interface {
       BigNumberish
     ]
   ): string;
-  encodeFunctionData(
-    functionFragment: "ElixirSwapCallback",
-    values: [BigNumberish, BigNumberish, BytesLike]
-  ): string;
 
-  decodeFunctionResult(functionFragment: "swap", data: BytesLike): Result;
   decodeFunctionResult(
-    functionFragment: "ElixirSwapCallback",
+    functionFragment: "elixirSwapCallback",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "swap", data: BytesLike): Result;
 
   events: {};
 }
@@ -66,6 +66,20 @@ export class TestElixirSwapPay extends Contract {
   interface: TestElixirSwapPayInterface;
 
   functions: {
+    elixirSwapCallback(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
+
+    "elixirSwapCallback(int256,int256,bytes)"(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
+
     swap(
       pool: string,
       recipient: string,
@@ -87,21 +101,21 @@ export class TestElixirSwapPay extends Contract {
       pay1: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
-
-    ElixirSwapCallback(
-      arg0: BigNumberish,
-      arg1: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
-
-    "ElixirSwapCallback(int256,int256,bytes)"(
-      arg0: BigNumberish,
-      arg1: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
   };
+
+  elixirSwapCallback(
+    arg0: BigNumberish,
+    arg1: BigNumberish,
+    data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
+
+  "elixirSwapCallback(int256,int256,bytes)"(
+    arg0: BigNumberish,
+    arg1: BigNumberish,
+    data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
 
   swap(
     pool: string,
@@ -125,21 +139,21 @@ export class TestElixirSwapPay extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
-  ElixirSwapCallback(
-    arg0: BigNumberish,
-    arg1: BigNumberish,
-    data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
-
-  "ElixirSwapCallback(int256,int256,bytes)"(
-    arg0: BigNumberish,
-    arg1: BigNumberish,
-    data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
-
   callStatic: {
+    elixirSwapCallback(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    "elixirSwapCallback(int256,int256,bytes)"(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
     swap(
       pool: string,
       recipient: string,
@@ -159,20 +173,6 @@ export class TestElixirSwapPay extends Contract {
       amountSpecified: BigNumberish,
       pay0: BigNumberish,
       pay1: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    ElixirSwapCallback(
-      arg0: BigNumberish,
-      arg1: BigNumberish,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    "ElixirSwapCallback(int256,int256,bytes)"(
-      arg0: BigNumberish,
-      arg1: BigNumberish,
-      data: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>;
   };
@@ -180,6 +180,20 @@ export class TestElixirSwapPay extends Contract {
   filters: {};
 
   estimateGas: {
+    elixirSwapCallback(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>;
+
+    "elixirSwapCallback(int256,int256,bytes)"(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>;
+
     swap(
       pool: string,
       recipient: string,
@@ -199,25 +213,25 @@ export class TestElixirSwapPay extends Contract {
       amountSpecified: BigNumberish,
       pay0: BigNumberish,
       pay1: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    ElixirSwapCallback(
-      arg0: BigNumberish,
-      arg1: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    "ElixirSwapCallback(int256,int256,bytes)"(
-      arg0: BigNumberish,
-      arg1: BigNumberish,
-      data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>;
   };
 
   populateTransaction: {
+    elixirSwapCallback(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
+    "elixirSwapCallback(int256,int256,bytes)"(
+      arg0: BigNumberish,
+      arg1: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
     swap(
       pool: string,
       recipient: string,
@@ -237,20 +251,6 @@ export class TestElixirSwapPay extends Contract {
       amountSpecified: BigNumberish,
       pay0: BigNumberish,
       pay1: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    ElixirSwapCallback(
-      arg0: BigNumberish,
-      arg1: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    "ElixirSwapCallback(int256,int256,bytes)"(
-      arg0: BigNumberish,
-      arg1: BigNumberish,
-      data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
   };

@@ -2,13 +2,13 @@ import { Fixture } from "ethereum-waffle";
 import { constants, Contract, Wallet } from "ethers";
 import { ethers, waffle } from "hardhat";
 import {
-  IUniswapV2Pair,
+  IPangolinPair,
   IElixirFactory,
   IWETH9,
   MockTimeNonfungiblePositionManager,
   TestERC20,
   ElixirMigrator,
-} from "../typechain";
+} from "../../typechain";
 import completeFixture from "./shared/completeFixture";
 import { v2FactoryFixture } from "./shared/externalFixtures";
 
@@ -64,7 +64,7 @@ describe("ElixirMigrator", () => {
   let weth9: IWETH9;
   let nft: MockTimeNonfungiblePositionManager;
   let migrator: ElixirMigrator;
-  let pair: IUniswapV2Pair;
+  let pair: IPangolinPair;
 
   let loadFixture: ReturnType<typeof waffle.createFixtureLoader>;
 
@@ -92,7 +92,7 @@ describe("ElixirMigrator", () => {
       pairAddress,
       PAIR_V2_ABI,
       wallet
-    ) as IUniswapV2Pair;
+    ) as IPangolinPair;
 
     await token.transfer(pair.address, 10000);
     await weth9.transfer(pair.address, 10000);

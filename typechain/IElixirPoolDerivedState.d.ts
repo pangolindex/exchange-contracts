@@ -63,8 +63,10 @@ export class IElixirPoolDerivedState extends Contract {
     ): Promise<{
       tickCumulatives: BigNumber[];
       secondsPerLiquidityCumulativeX128s: BigNumber[];
+      rewardPerLiquidityCumulativeX64s: BigNumber[];
       0: BigNumber[];
       1: BigNumber[];
+      2: BigNumber[];
     }>;
 
     "observe(uint32[])"(
@@ -73,8 +75,10 @@ export class IElixirPoolDerivedState extends Contract {
     ): Promise<{
       tickCumulatives: BigNumber[];
       secondsPerLiquidityCumulativeX128s: BigNumber[];
+      rewardPerLiquidityCumulativeX64s: BigNumber[];
       0: BigNumber[];
       1: BigNumber[];
+      2: BigNumber[];
     }>;
 
     snapshotCumulativesInside(
@@ -85,9 +89,11 @@ export class IElixirPoolDerivedState extends Contract {
       tickCumulativeInside: BigNumber;
       secondsPerLiquidityInsideX128: BigNumber;
       secondsInside: number;
+      rewardPerLiquidityInsideX64: BigNumber;
       0: BigNumber;
       1: BigNumber;
       2: number;
+      3: BigNumber;
     }>;
 
     "snapshotCumulativesInside(int24,int24)"(
@@ -98,9 +104,11 @@ export class IElixirPoolDerivedState extends Contract {
       tickCumulativeInside: BigNumber;
       secondsPerLiquidityInsideX128: BigNumber;
       secondsInside: number;
+      rewardPerLiquidityInsideX64: BigNumber;
       0: BigNumber;
       1: BigNumber;
       2: number;
+      3: BigNumber;
     }>;
   };
 
@@ -110,8 +118,10 @@ export class IElixirPoolDerivedState extends Contract {
   ): Promise<{
     tickCumulatives: BigNumber[];
     secondsPerLiquidityCumulativeX128s: BigNumber[];
+    rewardPerLiquidityCumulativeX64s: BigNumber[];
     0: BigNumber[];
     1: BigNumber[];
+    2: BigNumber[];
   }>;
 
   "observe(uint32[])"(
@@ -120,8 +130,10 @@ export class IElixirPoolDerivedState extends Contract {
   ): Promise<{
     tickCumulatives: BigNumber[];
     secondsPerLiquidityCumulativeX128s: BigNumber[];
+    rewardPerLiquidityCumulativeX64s: BigNumber[];
     0: BigNumber[];
     1: BigNumber[];
+    2: BigNumber[];
   }>;
 
   snapshotCumulativesInside(
@@ -132,9 +144,11 @@ export class IElixirPoolDerivedState extends Contract {
     tickCumulativeInside: BigNumber;
     secondsPerLiquidityInsideX128: BigNumber;
     secondsInside: number;
+    rewardPerLiquidityInsideX64: BigNumber;
     0: BigNumber;
     1: BigNumber;
     2: number;
+    3: BigNumber;
   }>;
 
   "snapshotCumulativesInside(int24,int24)"(
@@ -145,9 +159,11 @@ export class IElixirPoolDerivedState extends Contract {
     tickCumulativeInside: BigNumber;
     secondsPerLiquidityInsideX128: BigNumber;
     secondsInside: number;
+    rewardPerLiquidityInsideX64: BigNumber;
     0: BigNumber;
     1: BigNumber;
     2: number;
+    3: BigNumber;
   }>;
 
   callStatic: {
@@ -157,8 +173,10 @@ export class IElixirPoolDerivedState extends Contract {
     ): Promise<{
       tickCumulatives: BigNumber[];
       secondsPerLiquidityCumulativeX128s: BigNumber[];
+      rewardPerLiquidityCumulativeX64s: BigNumber[];
       0: BigNumber[];
       1: BigNumber[];
+      2: BigNumber[];
     }>;
 
     "observe(uint32[])"(
@@ -167,8 +185,10 @@ export class IElixirPoolDerivedState extends Contract {
     ): Promise<{
       tickCumulatives: BigNumber[];
       secondsPerLiquidityCumulativeX128s: BigNumber[];
+      rewardPerLiquidityCumulativeX64s: BigNumber[];
       0: BigNumber[];
       1: BigNumber[];
+      2: BigNumber[];
     }>;
 
     snapshotCumulativesInside(
@@ -179,9 +199,11 @@ export class IElixirPoolDerivedState extends Contract {
       tickCumulativeInside: BigNumber;
       secondsPerLiquidityInsideX128: BigNumber;
       secondsInside: number;
+      rewardPerLiquidityInsideX64: BigNumber;
       0: BigNumber;
       1: BigNumber;
       2: number;
+      3: BigNumber;
     }>;
 
     "snapshotCumulativesInside(int24,int24)"(
@@ -192,9 +214,11 @@ export class IElixirPoolDerivedState extends Contract {
       tickCumulativeInside: BigNumber;
       secondsPerLiquidityInsideX128: BigNumber;
       secondsInside: number;
+      rewardPerLiquidityInsideX64: BigNumber;
       0: BigNumber;
       1: BigNumber;
       2: number;
+      3: BigNumber;
     }>;
   };
 

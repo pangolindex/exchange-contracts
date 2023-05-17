@@ -3,7 +3,7 @@ import { waffle, ethers } from "hardhat";
 import { Fixture } from "ethereum-waffle";
 import completeFixture from "./shared/completeFixture";
 import { expect } from "./shared/expect";
-import { TestERC20, TestCallbackValidation } from "../typechain";
+import { TestERC20, TestCallbackValidation } from "../../typechain";
 import { FeeAmount } from "./shared/constants";
 
 describe("CallbackValidation", () => {

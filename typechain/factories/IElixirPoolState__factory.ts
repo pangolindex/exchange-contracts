@@ -86,6 +86,11 @@ const _abi = [
         name: "initialized",
         type: "bool",
       },
+      {
+        internalType: "uint192",
+        name: "rewardPerLiquidityCumulativeX64",
+        type: "uint192",
+      },
     ],
     stateMutability: "view",
     type: "function",
@@ -142,6 +147,24 @@ const _abi = [
         internalType: "uint128",
         name: "token1",
         type: "uint128",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "rewardSlot",
+    outputs: [
+      {
+        internalType: "uint144",
+        name: "rewardPerSecondX48",
+        type: "uint144",
+      },
+      {
+        internalType: "uint32",
+        name: "rewardRateEffectiveUntil",
+        type: "uint32",
       },
     ],
     stateMutability: "view",
@@ -258,6 +281,11 @@ const _abi = [
         internalType: "bool",
         name: "initialized",
         type: "bool",
+      },
+      {
+        internalType: "uint192",
+        name: "rewardPerLiquidityOutsideX64",
+        type: "uint192",
       },
     ],
     stateMutability: "view",

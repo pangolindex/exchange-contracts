@@ -35,7 +35,7 @@ const _abi = [
         type: "bytes",
       },
     ],
-    name: "ElixirSwapCallback",
+    name: "elixirSwapCallback",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",

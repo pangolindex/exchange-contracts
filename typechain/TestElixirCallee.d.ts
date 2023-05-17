@@ -22,33 +22,16 @@ import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 
 interface TestElixirCalleeInterface extends ethers.utils.Interface {
   functions: {
-    "flash(address,address,uint256,uint256,uint256,uint256)": FunctionFragment;
-    "mint(address,address,int24,int24,uint128)": FunctionFragment;
+    "elixirSwapCallback(int256,int256,bytes)": FunctionFragment;
     "swap0ForExact1(address,uint256,address,uint160)": FunctionFragment;
     "swap1ForExact0(address,uint256,address,uint160)": FunctionFragment;
     "swapExact0For1(address,uint256,address,uint160)": FunctionFragment;
     "swapExact1For0(address,uint256,address,uint160)": FunctionFragment;
-    "swapToHigherSqrtPrice(address,uint160,address)": FunctionFragment;
-    "swapToLowerSqrtPrice(address,uint160,address)": FunctionFragment;
-    "ElixirFlashCallback(uint256,uint256,bytes)": FunctionFragment;
-    "ElixirMintCallback(uint256,uint256,bytes)": FunctionFragment;
-    "ElixirSwapCallback(int256,int256,bytes)": FunctionFragment;
   };
 
   encodeFunctionData(
-    functionFragment: "flash",
-    values: [
-      string,
-      string,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish
-    ]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "mint",
-    values: [string, string, BigNumberish, BigNumberish, BigNumberish]
+    functionFragment: "elixirSwapCallback",
+    values: [BigNumberish, BigNumberish, BytesLike]
   ): string;
   encodeFunctionData(
     functionFragment: "swap0ForExact1",
@@ -66,29 +49,11 @@ interface TestElixirCalleeInterface extends ethers.utils.Interface {
     functionFragment: "swapExact1For0",
     values: [string, BigNumberish, string, BigNumberish]
   ): string;
-  encodeFunctionData(
-    functionFragment: "swapToHigherSqrtPrice",
-    values: [string, BigNumberish, string]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "swapToLowerSqrtPrice",
-    values: [string, BigNumberish, string]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "ElixirFlashCallback",
-    values: [BigNumberish, BigNumberish, BytesLike]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "ElixirMintCallback",
-    values: [BigNumberish, BigNumberish, BytesLike]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "ElixirSwapCallback",
-    values: [BigNumberish, BigNumberish, BytesLike]
-  ): string;
 
-  decodeFunctionResult(functionFragment: "flash", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "mint", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "elixirSwapCallback",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "swap0ForExact1",
     data: BytesLike
@@ -105,36 +70,8 @@ interface TestElixirCalleeInterface extends ethers.utils.Interface {
     functionFragment: "swapExact1For0",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(
-    functionFragment: "swapToHigherSqrtPrice",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "swapToLowerSqrtPrice",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "ElixirFlashCallback",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "ElixirMintCallback",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "ElixirSwapCallback",
-    data: BytesLike
-  ): Result;
 
-  events: {
-    "FlashCallback(uint256,uint256)": EventFragment;
-    "MintCallback(uint256,uint256)": EventFragment;
-    "SwapCallback(int256,int256)": EventFragment;
-  };
-
-  getEvent(nameOrSignatureOrTopic: "FlashCallback"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "MintCallback"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "SwapCallback"): EventFragment;
+  events: {};
 }
 
 export class TestElixirCallee extends Contract {
@@ -151,41 +88,17 @@ export class TestElixirCallee extends Contract {
   interface: TestElixirCalleeInterface;
 
   functions: {
-    flash(
-      pool: string,
-      recipient: string,
-      amount0: BigNumberish,
-      amount1: BigNumberish,
-      pay0: BigNumberish,
-      pay1: BigNumberish,
+    elixirSwapCallback(
+      amount0Delta: BigNumberish,
+      amount1Delta: BigNumberish,
+      data: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
 
-    "flash(address,address,uint256,uint256,uint256,uint256)"(
-      pool: string,
-      recipient: string,
-      amount0: BigNumberish,
-      amount1: BigNumberish,
-      pay0: BigNumberish,
-      pay1: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
-
-    mint(
-      pool: string,
-      recipient: string,
-      tickLower: BigNumberish,
-      tickUpper: BigNumberish,
-      amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
-
-    "mint(address,address,int24,int24,uint128)"(
-      pool: string,
-      recipient: string,
-      tickLower: BigNumberish,
-      tickUpper: BigNumberish,
-      amount: BigNumberish,
+    "elixirSwapCallback(int256,int256,bytes)"(
+      amount0Delta: BigNumberish,
+      amount1Delta: BigNumberish,
+      data: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
 
@@ -252,113 +165,19 @@ export class TestElixirCallee extends Contract {
       sqrtPriceLimitX96: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
-
-    swapToHigherSqrtPrice(
-      pool: string,
-      sqrtPriceX96: BigNumberish,
-      recipient: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
-
-    "swapToHigherSqrtPrice(address,uint160,address)"(
-      pool: string,
-      sqrtPriceX96: BigNumberish,
-      recipient: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
-
-    swapToLowerSqrtPrice(
-      pool: string,
-      sqrtPriceX96: BigNumberish,
-      recipient: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
-
-    "swapToLowerSqrtPrice(address,uint160,address)"(
-      pool: string,
-      sqrtPriceX96: BigNumberish,
-      recipient: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
-
-    ElixirFlashCallback(
-      fee0: BigNumberish,
-      fee1: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
-
-    "ElixirFlashCallback(uint256,uint256,bytes)"(
-      fee0: BigNumberish,
-      fee1: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
-
-    ElixirMintCallback(
-      amount0Owed: BigNumberish,
-      amount1Owed: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
-
-    "ElixirMintCallback(uint256,uint256,bytes)"(
-      amount0Owed: BigNumberish,
-      amount1Owed: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
-
-    ElixirSwapCallback(
-      amount0Delta: BigNumberish,
-      amount1Delta: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
-
-    "ElixirSwapCallback(int256,int256,bytes)"(
-      amount0Delta: BigNumberish,
-      amount1Delta: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
   };
 
-  flash(
-    pool: string,
-    recipient: string,
-    amount0: BigNumberish,
-    amount1: BigNumberish,
-    pay0: BigNumberish,
-    pay1: BigNumberish,
+  elixirSwapCallback(
+    amount0Delta: BigNumberish,
+    amount1Delta: BigNumberish,
+    data: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
-  "flash(address,address,uint256,uint256,uint256,uint256)"(
-    pool: string,
-    recipient: string,
-    amount0: BigNumberish,
-    amount1: BigNumberish,
-    pay0: BigNumberish,
-    pay1: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
-
-  mint(
-    pool: string,
-    recipient: string,
-    tickLower: BigNumberish,
-    tickUpper: BigNumberish,
-    amount: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
-
-  "mint(address,address,int24,int24,uint128)"(
-    pool: string,
-    recipient: string,
-    tickLower: BigNumberish,
-    tickUpper: BigNumberish,
-    amount: BigNumberish,
+  "elixirSwapCallback(int256,int256,bytes)"(
+    amount0Delta: BigNumberish,
+    amount1Delta: BigNumberish,
+    data: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
@@ -426,112 +245,18 @@ export class TestElixirCallee extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
-  swapToHigherSqrtPrice(
-    pool: string,
-    sqrtPriceX96: BigNumberish,
-    recipient: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
-
-  "swapToHigherSqrtPrice(address,uint160,address)"(
-    pool: string,
-    sqrtPriceX96: BigNumberish,
-    recipient: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
-
-  swapToLowerSqrtPrice(
-    pool: string,
-    sqrtPriceX96: BigNumberish,
-    recipient: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
-
-  "swapToLowerSqrtPrice(address,uint160,address)"(
-    pool: string,
-    sqrtPriceX96: BigNumberish,
-    recipient: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
-
-  ElixirFlashCallback(
-    fee0: BigNumberish,
-    fee1: BigNumberish,
-    data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
-
-  "ElixirFlashCallback(uint256,uint256,bytes)"(
-    fee0: BigNumberish,
-    fee1: BigNumberish,
-    data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
-
-  ElixirMintCallback(
-    amount0Owed: BigNumberish,
-    amount1Owed: BigNumberish,
-    data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
-
-  "ElixirMintCallback(uint256,uint256,bytes)"(
-    amount0Owed: BigNumberish,
-    amount1Owed: BigNumberish,
-    data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
-
-  ElixirSwapCallback(
-    amount0Delta: BigNumberish,
-    amount1Delta: BigNumberish,
-    data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
-
-  "ElixirSwapCallback(int256,int256,bytes)"(
-    amount0Delta: BigNumberish,
-    amount1Delta: BigNumberish,
-    data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
-
   callStatic: {
-    flash(
-      pool: string,
-      recipient: string,
-      amount0: BigNumberish,
-      amount1: BigNumberish,
-      pay0: BigNumberish,
-      pay1: BigNumberish,
+    elixirSwapCallback(
+      amount0Delta: BigNumberish,
+      amount1Delta: BigNumberish,
+      data: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>;
 
-    "flash(address,address,uint256,uint256,uint256,uint256)"(
-      pool: string,
-      recipient: string,
-      amount0: BigNumberish,
-      amount1: BigNumberish,
-      pay0: BigNumberish,
-      pay1: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    mint(
-      pool: string,
-      recipient: string,
-      tickLower: BigNumberish,
-      tickUpper: BigNumberish,
-      amount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    "mint(address,address,int24,int24,uint128)"(
-      pool: string,
-      recipient: string,
-      tickLower: BigNumberish,
-      tickUpper: BigNumberish,
-      amount: BigNumberish,
+    "elixirSwapCallback(int256,int256,bytes)"(
+      amount0Delta: BigNumberish,
+      amount1Delta: BigNumberish,
+      data: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>;
 
@@ -598,122 +323,22 @@ export class TestElixirCallee extends Contract {
       sqrtPriceLimitX96: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>;
-
-    swapToHigherSqrtPrice(
-      pool: string,
-      sqrtPriceX96: BigNumberish,
-      recipient: string,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    "swapToHigherSqrtPrice(address,uint160,address)"(
-      pool: string,
-      sqrtPriceX96: BigNumberish,
-      recipient: string,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    swapToLowerSqrtPrice(
-      pool: string,
-      sqrtPriceX96: BigNumberish,
-      recipient: string,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    "swapToLowerSqrtPrice(address,uint160,address)"(
-      pool: string,
-      sqrtPriceX96: BigNumberish,
-      recipient: string,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    ElixirFlashCallback(
-      fee0: BigNumberish,
-      fee1: BigNumberish,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    "ElixirFlashCallback(uint256,uint256,bytes)"(
-      fee0: BigNumberish,
-      fee1: BigNumberish,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    ElixirMintCallback(
-      amount0Owed: BigNumberish,
-      amount1Owed: BigNumberish,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    "ElixirMintCallback(uint256,uint256,bytes)"(
-      amount0Owed: BigNumberish,
-      amount1Owed: BigNumberish,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    ElixirSwapCallback(
-      amount0Delta: BigNumberish,
-      amount1Delta: BigNumberish,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    "ElixirSwapCallback(int256,int256,bytes)"(
-      amount0Delta: BigNumberish,
-      amount1Delta: BigNumberish,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>;
   };
 
-  filters: {
-    FlashCallback(fee0: null, fee1: null): EventFilter;
-
-    MintCallback(amount0Owed: null, amount1Owed: null): EventFilter;
-
-    SwapCallback(amount0Delta: null, amount1Delta: null): EventFilter;
-  };
+  filters: {};
 
   estimateGas: {
-    flash(
-      pool: string,
-      recipient: string,
-      amount0: BigNumberish,
-      amount1: BigNumberish,
-      pay0: BigNumberish,
-      pay1: BigNumberish,
+    elixirSwapCallback(
+      amount0Delta: BigNumberish,
+      amount1Delta: BigNumberish,
+      data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>;
 
-    "flash(address,address,uint256,uint256,uint256,uint256)"(
-      pool: string,
-      recipient: string,
-      amount0: BigNumberish,
-      amount1: BigNumberish,
-      pay0: BigNumberish,
-      pay1: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    mint(
-      pool: string,
-      recipient: string,
-      tickLower: BigNumberish,
-      tickUpper: BigNumberish,
-      amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    "mint(address,address,int24,int24,uint128)"(
-      pool: string,
-      recipient: string,
-      tickLower: BigNumberish,
-      tickUpper: BigNumberish,
-      amount: BigNumberish,
+    "elixirSwapCallback(int256,int256,bytes)"(
+      amount0Delta: BigNumberish,
+      amount1Delta: BigNumberish,
+      data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>;
 
@@ -778,116 +403,22 @@ export class TestElixirCallee extends Contract {
       amount1In: BigNumberish,
       recipient: string,
       sqrtPriceLimitX96: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    swapToHigherSqrtPrice(
-      pool: string,
-      sqrtPriceX96: BigNumberish,
-      recipient: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    "swapToHigherSqrtPrice(address,uint160,address)"(
-      pool: string,
-      sqrtPriceX96: BigNumberish,
-      recipient: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    swapToLowerSqrtPrice(
-      pool: string,
-      sqrtPriceX96: BigNumberish,
-      recipient: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    "swapToLowerSqrtPrice(address,uint160,address)"(
-      pool: string,
-      sqrtPriceX96: BigNumberish,
-      recipient: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    ElixirFlashCallback(
-      fee0: BigNumberish,
-      fee1: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    "ElixirFlashCallback(uint256,uint256,bytes)"(
-      fee0: BigNumberish,
-      fee1: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    ElixirMintCallback(
-      amount0Owed: BigNumberish,
-      amount1Owed: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    "ElixirMintCallback(uint256,uint256,bytes)"(
-      amount0Owed: BigNumberish,
-      amount1Owed: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    ElixirSwapCallback(
-      amount0Delta: BigNumberish,
-      amount1Delta: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    "ElixirSwapCallback(int256,int256,bytes)"(
-      amount0Delta: BigNumberish,
-      amount1Delta: BigNumberish,
-      data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>;
   };
 
   populateTransaction: {
-    flash(
-      pool: string,
-      recipient: string,
-      amount0: BigNumberish,
-      amount1: BigNumberish,
-      pay0: BigNumberish,
-      pay1: BigNumberish,
+    elixirSwapCallback(
+      amount0Delta: BigNumberish,
+      amount1Delta: BigNumberish,
+      data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
 
-    "flash(address,address,uint256,uint256,uint256,uint256)"(
-      pool: string,
-      recipient: string,
-      amount0: BigNumberish,
-      amount1: BigNumberish,
-      pay0: BigNumberish,
-      pay1: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    mint(
-      pool: string,
-      recipient: string,
-      tickLower: BigNumberish,
-      tickUpper: BigNumberish,
-      amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    "mint(address,address,int24,int24,uint128)"(
-      pool: string,
-      recipient: string,
-      tickLower: BigNumberish,
-      tickUpper: BigNumberish,
-      amount: BigNumberish,
+    "elixirSwapCallback(int256,int256,bytes)"(
+      amount0Delta: BigNumberish,
+      amount1Delta: BigNumberish,
+      data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
 
@@ -952,76 +483,6 @@ export class TestElixirCallee extends Contract {
       amount1In: BigNumberish,
       recipient: string,
       sqrtPriceLimitX96: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    swapToHigherSqrtPrice(
-      pool: string,
-      sqrtPriceX96: BigNumberish,
-      recipient: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    "swapToHigherSqrtPrice(address,uint160,address)"(
-      pool: string,
-      sqrtPriceX96: BigNumberish,
-      recipient: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    swapToLowerSqrtPrice(
-      pool: string,
-      sqrtPriceX96: BigNumberish,
-      recipient: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    "swapToLowerSqrtPrice(address,uint160,address)"(
-      pool: string,
-      sqrtPriceX96: BigNumberish,
-      recipient: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    ElixirFlashCallback(
-      fee0: BigNumberish,
-      fee1: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    "ElixirFlashCallback(uint256,uint256,bytes)"(
-      fee0: BigNumberish,
-      fee1: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    ElixirMintCallback(
-      amount0Owed: BigNumberish,
-      amount1Owed: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    "ElixirMintCallback(uint256,uint256,bytes)"(
-      amount0Owed: BigNumberish,
-      amount1Owed: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    ElixirSwapCallback(
-      amount0Delta: BigNumberish,
-      amount1Delta: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    "ElixirSwapCallback(int256,int256,bytes)"(
-      amount0Delta: BigNumberish,
-      amount1Delta: BigNumberish,
-      data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
   };

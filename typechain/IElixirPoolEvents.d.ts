@@ -27,6 +27,7 @@ interface IElixirPoolEventsInterface extends ethers.utils.Interface {
     "Initialize(uint160,int24)": EventFragment;
     "Mint(address,address,int24,int24,uint128,uint256,uint256)": EventFragment;
     "SetFeeProtocol(uint8,uint8,uint8,uint8)": EventFragment;
+    "SetRewardRate(uint144,uint32)": EventFragment;
     "Swap(address,address,int256,int256,uint160,uint128,int24)": EventFragment;
   };
 
@@ -40,6 +41,7 @@ interface IElixirPoolEventsInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: "Initialize"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "Mint"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "SetFeeProtocol"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "SetRewardRate"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "Swap"): EventFragment;
 }
 
@@ -117,6 +119,11 @@ export class IElixirPoolEvents extends Contract {
       feeProtocol1Old: null,
       feeProtocol0New: null,
       feeProtocol1New: null
+    ): EventFilter;
+
+    SetRewardRate(
+      rewardPerSecondX48: null,
+      rewardRateEffectiveUntil: null
     ): EventFilter;
 
     Swap(

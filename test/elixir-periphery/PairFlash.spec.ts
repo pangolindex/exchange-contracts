@@ -12,7 +12,7 @@ import {
   NFTDescriptor,
   Quoter,
   SwapRouter,
-} from "../typechain";
+} from "../../typechain";
 import completeFixture from "./shared/completeFixture";
 import { FeeAmount, MaxUint128, TICK_SPACINGS } from "./shared/constants";
 import { encodePriceSqrt } from "./shared/encodePriceSqrt";

@@ -22,16 +22,16 @@ import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 
 interface IElixirFlashCallbackInterface extends ethers.utils.Interface {
   functions: {
-    "ElixirFlashCallback(uint256,uint256,bytes)": FunctionFragment;
+    "elixirFlashCallback(uint256,uint256,bytes)": FunctionFragment;
   };
 
   encodeFunctionData(
-    functionFragment: "ElixirFlashCallback",
+    functionFragment: "elixirFlashCallback",
     values: [BigNumberish, BigNumberish, BytesLike]
   ): string;
 
   decodeFunctionResult(
-    functionFragment: "ElixirFlashCallback",
+    functionFragment: "elixirFlashCallback",
     data: BytesLike
   ): Result;
 
@@ -52,14 +52,14 @@ export class IElixirFlashCallback extends Contract {
   interface: IElixirFlashCallbackInterface;
 
   functions: {
-    ElixirFlashCallback(
+    elixirFlashCallback(
       fee0: BigNumberish,
       fee1: BigNumberish,
       data: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
 
-    "ElixirFlashCallback(uint256,uint256,bytes)"(
+    "elixirFlashCallback(uint256,uint256,bytes)"(
       fee0: BigNumberish,
       fee1: BigNumberish,
       data: BytesLike,
@@ -67,14 +67,14 @@ export class IElixirFlashCallback extends Contract {
     ): Promise<ContractTransaction>;
   };
 
-  ElixirFlashCallback(
+  elixirFlashCallback(
     fee0: BigNumberish,
     fee1: BigNumberish,
     data: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
-  "ElixirFlashCallback(uint256,uint256,bytes)"(
+  "elixirFlashCallback(uint256,uint256,bytes)"(
     fee0: BigNumberish,
     fee1: BigNumberish,
     data: BytesLike,
@@ -82,14 +82,14 @@ export class IElixirFlashCallback extends Contract {
   ): Promise<ContractTransaction>;
 
   callStatic: {
-    ElixirFlashCallback(
+    elixirFlashCallback(
       fee0: BigNumberish,
       fee1: BigNumberish,
       data: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>;
 
-    "ElixirFlashCallback(uint256,uint256,bytes)"(
+    "elixirFlashCallback(uint256,uint256,bytes)"(
       fee0: BigNumberish,
       fee1: BigNumberish,
       data: BytesLike,
@@ -100,14 +100,14 @@ export class IElixirFlashCallback extends Contract {
   filters: {};
 
   estimateGas: {
-    ElixirFlashCallback(
+    elixirFlashCallback(
       fee0: BigNumberish,
       fee1: BigNumberish,
       data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>;
 
-    "ElixirFlashCallback(uint256,uint256,bytes)"(
+    "elixirFlashCallback(uint256,uint256,bytes)"(
       fee0: BigNumberish,
       fee1: BigNumberish,
       data: BytesLike,
@@ -116,14 +116,14 @@ export class IElixirFlashCallback extends Contract {
   };
 
   populateTransaction: {
-    ElixirFlashCallback(
+    elixirFlashCallback(
       fee0: BigNumberish,
       fee1: BigNumberish,
       data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
 
-    "ElixirFlashCallback(uint256,uint256,bytes)"(
+    "elixirFlashCallback(uint256,uint256,bytes)"(
       fee0: BigNumberish,
       fee1: BigNumberish,
       data: BytesLike,

@@ -41,6 +41,11 @@ const _abi = [
         name: "secondsPerLiquidityCumulativeX128s",
         type: "uint160[]",
       },
+      {
+        internalType: "uint192[]",
+        name: "rewardPerLiquidityCumulativeX64s",
+        type: "uint192[]",
+      },
     ],
     stateMutability: "view",
     type: "function",
@@ -74,6 +79,11 @@ const _abi = [
         internalType: "uint32",
         name: "secondsInside",
         type: "uint32",
+      },
+      {
+        internalType: "uint192",
+        name: "rewardPerLiquidityInsideX64",
+        type: "uint192",
       },
     ],
     stateMutability: "view",

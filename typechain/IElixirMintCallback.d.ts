@@ -22,16 +22,16 @@ import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 
 interface IElixirMintCallbackInterface extends ethers.utils.Interface {
   functions: {
-    "ElixirMintCallback(uint256,uint256,bytes)": FunctionFragment;
+    "elixirMintCallback(uint256,uint256,bytes)": FunctionFragment;
   };
 
   encodeFunctionData(
-    functionFragment: "ElixirMintCallback",
+    functionFragment: "elixirMintCallback",
     values: [BigNumberish, BigNumberish, BytesLike]
   ): string;
 
   decodeFunctionResult(
-    functionFragment: "ElixirMintCallback",
+    functionFragment: "elixirMintCallback",
     data: BytesLike
   ): Result;
 
@@ -52,14 +52,14 @@ export class IElixirMintCallback extends Contract {
   interface: IElixirMintCallbackInterface;
 
   functions: {
-    ElixirMintCallback(
+    elixirMintCallback(
       amount0Owed: BigNumberish,
       amount1Owed: BigNumberish,
       data: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
 
-    "ElixirMintCallback(uint256,uint256,bytes)"(
+    "elixirMintCallback(uint256,uint256,bytes)"(
       amount0Owed: BigNumberish,
       amount1Owed: BigNumberish,
       data: BytesLike,
@@ -67,14 +67,14 @@ export class IElixirMintCallback extends Contract {
     ): Promise<ContractTransaction>;
   };
 
-  ElixirMintCallback(
+  elixirMintCallback(
     amount0Owed: BigNumberish,
     amount1Owed: BigNumberish,
     data: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
-  "ElixirMintCallback(uint256,uint256,bytes)"(
+  "elixirMintCallback(uint256,uint256,bytes)"(
     amount0Owed: BigNumberish,
     amount1Owed: BigNumberish,
     data: BytesLike,
@@ -82,14 +82,14 @@ export class IElixirMintCallback extends Contract {
   ): Promise<ContractTransaction>;
 
   callStatic: {
-    ElixirMintCallback(
+    elixirMintCallback(
       amount0Owed: BigNumberish,
       amount1Owed: BigNumberish,
       data: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>;
 
-    "ElixirMintCallback(uint256,uint256,bytes)"(
+    "elixirMintCallback(uint256,uint256,bytes)"(
       amount0Owed: BigNumberish,
       amount1Owed: BigNumberish,
       data: BytesLike,
@@ -100,14 +100,14 @@ export class IElixirMintCallback extends Contract {
   filters: {};
 
   estimateGas: {
-    ElixirMintCallback(
+    elixirMintCallback(
       amount0Owed: BigNumberish,
       amount1Owed: BigNumberish,
       data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>;
 
-    "ElixirMintCallback(uint256,uint256,bytes)"(
+    "elixirMintCallback(uint256,uint256,bytes)"(
       amount0Owed: BigNumberish,
       amount1Owed: BigNumberish,
       data: BytesLike,
@@ -116,14 +116,14 @@ export class IElixirMintCallback extends Contract {
   };
 
   populateTransaction: {
-    ElixirMintCallback(
+    elixirMintCallback(
       amount0Owed: BigNumberish,
       amount1Owed: BigNumberish,
       data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
 
-    "ElixirMintCallback(uint256,uint256,bytes)"(
+    "elixirMintCallback(uint256,uint256,bytes)"(
       amount0Owed: BigNumberish,
       amount1Owed: BigNumberish,
       data: BytesLike,

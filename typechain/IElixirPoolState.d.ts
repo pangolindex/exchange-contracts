@@ -27,6 +27,7 @@ interface IElixirPoolStateInterface extends ethers.utils.Interface {
     "observations(uint256)": FunctionFragment;
     "positions(bytes32)": FunctionFragment;
     "protocolFees()": FunctionFragment;
+    "rewardSlot()": FunctionFragment;
     "slot0()": FunctionFragment;
     "tickBitmap(int16)": FunctionFragment;
     "ticks(int24)": FunctionFragment;
@@ -51,6 +52,10 @@ interface IElixirPoolStateInterface extends ethers.utils.Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "protocolFees",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "rewardSlot",
     values?: undefined
   ): string;
   encodeFunctionData(functionFragment: "slot0", values?: undefined): string;
@@ -78,6 +83,7 @@ interface IElixirPoolStateInterface extends ethers.utils.Interface {
     functionFragment: "protocolFees",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "rewardSlot", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "slot0", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "tickBitmap", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "ticks", data: BytesLike): Result;
@@ -131,10 +137,12 @@ export class IElixirPoolState extends Contract {
       tickCumulative: BigNumber;
       secondsPerLiquidityCumulativeX128: BigNumber;
       initialized: boolean;
+      rewardPerLiquidityCumulativeX64: BigNumber;
       0: number;
       1: BigNumber;
       2: BigNumber;
       3: boolean;
+      4: BigNumber;
     }>;
 
     "observations(uint256)"(
@@ -145,10 +153,12 @@ export class IElixirPoolState extends Contract {
       tickCumulative: BigNumber;
       secondsPerLiquidityCumulativeX128: BigNumber;
       initialized: boolean;
+      rewardPerLiquidityCumulativeX64: BigNumber;
       0: number;
       1: BigNumber;
       2: BigNumber;
       3: boolean;
+      4: BigNumber;
     }>;
 
     positions(
@@ -195,6 +205,20 @@ export class IElixirPoolState extends Contract {
       token1: BigNumber;
       0: BigNumber;
       1: BigNumber;
+    }>;
+
+    rewardSlot(overrides?: CallOverrides): Promise<{
+      rewardPerSecondX48: BigNumber;
+      rewardRateEffectiveUntil: number;
+      0: BigNumber;
+      1: number;
+    }>;
+
+    "rewardSlot()"(overrides?: CallOverrides): Promise<{
+      rewardPerSecondX48: BigNumber;
+      rewardRateEffectiveUntil: number;
+      0: BigNumber;
+      1: number;
     }>;
 
     slot0(overrides?: CallOverrides): Promise<{
@@ -257,6 +281,7 @@ export class IElixirPoolState extends Contract {
       secondsPerLiquidityOutsideX128: BigNumber;
       secondsOutside: number;
       initialized: boolean;
+      rewardPerLiquidityOutsideX64: BigNumber;
       0: BigNumber;
       1: BigNumber;
       2: BigNumber;
@@ -265,6 +290,7 @@ export class IElixirPoolState extends Contract {
       5: BigNumber;
       6: number;
       7: boolean;
+      8: BigNumber;
     }>;
 
     "ticks(int24)"(
@@ -279,6 +305,7 @@ export class IElixirPoolState extends Contract {
       secondsPerLiquidityOutsideX128: BigNumber;
       secondsOutside: number;
       initialized: boolean;
+      rewardPerLiquidityOutsideX64: BigNumber;
       0: BigNumber;
       1: BigNumber;
       2: BigNumber;
@@ -287,6 +314,7 @@ export class IElixirPoolState extends Contract {
       5: BigNumber;
       6: number;
       7: boolean;
+      8: BigNumber;
     }>;
   };
 
@@ -310,10 +338,12 @@ export class IElixirPoolState extends Contract {
     tickCumulative: BigNumber;
     secondsPerLiquidityCumulativeX128: BigNumber;
     initialized: boolean;
+    rewardPerLiquidityCumulativeX64: BigNumber;
     0: number;
     1: BigNumber;
     2: BigNumber;
     3: boolean;
+    4: BigNumber;
   }>;
 
   "observations(uint256)"(
@@ -324,10 +354,12 @@ export class IElixirPoolState extends Contract {
     tickCumulative: BigNumber;
     secondsPerLiquidityCumulativeX128: BigNumber;
     initialized: boolean;
+    rewardPerLiquidityCumulativeX64: BigNumber;
     0: number;
     1: BigNumber;
     2: BigNumber;
     3: boolean;
+    4: BigNumber;
   }>;
 
   positions(
@@ -374,6 +406,20 @@ export class IElixirPoolState extends Contract {
     token1: BigNumber;
     0: BigNumber;
     1: BigNumber;
+  }>;
+
+  rewardSlot(overrides?: CallOverrides): Promise<{
+    rewardPerSecondX48: BigNumber;
+    rewardRateEffectiveUntil: number;
+    0: BigNumber;
+    1: number;
+  }>;
+
+  "rewardSlot()"(overrides?: CallOverrides): Promise<{
+    rewardPerSecondX48: BigNumber;
+    rewardRateEffectiveUntil: number;
+    0: BigNumber;
+    1: number;
   }>;
 
   slot0(overrides?: CallOverrides): Promise<{
@@ -432,6 +478,7 @@ export class IElixirPoolState extends Contract {
     secondsPerLiquidityOutsideX128: BigNumber;
     secondsOutside: number;
     initialized: boolean;
+    rewardPerLiquidityOutsideX64: BigNumber;
     0: BigNumber;
     1: BigNumber;
     2: BigNumber;
@@ -440,6 +487,7 @@ export class IElixirPoolState extends Contract {
     5: BigNumber;
     6: number;
     7: boolean;
+    8: BigNumber;
   }>;
 
   "ticks(int24)"(
@@ -454,6 +502,7 @@ export class IElixirPoolState extends Contract {
     secondsPerLiquidityOutsideX128: BigNumber;
     secondsOutside: number;
     initialized: boolean;
+    rewardPerLiquidityOutsideX64: BigNumber;
     0: BigNumber;
     1: BigNumber;
     2: BigNumber;
@@ -462,6 +511,7 @@ export class IElixirPoolState extends Contract {
     5: BigNumber;
     6: number;
     7: boolean;
+    8: BigNumber;
   }>;
 
   callStatic: {
@@ -485,10 +535,12 @@ export class IElixirPoolState extends Contract {
       tickCumulative: BigNumber;
       secondsPerLiquidityCumulativeX128: BigNumber;
       initialized: boolean;
+      rewardPerLiquidityCumulativeX64: BigNumber;
       0: number;
       1: BigNumber;
       2: BigNumber;
       3: boolean;
+      4: BigNumber;
     }>;
 
     "observations(uint256)"(
@@ -499,10 +551,12 @@ export class IElixirPoolState extends Contract {
       tickCumulative: BigNumber;
       secondsPerLiquidityCumulativeX128: BigNumber;
       initialized: boolean;
+      rewardPerLiquidityCumulativeX64: BigNumber;
       0: number;
       1: BigNumber;
       2: BigNumber;
       3: boolean;
+      4: BigNumber;
     }>;
 
     positions(
@@ -549,6 +603,20 @@ export class IElixirPoolState extends Contract {
       token1: BigNumber;
       0: BigNumber;
       1: BigNumber;
+    }>;
+
+    rewardSlot(overrides?: CallOverrides): Promise<{
+      rewardPerSecondX48: BigNumber;
+      rewardRateEffectiveUntil: number;
+      0: BigNumber;
+      1: number;
+    }>;
+
+    "rewardSlot()"(overrides?: CallOverrides): Promise<{
+      rewardPerSecondX48: BigNumber;
+      rewardRateEffectiveUntil: number;
+      0: BigNumber;
+      1: number;
     }>;
 
     slot0(overrides?: CallOverrides): Promise<{
@@ -607,6 +675,7 @@ export class IElixirPoolState extends Contract {
       secondsPerLiquidityOutsideX128: BigNumber;
       secondsOutside: number;
       initialized: boolean;
+      rewardPerLiquidityOutsideX64: BigNumber;
       0: BigNumber;
       1: BigNumber;
       2: BigNumber;
@@ -615,6 +684,7 @@ export class IElixirPoolState extends Contract {
       5: BigNumber;
       6: number;
       7: boolean;
+      8: BigNumber;
     }>;
 
     "ticks(int24)"(
@@ -629,6 +699,7 @@ export class IElixirPoolState extends Contract {
       secondsPerLiquidityOutsideX128: BigNumber;
       secondsOutside: number;
       initialized: boolean;
+      rewardPerLiquidityOutsideX64: BigNumber;
       0: BigNumber;
       1: BigNumber;
       2: BigNumber;
@@ -637,6 +708,7 @@ export class IElixirPoolState extends Contract {
       5: BigNumber;
       6: number;
       7: boolean;
+      8: BigNumber;
     }>;
   };
 
@@ -675,6 +747,10 @@ export class IElixirPoolState extends Contract {
     protocolFees(overrides?: CallOverrides): Promise<BigNumber>;
 
     "protocolFees()"(overrides?: CallOverrides): Promise<BigNumber>;
+
+    rewardSlot(overrides?: CallOverrides): Promise<BigNumber>;
+
+    "rewardSlot()"(overrides?: CallOverrides): Promise<BigNumber>;
 
     slot0(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -742,6 +818,10 @@ export class IElixirPoolState extends Contract {
     protocolFees(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     "protocolFees()"(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    rewardSlot(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    "rewardSlot()"(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     slot0(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 

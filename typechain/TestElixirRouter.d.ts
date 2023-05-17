@@ -22,34 +22,34 @@ import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 
 interface TestElixirRouterInterface extends ethers.utils.Interface {
   functions: {
+    "elixirSwapCallback(int256,int256,bytes)": FunctionFragment;
     "swapForExact0Multi(address,address,address,uint256)": FunctionFragment;
     "swapForExact1Multi(address,address,address,uint256)": FunctionFragment;
-    "ElixirSwapCallback(int256,int256,bytes)": FunctionFragment;
   };
 
   encodeFunctionData(
+    functionFragment: "elixirSwapCallback",
+    values: [BigNumberish, BigNumberish, BytesLike]
+  ): string;
+  encodeFunctionData(
     functionFragment: "swapForExact0Multi",
     values: [string, string, string, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "swapForExact1Multi",
     values: [string, string, string, BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "ElixirSwapCallback",
-    values: [BigNumberish, BigNumberish, BytesLike]
   ): string;
 
   decodeFunctionResult(
+    functionFragment: "elixirSwapCallback",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "swapForExact0Multi",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
     functionFragment: "swapForExact1Multi",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "ElixirSwapCallback",
     data: BytesLike
   ): Result;
 
@@ -74,6 +74,20 @@ export class TestElixirRouter extends Contract {
   interface: TestElixirRouterInterface;
 
   functions: {
+    elixirSwapCallback(
+      amount0Delta: BigNumberish,
+      amount1Delta: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
+
+    "elixirSwapCallback(int256,int256,bytes)"(
+      amount0Delta: BigNumberish,
+      amount1Delta: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
+
     swapForExact0Multi(
       recipient: string,
       poolInput: string,
@@ -105,21 +119,21 @@ export class TestElixirRouter extends Contract {
       amount1Out: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
-
-    ElixirSwapCallback(
-      amount0Delta: BigNumberish,
-      amount1Delta: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
-
-    "ElixirSwapCallback(int256,int256,bytes)"(
-      amount0Delta: BigNumberish,
-      amount1Delta: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
   };
+
+  elixirSwapCallback(
+    amount0Delta: BigNumberish,
+    amount1Delta: BigNumberish,
+    data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
+
+  "elixirSwapCallback(int256,int256,bytes)"(
+    amount0Delta: BigNumberish,
+    amount1Delta: BigNumberish,
+    data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
 
   swapForExact0Multi(
     recipient: string,
@@ -153,21 +167,21 @@ export class TestElixirRouter extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
-  ElixirSwapCallback(
-    amount0Delta: BigNumberish,
-    amount1Delta: BigNumberish,
-    data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
-
-  "ElixirSwapCallback(int256,int256,bytes)"(
-    amount0Delta: BigNumberish,
-    amount1Delta: BigNumberish,
-    data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
-
   callStatic: {
+    elixirSwapCallback(
+      amount0Delta: BigNumberish,
+      amount1Delta: BigNumberish,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    "elixirSwapCallback(int256,int256,bytes)"(
+      amount0Delta: BigNumberish,
+      amount1Delta: BigNumberish,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
     swapForExact0Multi(
       recipient: string,
       poolInput: string,
@@ -197,20 +211,6 @@ export class TestElixirRouter extends Contract {
       poolInput: string,
       poolOutput: string,
       amount1Out: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    ElixirSwapCallback(
-      amount0Delta: BigNumberish,
-      amount1Delta: BigNumberish,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    "ElixirSwapCallback(int256,int256,bytes)"(
-      amount0Delta: BigNumberish,
-      amount1Delta: BigNumberish,
-      data: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>;
   };
@@ -220,6 +220,20 @@ export class TestElixirRouter extends Contract {
   };
 
   estimateGas: {
+    elixirSwapCallback(
+      amount0Delta: BigNumberish,
+      amount1Delta: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>;
+
+    "elixirSwapCallback(int256,int256,bytes)"(
+      amount0Delta: BigNumberish,
+      amount1Delta: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>;
+
     swapForExact0Multi(
       recipient: string,
       poolInput: string,
@@ -249,25 +263,25 @@ export class TestElixirRouter extends Contract {
       poolInput: string,
       poolOutput: string,
       amount1Out: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    ElixirSwapCallback(
-      amount0Delta: BigNumberish,
-      amount1Delta: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    "ElixirSwapCallback(int256,int256,bytes)"(
-      amount0Delta: BigNumberish,
-      amount1Delta: BigNumberish,
-      data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>;
   };
 
   populateTransaction: {
+    elixirSwapCallback(
+      amount0Delta: BigNumberish,
+      amount1Delta: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
+    "elixirSwapCallback(int256,int256,bytes)"(
+      amount0Delta: BigNumberish,
+      amount1Delta: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
     swapForExact0Multi(
       recipient: string,
       poolInput: string,
@@ -297,20 +311,6 @@ export class TestElixirRouter extends Contract {
       poolInput: string,
       poolOutput: string,
       amount1Out: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    ElixirSwapCallback(
-      amount0Delta: BigNumberish,
-      amount1Delta: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    "ElixirSwapCallback(int256,int256,bytes)"(
-      amount0Delta: BigNumberish,
-      amount1Delta: BigNumberish,
-      data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
   };

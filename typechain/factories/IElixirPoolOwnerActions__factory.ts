@@ -58,6 +58,34 @@ const _abi = [
   {
     inputs: [
       {
+        internalType: "address",
+        name: "_token0",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "_token1",
+        type: "address",
+      },
+      {
+        internalType: "uint24",
+        name: "_fee",
+        type: "uint24",
+      },
+      {
+        internalType: "int24",
+        name: "_tickSpacing",
+        type: "int24",
+      },
+    ],
+    name: "initialize",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
         internalType: "uint8",
         name: "feeProtocol0",
         type: "uint8",
@@ -69,6 +97,24 @@ const _abi = [
       },
     ],
     name: "setFeeProtocol",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint144",
+        name: "rewardPerSecondX48",
+        type: "uint144",
+      },
+      {
+        internalType: "uint32",
+        name: "rewardRateEffectiveUntil",
+        type: "uint32",
+      },
+    ],
+    name: "setRewardRate",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",

@@ -1,6 +1,7 @@
 cache/
 node_modules/
 artifacts/
+typechain/
 .secret.env
 .env
 .idea

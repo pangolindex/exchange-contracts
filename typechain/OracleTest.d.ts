@@ -13,7 +13,6 @@ import {
 import {
   Contract,
   ContractTransaction,
-  Overrides,
   CallOverrides,
 } from "@ethersproject/contracts";
 import { BytesLike } from "@ethersproject/bytes";
@@ -22,110 +21,78 @@ import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 
 interface OracleTestInterface extends ethers.utils.Interface {
   functions: {
-    "advanceTime(uint32)": FunctionFragment;
-    "batchUpdate(tuple[])": FunctionFragment;
-    "cardinality()": FunctionFragment;
-    "cardinalityNext()": FunctionFragment;
-    "getGasCostOfObserve(uint32[])": FunctionFragment;
-    "grow(uint16)": FunctionFragment;
-    "index()": FunctionFragment;
-    "initialize(tuple)": FunctionFragment;
-    "liquidity()": FunctionFragment;
-    "observations(uint256)": FunctionFragment;
-    "observe(uint32[])": FunctionFragment;
-    "tick()": FunctionFragment;
-    "time()": FunctionFragment;
-    "update(tuple)": FunctionFragment;
+    "consult(address,uint32)": FunctionFragment;
+    "getBlockStartingTickAndLiquidity(address)": FunctionFragment;
+    "getChainedPrice(address[],int24[])": FunctionFragment;
+    "getGasCostOfConsult(address,uint32)": FunctionFragment;
+    "getGasCostOfGetQuoteAtTick(int24,uint128,address,address)": FunctionFragment;
+    "getOldestObservationSecondsAgo(address)": FunctionFragment;
+    "getQuoteAtTick(int24,uint128,address,address)": FunctionFragment;
+    "getWeightedArithmeticMeanTick(tuple[])": FunctionFragment;
   };
 
   encodeFunctionData(
-    functionFragment: "advanceTime",
-    values: [BigNumberish]
+    functionFragment: "consult",
+    values: [string, BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "batchUpdate",
-    values: [
-      {
-        advanceTimeBy: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      }[]
-    ]
+    functionFragment: "getBlockStartingTickAndLiquidity",
+    values: [string]
   ): string;
   encodeFunctionData(
-    functionFragment: "cardinality",
-    values?: undefined
+    functionFragment: "getChainedPrice",
+    values: [string[], BigNumberish[]]
   ): string;
   encodeFunctionData(
-    functionFragment: "cardinalityNext",
-    values?: undefined
+    functionFragment: "getGasCostOfConsult",
+    values: [string, BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "getGasCostOfObserve",
-    values: [BigNumberish[]]
-  ): string;
-  encodeFunctionData(functionFragment: "grow", values: [BigNumberish]): string;
-  encodeFunctionData(functionFragment: "index", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "initialize",
-    values: [
-      { time: BigNumberish; tick: BigNumberish; liquidity: BigNumberish }
-    ]
-  ): string;
-  encodeFunctionData(functionFragment: "liquidity", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "observations",
-    values: [BigNumberish]
+    functionFragment: "getGasCostOfGetQuoteAtTick",
+    values: [BigNumberish, BigNumberish, string, string]
   ): string;
   encodeFunctionData(
-    functionFragment: "observe",
-    values: [BigNumberish[]]
+    functionFragment: "getOldestObservationSecondsAgo",
+    values: [string]
   ): string;
-  encodeFunctionData(functionFragment: "tick", values?: undefined): string;
-  encodeFunctionData(functionFragment: "time", values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "update",
-    values: [
-      {
-        advanceTimeBy: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      }
-    ]
+    functionFragment: "getQuoteAtTick",
+    values: [BigNumberish, BigNumberish, string, string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getWeightedArithmeticMeanTick",
+    values: [{ tick: BigNumberish; weight: BigNumberish }[]]
   ): string;
 
+  decodeFunctionResult(functionFragment: "consult", data: BytesLike): Result;
   decodeFunctionResult(
-    functionFragment: "advanceTime",
+    functionFragment: "getBlockStartingTickAndLiquidity",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "batchUpdate",
+    functionFragment: "getChainedPrice",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "cardinality",
+    functionFragment: "getGasCostOfConsult",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "cardinalityNext",
+    functionFragment: "getGasCostOfGetQuoteAtTick",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "getGasCostOfObserve",
+    functionFragment: "getOldestObservationSecondsAgo",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "grow", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "index", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "initialize", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "liquidity", data: BytesLike): Result;
   decodeFunctionResult(
-    functionFragment: "observations",
+    functionFragment: "getQuoteAtTick",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "observe", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "tick", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "time", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "update", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "getWeightedArithmeticMeanTick",
+    data: BytesLike
+  ): Result;
 
   events: {};
 }
@@ -144,776 +111,606 @@ export class OracleTest extends Contract {
   interface: OracleTestInterface;
 
   functions: {
-    advanceTime(
-      by: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
-
-    "advanceTime(uint32)"(
-      by: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
-
-    batchUpdate(
-      params: {
-        advanceTimeBy: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      }[],
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
-
-    "batchUpdate(tuple[])"(
-      params: {
-        advanceTimeBy: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      }[],
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
-
-    cardinality(
+    consult(
+      pool: string,
+      secondsAgo: BigNumberish,
       overrides?: CallOverrides
     ): Promise<{
-      0: number;
-    }>;
-
-    "cardinality()"(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: number;
-    }>;
-
-    cardinalityNext(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: number;
-    }>;
-
-    "cardinalityNext()"(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: number;
-    }>;
-
-    getGasCostOfObserve(
-      secondsAgos: BigNumberish[],
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber;
-    }>;
-
-    "getGasCostOfObserve(uint32[])"(
-      secondsAgos: BigNumberish[],
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber;
-    }>;
-
-    grow(
-      _cardinalityNext: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
-
-    "grow(uint16)"(
-      _cardinalityNext: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
-
-    index(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: number;
-    }>;
-
-    "index()"(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: number;
-    }>;
-
-    initialize(
-      params: {
-        time: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      },
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
-
-    "initialize(tuple)"(
-      params: {
-        time: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      },
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
-
-    liquidity(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber;
-    }>;
-
-    "liquidity()"(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber;
-    }>;
-
-    observations(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<{
-      blockTimestamp: number;
-      tickCumulative: BigNumber;
-      secondsPerLiquidityCumulativeX128: BigNumber;
-      initialized: boolean;
+      arithmeticMeanTick: number;
+      harmonicMeanLiquidity: BigNumber;
       0: number;
       1: BigNumber;
-      2: BigNumber;
-      3: boolean;
     }>;
 
-    "observations(uint256)"(
-      arg0: BigNumberish,
+    "consult(address,uint32)"(
+      pool: string,
+      secondsAgo: BigNumberish,
       overrides?: CallOverrides
     ): Promise<{
-      blockTimestamp: number;
-      tickCumulative: BigNumber;
-      secondsPerLiquidityCumulativeX128: BigNumber;
-      initialized: boolean;
+      arithmeticMeanTick: number;
+      harmonicMeanLiquidity: BigNumber;
       0: number;
       1: BigNumber;
-      2: BigNumber;
-      3: boolean;
     }>;
 
-    observe(
-      secondsAgos: BigNumberish[],
-      overrides?: CallOverrides
-    ): Promise<{
-      tickCumulatives: BigNumber[];
-      secondsPerLiquidityCumulativeX128s: BigNumber[];
-      0: BigNumber[];
-      1: BigNumber[];
-    }>;
-
-    "observe(uint32[])"(
-      secondsAgos: BigNumberish[],
-      overrides?: CallOverrides
-    ): Promise<{
-      tickCumulatives: BigNumber[];
-      secondsPerLiquidityCumulativeX128s: BigNumber[];
-      0: BigNumber[];
-      1: BigNumber[];
-    }>;
-
-    tick(
+    getBlockStartingTickAndLiquidity(
+      pool: string,
       overrides?: CallOverrides
     ): Promise<{
       0: number;
+      1: BigNumber;
     }>;
 
-    "tick()"(
+    "getBlockStartingTickAndLiquidity(address)"(
+      pool: string,
       overrides?: CallOverrides
     ): Promise<{
       0: number;
+      1: BigNumber;
     }>;
 
-    time(
+    getChainedPrice(
+      tokens: string[],
+      ticks: BigNumberish[],
       overrides?: CallOverrides
     ): Promise<{
+      syntheticTick: BigNumber;
+      0: BigNumber;
+    }>;
+
+    "getChainedPrice(address[],int24[])"(
+      tokens: string[],
+      ticks: BigNumberish[],
+      overrides?: CallOverrides
+    ): Promise<{
+      syntheticTick: BigNumber;
+      0: BigNumber;
+    }>;
+
+    getGasCostOfConsult(
+      pool: string,
+      period: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<{
+      0: BigNumber;
+    }>;
+
+    "getGasCostOfConsult(address,uint32)"(
+      pool: string,
+      period: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<{
+      0: BigNumber;
+    }>;
+
+    getGasCostOfGetQuoteAtTick(
+      tick: BigNumberish,
+      baseAmount: BigNumberish,
+      baseToken: string,
+      quoteToken: string,
+      overrides?: CallOverrides
+    ): Promise<{
+      0: BigNumber;
+    }>;
+
+    "getGasCostOfGetQuoteAtTick(int24,uint128,address,address)"(
+      tick: BigNumberish,
+      baseAmount: BigNumberish,
+      baseToken: string,
+      quoteToken: string,
+      overrides?: CallOverrides
+    ): Promise<{
+      0: BigNumber;
+    }>;
+
+    getOldestObservationSecondsAgo(
+      pool: string,
+      overrides?: CallOverrides
+    ): Promise<{
+      secondsAgo: number;
+      currentTimestamp: number;
+      0: number;
+      1: number;
+    }>;
+
+    "getOldestObservationSecondsAgo(address)"(
+      pool: string,
+      overrides?: CallOverrides
+    ): Promise<{
+      secondsAgo: number;
+      currentTimestamp: number;
+      0: number;
+      1: number;
+    }>;
+
+    getQuoteAtTick(
+      tick: BigNumberish,
+      baseAmount: BigNumberish,
+      baseToken: string,
+      quoteToken: string,
+      overrides?: CallOverrides
+    ): Promise<{
+      quoteAmount: BigNumber;
+      0: BigNumber;
+    }>;
+
+    "getQuoteAtTick(int24,uint128,address,address)"(
+      tick: BigNumberish,
+      baseAmount: BigNumberish,
+      baseToken: string,
+      quoteToken: string,
+      overrides?: CallOverrides
+    ): Promise<{
+      quoteAmount: BigNumber;
+      0: BigNumber;
+    }>;
+
+    getWeightedArithmeticMeanTick(
+      observations: { tick: BigNumberish; weight: BigNumberish }[],
+      overrides?: CallOverrides
+    ): Promise<{
+      arithmeticMeanWeightedTick: number;
       0: number;
     }>;
 
-    "time()"(
+    "getWeightedArithmeticMeanTick(tuple[])"(
+      observations: { tick: BigNumberish; weight: BigNumberish }[],
       overrides?: CallOverrides
     ): Promise<{
+      arithmeticMeanWeightedTick: number;
       0: number;
     }>;
-
-    update(
-      params: {
-        advanceTimeBy: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      },
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
-
-    "update(tuple)"(
-      params: {
-        advanceTimeBy: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      },
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
   };
 
-  advanceTime(
-    by: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
+  consult(
+    pool: string,
+    secondsAgo: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<{
+    arithmeticMeanTick: number;
+    harmonicMeanLiquidity: BigNumber;
+    0: number;
+    1: BigNumber;
+  }>;
 
-  "advanceTime(uint32)"(
-    by: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
+  "consult(address,uint32)"(
+    pool: string,
+    secondsAgo: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<{
+    arithmeticMeanTick: number;
+    harmonicMeanLiquidity: BigNumber;
+    0: number;
+    1: BigNumber;
+  }>;
 
-  batchUpdate(
-    params: {
-      advanceTimeBy: BigNumberish;
-      tick: BigNumberish;
-      liquidity: BigNumberish;
-    }[],
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
+  getBlockStartingTickAndLiquidity(
+    pool: string,
+    overrides?: CallOverrides
+  ): Promise<{
+    0: number;
+    1: BigNumber;
+  }>;
 
-  "batchUpdate(tuple[])"(
-    params: {
-      advanceTimeBy: BigNumberish;
-      tick: BigNumberish;
-      liquidity: BigNumberish;
-    }[],
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
+  "getBlockStartingTickAndLiquidity(address)"(
+    pool: string,
+    overrides?: CallOverrides
+  ): Promise<{
+    0: number;
+    1: BigNumber;
+  }>;
 
-  cardinality(overrides?: CallOverrides): Promise<number>;
-
-  "cardinality()"(overrides?: CallOverrides): Promise<number>;
-
-  cardinalityNext(overrides?: CallOverrides): Promise<number>;
-
-  "cardinalityNext()"(overrides?: CallOverrides): Promise<number>;
-
-  getGasCostOfObserve(
-    secondsAgos: BigNumberish[],
+  getChainedPrice(
+    tokens: string[],
+    ticks: BigNumberish[],
     overrides?: CallOverrides
   ): Promise<BigNumber>;
 
-  "getGasCostOfObserve(uint32[])"(
-    secondsAgos: BigNumberish[],
+  "getChainedPrice(address[],int24[])"(
+    tokens: string[],
+    ticks: BigNumberish[],
     overrides?: CallOverrides
   ): Promise<BigNumber>;
 
-  grow(
-    _cardinalityNext: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
+  getGasCostOfConsult(
+    pool: string,
+    period: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<BigNumber>;
 
-  "grow(uint16)"(
-    _cardinalityNext: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
+  "getGasCostOfConsult(address,uint32)"(
+    pool: string,
+    period: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<BigNumber>;
 
-  index(overrides?: CallOverrides): Promise<number>;
+  getGasCostOfGetQuoteAtTick(
+    tick: BigNumberish,
+    baseAmount: BigNumberish,
+    baseToken: string,
+    quoteToken: string,
+    overrides?: CallOverrides
+  ): Promise<BigNumber>;
 
-  "index()"(overrides?: CallOverrides): Promise<number>;
+  "getGasCostOfGetQuoteAtTick(int24,uint128,address,address)"(
+    tick: BigNumberish,
+    baseAmount: BigNumberish,
+    baseToken: string,
+    quoteToken: string,
+    overrides?: CallOverrides
+  ): Promise<BigNumber>;
 
-  initialize(
-    params: { time: BigNumberish; tick: BigNumberish; liquidity: BigNumberish },
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
-
-  "initialize(tuple)"(
-    params: { time: BigNumberish; tick: BigNumberish; liquidity: BigNumberish },
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
-
-  liquidity(overrides?: CallOverrides): Promise<BigNumber>;
-
-  "liquidity()"(overrides?: CallOverrides): Promise<BigNumber>;
-
-  observations(
-    arg0: BigNumberish,
+  getOldestObservationSecondsAgo(
+    pool: string,
     overrides?: CallOverrides
   ): Promise<{
-    blockTimestamp: number;
-    tickCumulative: BigNumber;
-    secondsPerLiquidityCumulativeX128: BigNumber;
-    initialized: boolean;
+    secondsAgo: number;
+    currentTimestamp: number;
     0: number;
-    1: BigNumber;
-    2: BigNumber;
-    3: boolean;
+    1: number;
   }>;
 
-  "observations(uint256)"(
-    arg0: BigNumberish,
+  "getOldestObservationSecondsAgo(address)"(
+    pool: string,
     overrides?: CallOverrides
   ): Promise<{
-    blockTimestamp: number;
-    tickCumulative: BigNumber;
-    secondsPerLiquidityCumulativeX128: BigNumber;
-    initialized: boolean;
+    secondsAgo: number;
+    currentTimestamp: number;
     0: number;
-    1: BigNumber;
-    2: BigNumber;
-    3: boolean;
+    1: number;
   }>;
 
-  observe(
-    secondsAgos: BigNumberish[],
+  getQuoteAtTick(
+    tick: BigNumberish,
+    baseAmount: BigNumberish,
+    baseToken: string,
+    quoteToken: string,
     overrides?: CallOverrides
-  ): Promise<{
-    tickCumulatives: BigNumber[];
-    secondsPerLiquidityCumulativeX128s: BigNumber[];
-    0: BigNumber[];
-    1: BigNumber[];
-  }>;
+  ): Promise<BigNumber>;
 
-  "observe(uint32[])"(
-    secondsAgos: BigNumberish[],
+  "getQuoteAtTick(int24,uint128,address,address)"(
+    tick: BigNumberish,
+    baseAmount: BigNumberish,
+    baseToken: string,
+    quoteToken: string,
     overrides?: CallOverrides
-  ): Promise<{
-    tickCumulatives: BigNumber[];
-    secondsPerLiquidityCumulativeX128s: BigNumber[];
-    0: BigNumber[];
-    1: BigNumber[];
-  }>;
+  ): Promise<BigNumber>;
 
-  tick(overrides?: CallOverrides): Promise<number>;
+  getWeightedArithmeticMeanTick(
+    observations: { tick: BigNumberish; weight: BigNumberish }[],
+    overrides?: CallOverrides
+  ): Promise<number>;
 
-  "tick()"(overrides?: CallOverrides): Promise<number>;
-
-  time(overrides?: CallOverrides): Promise<number>;
-
-  "time()"(overrides?: CallOverrides): Promise<number>;
-
-  update(
-    params: {
-      advanceTimeBy: BigNumberish;
-      tick: BigNumberish;
-      liquidity: BigNumberish;
-    },
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
-
-  "update(tuple)"(
-    params: {
-      advanceTimeBy: BigNumberish;
-      tick: BigNumberish;
-      liquidity: BigNumberish;
-    },
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
+  "getWeightedArithmeticMeanTick(tuple[])"(
+    observations: { tick: BigNumberish; weight: BigNumberish }[],
+    overrides?: CallOverrides
+  ): Promise<number>;
 
   callStatic: {
-    advanceTime(by: BigNumberish, overrides?: CallOverrides): Promise<void>;
-
-    "advanceTime(uint32)"(
-      by: BigNumberish,
+    consult(
+      pool: string,
+      secondsAgo: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<void>;
+    ): Promise<{
+      arithmeticMeanTick: number;
+      harmonicMeanLiquidity: BigNumber;
+      0: number;
+      1: BigNumber;
+    }>;
 
-    batchUpdate(
-      params: {
-        advanceTimeBy: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      }[],
+    "consult(address,uint32)"(
+      pool: string,
+      secondsAgo: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<void>;
+    ): Promise<{
+      arithmeticMeanTick: number;
+      harmonicMeanLiquidity: BigNumber;
+      0: number;
+      1: BigNumber;
+    }>;
 
-    "batchUpdate(tuple[])"(
-      params: {
-        advanceTimeBy: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      }[],
+    getBlockStartingTickAndLiquidity(
+      pool: string,
       overrides?: CallOverrides
-    ): Promise<void>;
+    ): Promise<{
+      0: number;
+      1: BigNumber;
+    }>;
 
-    cardinality(overrides?: CallOverrides): Promise<number>;
+    "getBlockStartingTickAndLiquidity(address)"(
+      pool: string,
+      overrides?: CallOverrides
+    ): Promise<{
+      0: number;
+      1: BigNumber;
+    }>;
 
-    "cardinality()"(overrides?: CallOverrides): Promise<number>;
-
-    cardinalityNext(overrides?: CallOverrides): Promise<number>;
-
-    "cardinalityNext()"(overrides?: CallOverrides): Promise<number>;
-
-    getGasCostOfObserve(
-      secondsAgos: BigNumberish[],
+    getChainedPrice(
+      tokens: string[],
+      ticks: BigNumberish[],
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    "getGasCostOfObserve(uint32[])"(
-      secondsAgos: BigNumberish[],
+    "getChainedPrice(address[],int24[])"(
+      tokens: string[],
+      ticks: BigNumberish[],
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    grow(
-      _cardinalityNext: BigNumberish,
+    getGasCostOfConsult(
+      pool: string,
+      period: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<void>;
+    ): Promise<BigNumber>;
 
-    "grow(uint16)"(
-      _cardinalityNext: BigNumberish,
+    "getGasCostOfConsult(address,uint32)"(
+      pool: string,
+      period: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<void>;
+    ): Promise<BigNumber>;
 
-    index(overrides?: CallOverrides): Promise<number>;
-
-    "index()"(overrides?: CallOverrides): Promise<number>;
-
-    initialize(
-      params: {
-        time: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      },
+    getGasCostOfGetQuoteAtTick(
+      tick: BigNumberish,
+      baseAmount: BigNumberish,
+      baseToken: string,
+      quoteToken: string,
       overrides?: CallOverrides
-    ): Promise<void>;
+    ): Promise<BigNumber>;
 
-    "initialize(tuple)"(
-      params: {
-        time: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      },
+    "getGasCostOfGetQuoteAtTick(int24,uint128,address,address)"(
+      tick: BigNumberish,
+      baseAmount: BigNumberish,
+      baseToken: string,
+      quoteToken: string,
       overrides?: CallOverrides
-    ): Promise<void>;
+    ): Promise<BigNumber>;
 
-    liquidity(overrides?: CallOverrides): Promise<BigNumber>;
-
-    "liquidity()"(overrides?: CallOverrides): Promise<BigNumber>;
-
-    observations(
-      arg0: BigNumberish,
+    getOldestObservationSecondsAgo(
+      pool: string,
       overrides?: CallOverrides
     ): Promise<{
-      blockTimestamp: number;
-      tickCumulative: BigNumber;
-      secondsPerLiquidityCumulativeX128: BigNumber;
-      initialized: boolean;
+      secondsAgo: number;
+      currentTimestamp: number;
       0: number;
-      1: BigNumber;
-      2: BigNumber;
-      3: boolean;
+      1: number;
     }>;
 
-    "observations(uint256)"(
-      arg0: BigNumberish,
+    "getOldestObservationSecondsAgo(address)"(
+      pool: string,
       overrides?: CallOverrides
     ): Promise<{
-      blockTimestamp: number;
-      tickCumulative: BigNumber;
-      secondsPerLiquidityCumulativeX128: BigNumber;
-      initialized: boolean;
+      secondsAgo: number;
+      currentTimestamp: number;
       0: number;
-      1: BigNumber;
-      2: BigNumber;
-      3: boolean;
+      1: number;
     }>;
 
-    observe(
-      secondsAgos: BigNumberish[],
+    getQuoteAtTick(
+      tick: BigNumberish,
+      baseAmount: BigNumberish,
+      baseToken: string,
+      quoteToken: string,
       overrides?: CallOverrides
-    ): Promise<{
-      tickCumulatives: BigNumber[];
-      secondsPerLiquidityCumulativeX128s: BigNumber[];
-      0: BigNumber[];
-      1: BigNumber[];
-    }>;
+    ): Promise<BigNumber>;
 
-    "observe(uint32[])"(
-      secondsAgos: BigNumberish[],
+    "getQuoteAtTick(int24,uint128,address,address)"(
+      tick: BigNumberish,
+      baseAmount: BigNumberish,
+      baseToken: string,
+      quoteToken: string,
       overrides?: CallOverrides
-    ): Promise<{
-      tickCumulatives: BigNumber[];
-      secondsPerLiquidityCumulativeX128s: BigNumber[];
-      0: BigNumber[];
-      1: BigNumber[];
-    }>;
+    ): Promise<BigNumber>;
 
-    tick(overrides?: CallOverrides): Promise<number>;
-
-    "tick()"(overrides?: CallOverrides): Promise<number>;
-
-    time(overrides?: CallOverrides): Promise<number>;
-
-    "time()"(overrides?: CallOverrides): Promise<number>;
-
-    update(
-      params: {
-        advanceTimeBy: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      },
+    getWeightedArithmeticMeanTick(
+      observations: { tick: BigNumberish; weight: BigNumberish }[],
       overrides?: CallOverrides
-    ): Promise<void>;
+    ): Promise<number>;
 
-    "update(tuple)"(
-      params: {
-        advanceTimeBy: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      },
+    "getWeightedArithmeticMeanTick(tuple[])"(
+      observations: { tick: BigNumberish; weight: BigNumberish }[],
       overrides?: CallOverrides
-    ): Promise<void>;
+    ): Promise<number>;
   };
 
   filters: {};
 
   estimateGas: {
-    advanceTime(by: BigNumberish, overrides?: Overrides): Promise<BigNumber>;
-
-    "advanceTime(uint32)"(
-      by: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    batchUpdate(
-      params: {
-        advanceTimeBy: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      }[],
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    "batchUpdate(tuple[])"(
-      params: {
-        advanceTimeBy: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      }[],
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    cardinality(overrides?: CallOverrides): Promise<BigNumber>;
-
-    "cardinality()"(overrides?: CallOverrides): Promise<BigNumber>;
-
-    cardinalityNext(overrides?: CallOverrides): Promise<BigNumber>;
-
-    "cardinalityNext()"(overrides?: CallOverrides): Promise<BigNumber>;
-
-    getGasCostOfObserve(
-      secondsAgos: BigNumberish[],
+    consult(
+      pool: string,
+      secondsAgo: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    "getGasCostOfObserve(uint32[])"(
-      secondsAgos: BigNumberish[],
+    "consult(address,uint32)"(
+      pool: string,
+      secondsAgo: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    grow(
-      _cardinalityNext: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    "grow(uint16)"(
-      _cardinalityNext: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    index(overrides?: CallOverrides): Promise<BigNumber>;
-
-    "index()"(overrides?: CallOverrides): Promise<BigNumber>;
-
-    initialize(
-      params: {
-        time: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      },
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    "initialize(tuple)"(
-      params: {
-        time: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      },
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    liquidity(overrides?: CallOverrides): Promise<BigNumber>;
-
-    "liquidity()"(overrides?: CallOverrides): Promise<BigNumber>;
-
-    observations(
-      arg0: BigNumberish,
+    getBlockStartingTickAndLiquidity(
+      pool: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    "observations(uint256)"(
-      arg0: BigNumberish,
+    "getBlockStartingTickAndLiquidity(address)"(
+      pool: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    observe(
-      secondsAgos: BigNumberish[],
+    getChainedPrice(
+      tokens: string[],
+      ticks: BigNumberish[],
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    "observe(uint32[])"(
-      secondsAgos: BigNumberish[],
+    "getChainedPrice(address[],int24[])"(
+      tokens: string[],
+      ticks: BigNumberish[],
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    tick(overrides?: CallOverrides): Promise<BigNumber>;
-
-    "tick()"(overrides?: CallOverrides): Promise<BigNumber>;
-
-    time(overrides?: CallOverrides): Promise<BigNumber>;
-
-    "time()"(overrides?: CallOverrides): Promise<BigNumber>;
-
-    update(
-      params: {
-        advanceTimeBy: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      },
-      overrides?: Overrides
+    getGasCostOfConsult(
+      pool: string,
+      period: BigNumberish,
+      overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    "update(tuple)"(
-      params: {
-        advanceTimeBy: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      },
-      overrides?: Overrides
+    "getGasCostOfConsult(address,uint32)"(
+      pool: string,
+      period: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    getGasCostOfGetQuoteAtTick(
+      tick: BigNumberish,
+      baseAmount: BigNumberish,
+      baseToken: string,
+      quoteToken: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    "getGasCostOfGetQuoteAtTick(int24,uint128,address,address)"(
+      tick: BigNumberish,
+      baseAmount: BigNumberish,
+      baseToken: string,
+      quoteToken: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    getOldestObservationSecondsAgo(
+      pool: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    "getOldestObservationSecondsAgo(address)"(
+      pool: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    getQuoteAtTick(
+      tick: BigNumberish,
+      baseAmount: BigNumberish,
+      baseToken: string,
+      quoteToken: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    "getQuoteAtTick(int24,uint128,address,address)"(
+      tick: BigNumberish,
+      baseAmount: BigNumberish,
+      baseToken: string,
+      quoteToken: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    getWeightedArithmeticMeanTick(
+      observations: { tick: BigNumberish; weight: BigNumberish }[],
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    "getWeightedArithmeticMeanTick(tuple[])"(
+      observations: { tick: BigNumberish; weight: BigNumberish }[],
+      overrides?: CallOverrides
     ): Promise<BigNumber>;
   };
 
   populateTransaction: {
-    advanceTime(
-      by: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    "advanceTime(uint32)"(
-      by: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    batchUpdate(
-      params: {
-        advanceTimeBy: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      }[],
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    "batchUpdate(tuple[])"(
-      params: {
-        advanceTimeBy: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      }[],
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    cardinality(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    "cardinality()"(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    cardinalityNext(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    "cardinalityNext()"(
+    consult(
+      pool: string,
+      secondsAgo: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    getGasCostOfObserve(
-      secondsAgos: BigNumberish[],
+    "consult(address,uint32)"(
+      pool: string,
+      secondsAgo: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    "getGasCostOfObserve(uint32[])"(
-      secondsAgos: BigNumberish[],
+    getBlockStartingTickAndLiquidity(
+      pool: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    grow(
-      _cardinalityNext: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    "grow(uint16)"(
-      _cardinalityNext: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    index(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    "index()"(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    initialize(
-      params: {
-        time: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      },
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    "initialize(tuple)"(
-      params: {
-        time: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      },
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    liquidity(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    "liquidity()"(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    observations(
-      arg0: BigNumberish,
+    "getBlockStartingTickAndLiquidity(address)"(
+      pool: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    "observations(uint256)"(
-      arg0: BigNumberish,
+    getChainedPrice(
+      tokens: string[],
+      ticks: BigNumberish[],
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    observe(
-      secondsAgos: BigNumberish[],
+    "getChainedPrice(address[],int24[])"(
+      tokens: string[],
+      ticks: BigNumberish[],
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    "observe(uint32[])"(
-      secondsAgos: BigNumberish[],
+    getGasCostOfConsult(
+      pool: string,
+      period: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    tick(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    "tick()"(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    time(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    "time()"(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    update(
-      params: {
-        advanceTimeBy: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      },
-      overrides?: Overrides
+    "getGasCostOfConsult(address,uint32)"(
+      pool: string,
+      period: BigNumberish,
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    "update(tuple)"(
-      params: {
-        advanceTimeBy: BigNumberish;
-        tick: BigNumberish;
-        liquidity: BigNumberish;
-      },
-      overrides?: Overrides
+    getGasCostOfGetQuoteAtTick(
+      tick: BigNumberish,
+      baseAmount: BigNumberish,
+      baseToken: string,
+      quoteToken: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    "getGasCostOfGetQuoteAtTick(int24,uint128,address,address)"(
+      tick: BigNumberish,
+      baseAmount: BigNumberish,
+      baseToken: string,
+      quoteToken: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    getOldestObservationSecondsAgo(
+      pool: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    "getOldestObservationSecondsAgo(address)"(
+      pool: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    getQuoteAtTick(
+      tick: BigNumberish,
+      baseAmount: BigNumberish,
+      baseToken: string,
+      quoteToken: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    "getQuoteAtTick(int24,uint128,address,address)"(
+      tick: BigNumberish,
+      baseAmount: BigNumberish,
+      baseToken: string,
+      quoteToken: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    getWeightedArithmeticMeanTick(
+      observations: { tick: BigNumberish; weight: BigNumberish }[],
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    "getWeightedArithmeticMeanTick(tuple[])"(
+      observations: { tick: BigNumberish; weight: BigNumberish }[],
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
   };
 }

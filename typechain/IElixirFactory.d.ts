@@ -26,6 +26,7 @@ interface IElixirFactoryInterface extends ethers.utils.Interface {
     "enableFeeAmount(uint24,int24)": FunctionFragment;
     "feeAmountTickSpacing(uint24)": FunctionFragment;
     "getPool(address,address,uint24)": FunctionFragment;
+    "implementation()": FunctionFragment;
     "owner()": FunctionFragment;
     "setOwner(address)": FunctionFragment;
   };
@@ -46,6 +47,10 @@ interface IElixirFactoryInterface extends ethers.utils.Interface {
     functionFragment: "getPool",
     values: [string, string, BigNumberish]
   ): string;
+  encodeFunctionData(
+    functionFragment: "implementation",
+    values?: undefined
+  ): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(functionFragment: "setOwner", values: [string]): string;
 
@@ -59,6 +64,10 @@ interface IElixirFactoryInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "getPool", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "implementation",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "setOwner", data: BytesLike): Result;
 
@@ -147,6 +156,14 @@ export class IElixirFactory extends Contract {
       0: string;
     }>;
 
+    implementation(overrides?: CallOverrides): Promise<{
+      0: string;
+    }>;
+
+    "implementation()"(overrides?: CallOverrides): Promise<{
+      0: string;
+    }>;
+
     owner(overrides?: CallOverrides): Promise<{
       0: string;
     }>;
@@ -216,6 +233,10 @@ export class IElixirFactory extends Contract {
     overrides?: CallOverrides
   ): Promise<string>;
 
+  implementation(overrides?: CallOverrides): Promise<string>;
+
+  "implementation()"(overrides?: CallOverrides): Promise<string>;
+
   owner(overrides?: CallOverrides): Promise<string>;
 
   "owner()"(overrides?: CallOverrides): Promise<string>;
@@ -277,6 +298,10 @@ export class IElixirFactory extends Contract {
       fee: BigNumberish,
       overrides?: CallOverrides
     ): Promise<string>;
+
+    implementation(overrides?: CallOverrides): Promise<string>;
+
+    "implementation()"(overrides?: CallOverrides): Promise<string>;
 
     owner(overrides?: CallOverrides): Promise<string>;
 
@@ -358,6 +383,10 @@ export class IElixirFactory extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    implementation(overrides?: CallOverrides): Promise<BigNumber>;
+
+    "implementation()"(overrides?: CallOverrides): Promise<BigNumber>;
+
     owner(overrides?: CallOverrides): Promise<BigNumber>;
 
     "owner()"(overrides?: CallOverrides): Promise<BigNumber>;
@@ -418,6 +447,12 @@ export class IElixirFactory extends Contract {
       tokenA: string,
       tokenB: string,
       fee: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    implementation(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    "implementation()"(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 

@@ -23,7 +23,9 @@ import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 interface IElixirPoolOwnerActionsInterface extends ethers.utils.Interface {
   functions: {
     "collectProtocol(address,uint128,uint128)": FunctionFragment;
+    "initialize(address,address,uint24,int24)": FunctionFragment;
     "setFeeProtocol(uint8,uint8)": FunctionFragment;
+    "setRewardRate(uint144,uint32)": FunctionFragment;
   };
 
   encodeFunctionData(
@@ -31,7 +33,15 @@ interface IElixirPoolOwnerActionsInterface extends ethers.utils.Interface {
     values: [string, BigNumberish, BigNumberish]
   ): string;
   encodeFunctionData(
+    functionFragment: "initialize",
+    values: [string, string, BigNumberish, BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "setFeeProtocol",
+    values: [BigNumberish, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setRewardRate",
     values: [BigNumberish, BigNumberish]
   ): string;
 
@@ -39,8 +49,13 @@ interface IElixirPoolOwnerActionsInterface extends ethers.utils.Interface {
     functionFragment: "collectProtocol",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "initialize", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "setFeeProtocol",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setRewardRate",
     data: BytesLike
   ): Result;
 
@@ -75,6 +90,22 @@ export class IElixirPoolOwnerActions extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>;
 
+    initialize(
+      _token0: string,
+      _token1: string,
+      _fee: BigNumberish,
+      _tickSpacing: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
+
+    "initialize(address,address,uint24,int24)"(
+      _token0: string,
+      _token1: string,
+      _fee: BigNumberish,
+      _tickSpacing: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
+
     setFeeProtocol(
       feeProtocol0: BigNumberish,
       feeProtocol1: BigNumberish,
@@ -84,6 +115,18 @@ export class IElixirPoolOwnerActions extends Contract {
     "setFeeProtocol(uint8,uint8)"(
       feeProtocol0: BigNumberish,
       feeProtocol1: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
+
+    setRewardRate(
+      rewardPerSecondX48: BigNumberish,
+      rewardRateEffectiveUntil: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
+
+    "setRewardRate(uint144,uint32)"(
+      rewardPerSecondX48: BigNumberish,
+      rewardRateEffectiveUntil: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
   };
@@ -102,6 +145,22 @@ export class IElixirPoolOwnerActions extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
+  initialize(
+    _token0: string,
+    _token1: string,
+    _fee: BigNumberish,
+    _tickSpacing: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
+
+  "initialize(address,address,uint24,int24)"(
+    _token0: string,
+    _token1: string,
+    _fee: BigNumberish,
+    _tickSpacing: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
+
   setFeeProtocol(
     feeProtocol0: BigNumberish,
     feeProtocol1: BigNumberish,
@@ -111,6 +170,18 @@ export class IElixirPoolOwnerActions extends Contract {
   "setFeeProtocol(uint8,uint8)"(
     feeProtocol0: BigNumberish,
     feeProtocol1: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
+
+  setRewardRate(
+    rewardPerSecondX48: BigNumberish,
+    rewardRateEffectiveUntil: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
+
+  "setRewardRate(uint144,uint32)"(
+    rewardPerSecondX48: BigNumberish,
+    rewardRateEffectiveUntil: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
@@ -139,6 +210,22 @@ export class IElixirPoolOwnerActions extends Contract {
       1: BigNumber;
     }>;
 
+    initialize(
+      _token0: string,
+      _token1: string,
+      _fee: BigNumberish,
+      _tickSpacing: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    "initialize(address,address,uint24,int24)"(
+      _token0: string,
+      _token1: string,
+      _fee: BigNumberish,
+      _tickSpacing: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
     setFeeProtocol(
       feeProtocol0: BigNumberish,
       feeProtocol1: BigNumberish,
@@ -148,6 +235,18 @@ export class IElixirPoolOwnerActions extends Contract {
     "setFeeProtocol(uint8,uint8)"(
       feeProtocol0: BigNumberish,
       feeProtocol1: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    setRewardRate(
+      rewardPerSecondX48: BigNumberish,
+      rewardRateEffectiveUntil: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    "setRewardRate(uint144,uint32)"(
+      rewardPerSecondX48: BigNumberish,
+      rewardRateEffectiveUntil: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>;
   };
@@ -169,6 +268,22 @@ export class IElixirPoolOwnerActions extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>;
 
+    initialize(
+      _token0: string,
+      _token1: string,
+      _fee: BigNumberish,
+      _tickSpacing: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>;
+
+    "initialize(address,address,uint24,int24)"(
+      _token0: string,
+      _token1: string,
+      _fee: BigNumberish,
+      _tickSpacing: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>;
+
     setFeeProtocol(
       feeProtocol0: BigNumberish,
       feeProtocol1: BigNumberish,
@@ -178,6 +293,18 @@ export class IElixirPoolOwnerActions extends Contract {
     "setFeeProtocol(uint8,uint8)"(
       feeProtocol0: BigNumberish,
       feeProtocol1: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>;
+
+    setRewardRate(
+      rewardPerSecondX48: BigNumberish,
+      rewardRateEffectiveUntil: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>;
+
+    "setRewardRate(uint144,uint32)"(
+      rewardPerSecondX48: BigNumberish,
+      rewardRateEffectiveUntil: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>;
   };
@@ -197,6 +324,22 @@ export class IElixirPoolOwnerActions extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
 
+    initialize(
+      _token0: string,
+      _token1: string,
+      _fee: BigNumberish,
+      _tickSpacing: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
+    "initialize(address,address,uint24,int24)"(
+      _token0: string,
+      _token1: string,
+      _fee: BigNumberish,
+      _tickSpacing: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
     setFeeProtocol(
       feeProtocol0: BigNumberish,
       feeProtocol1: BigNumberish,
@@ -206,6 +349,18 @@ export class IElixirPoolOwnerActions extends Contract {
     "setFeeProtocol(uint8,uint8)"(
       feeProtocol0: BigNumberish,
       feeProtocol1: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
+    setRewardRate(
+      rewardPerSecondX48: BigNumberish,
+      rewardRateEffectiveUntil: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
+    "setRewardRate(uint144,uint32)"(
+      rewardPerSecondX48: BigNumberish,
+      rewardRateEffectiveUntil: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
   };

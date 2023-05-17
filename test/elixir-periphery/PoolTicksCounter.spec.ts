@@ -2,7 +2,7 @@ import { waffle, ethers, artifacts } from "hardhat";
 
 import { expect } from "./shared/expect";
 
-import { PoolTicksCounterTest } from "../typechain";
+import { PoolTicksCounterTest } from "../../typechain";
 import { deployMockContract, Fixture, MockContract } from "ethereum-waffle";
 import { Artifact } from "hardhat/types";
 

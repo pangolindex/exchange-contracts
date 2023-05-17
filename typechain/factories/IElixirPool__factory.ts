@@ -299,6 +299,25 @@ const _abi = [
     anonymous: false,
     inputs: [
       {
+        indexed: false,
+        internalType: "uint144",
+        name: "rewardPerSecondX48",
+        type: "uint144",
+      },
+      {
+        indexed: false,
+        internalType: "uint32",
+        name: "rewardRateEffectiveUntil",
+        type: "uint32",
+      },
+    ],
+    name: "SetRewardRate",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
         indexed: true,
         internalType: "address",
         name: "sender",
@@ -552,6 +571,34 @@ const _abi = [
   {
     inputs: [
       {
+        internalType: "address",
+        name: "_token0",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "_token1",
+        type: "address",
+      },
+      {
+        internalType: "uint24",
+        name: "_fee",
+        type: "uint24",
+      },
+      {
+        internalType: "int24",
+        name: "_tickSpacing",
+        type: "int24",
+      },
+    ],
+    name: "initialize",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
         internalType: "uint160",
         name: "sqrtPriceX96",
         type: "uint160",
@@ -662,6 +709,11 @@ const _abi = [
         name: "initialized",
         type: "bool",
       },
+      {
+        internalType: "uint192",
+        name: "rewardPerLiquidityCumulativeX64",
+        type: "uint192",
+      },
     ],
     stateMutability: "view",
     type: "function",
@@ -685,6 +737,11 @@ const _abi = [
         internalType: "uint160[]",
         name: "secondsPerLiquidityCumulativeX128s",
         type: "uint160[]",
+      },
+      {
+        internalType: "uint192[]",
+        name: "rewardPerLiquidityCumulativeX64s",
+        type: "uint192[]",
       },
     ],
     stateMutability: "view",
@@ -748,6 +805,24 @@ const _abi = [
     type: "function",
   },
   {
+    inputs: [],
+    name: "rewardSlot",
+    outputs: [
+      {
+        internalType: "uint144",
+        name: "rewardPerSecondX48",
+        type: "uint144",
+      },
+      {
+        internalType: "uint32",
+        name: "rewardRateEffectiveUntil",
+        type: "uint32",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [
       {
         internalType: "uint8",
@@ -761,6 +836,24 @@ const _abi = [
       },
     ],
     name: "setFeeProtocol",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint144",
+        name: "rewardPerSecondX48",
+        type: "uint144",
+      },
+      {
+        internalType: "uint32",
+        name: "rewardRateEffectiveUntil",
+        type: "uint32",
+      },
+    ],
+    name: "setRewardRate",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
@@ -837,6 +930,11 @@ const _abi = [
         internalType: "uint32",
         name: "secondsInside",
         type: "uint32",
+      },
+      {
+        internalType: "uint192",
+        name: "rewardPerLiquidityInsideX64",
+        type: "uint192",
       },
     ],
     stateMutability: "view",
@@ -967,6 +1065,11 @@ const _abi = [
         internalType: "bool",
         name: "initialized",
         type: "bool",
+      },
+      {
+        internalType: "uint192",
+        name: "rewardPerLiquidityOutsideX64",
+        type: "uint192",
       },
     ],
     stateMutability: "view",

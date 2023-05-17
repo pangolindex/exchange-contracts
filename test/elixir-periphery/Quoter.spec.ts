@@ -5,7 +5,7 @@ import {
   MockTimeNonfungiblePositionManager,
   Quoter,
   TestERC20,
-} from "../typechain";
+} from "../../typechain";
 import completeFixture from "./shared/completeFixture";
 import { FeeAmount, MaxUint128, TICK_SPACINGS } from "./shared/constants";
 import { encodePriceSqrt } from "./shared/encodePriceSqrt";

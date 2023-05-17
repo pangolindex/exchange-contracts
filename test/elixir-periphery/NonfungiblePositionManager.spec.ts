@@ -10,7 +10,7 @@ import {
   SwapRouter,
   TestERC20,
   TestPositionNFTOwner,
-} from "../typechain";
+} from "../../typechain";
 import completeFixture from "./shared/completeFixture";
 import { computePoolAddress } from "./shared/computePoolAddress";
 import { FeeAmount, MaxUint128, TICK_SPACINGS } from "./shared/constants";
