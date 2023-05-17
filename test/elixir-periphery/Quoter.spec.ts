@@ -1,9 +1,9 @@
 import { Fixture } from "ethereum-waffle";
 import { constants, Wallet } from "ethers";
-import { ethers, waffle } from "hardhat";
+import { ethers, waffle, network } from "hardhat";
 import {
   MockTimeNonfungiblePositionManager,
-  Quoter,
+  ElixirQuoter,
   TestERC20,
 } from "../../typechain";
 import completeFixture from "./shared/completeFixture";
@@ -21,12 +21,32 @@ describe("Quoter", () => {
   const swapRouterFixture: Fixture<{
     nft: MockTimeNonfungiblePositionManager;
     tokens: [TestERC20, TestERC20, TestERC20];
-    quoter: Quoter;
+    quoter: ElixirQuoter;
   }> = async (wallets, provider) => {
     const { weth9, factory, router, tokens, nft } = await completeFixture(
       wallets,
       provider
     );
+
+    ////// POOL IMPLEMENTATION DEPLOYMENT
+    //  impersonating poolDeployer's account
+    const poolDeployerAddress = "0x427207B1Cdb6F2Ab8B1D21Ab77600f00b0a639a7";
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [poolDeployerAddress],
+    });
+
+    const poolDeployer = await (ethers as any).getSigner(poolDeployerAddress);
+
+    //  fund the impersonated account
+    await wallets[0].sendTransaction({
+      to: poolDeployerAddress,
+      value: ethers.utils.parseEther("100"),
+    });
+
+    const poolFactory = await ethers.getContractFactory("ElixirPool");
+    const poolImplementation = await poolFactory.connect(poolDeployer).deploy();
+    //////
 
     // approve & fund wallets
     for (const token of tokens) {
@@ -40,7 +60,7 @@ describe("Quoter", () => {
     quoter = (await quoterFactory.deploy(
       factory.address,
       weth9.address
-    )) as Quoter;
+    )) as ElixirQuoter;
 
     return {
       tokens,
@@ -51,7 +71,7 @@ describe("Quoter", () => {
 
   let nft: MockTimeNonfungiblePositionManager;
   let tokens: [TestERC20, TestERC20, TestERC20];
-  let quoter: Quoter;
+  let quoter: ElixirQuoter;
 
   let loadFixture: ReturnType<typeof waffle.createFixtureLoader>;
 
@@ -82,7 +102,7 @@ describe("Quoter", () => {
           3
         );
 
-        expect(quote).to.eq(1);
+        expect(quote[0]).to.eq(1);
       });
 
       it("1 -> 0", async () => {
@@ -94,7 +114,7 @@ describe("Quoter", () => {
           3
         );
 
-        expect(quote).to.eq(1);
+        expect(quote[0]).to.eq(1);
       });
 
       it("0 -> 1 -> 2", async () => {
@@ -106,7 +126,7 @@ describe("Quoter", () => {
           5
         );
 
-        expect(quote).to.eq(1);
+        expect(quote[0]).to.eq(1);
       });
 
       it("2 -> 1 -> 0", async () => {
@@ -118,7 +138,7 @@ describe("Quoter", () => {
           5
         );
 
-        expect(quote).to.eq(1);
+        expect(quote[0]).to.eq(1);
       });
     });
 
@@ -133,7 +153,7 @@ describe("Quoter", () => {
           encodePriceSqrt(100, 102)
         );
 
-        expect(quote).to.eq(9852);
+        expect(quote[0]).to.eq(9852);
       });
 
       it("1 -> 0", async () => {
@@ -146,7 +166,7 @@ describe("Quoter", () => {
           encodePriceSqrt(102, 100)
         );
 
-        expect(quote).to.eq(9852);
+        expect(quote[0]).to.eq(9852);
       });
     });
 
@@ -160,7 +180,7 @@ describe("Quoter", () => {
           1
         );
 
-        expect(quote).to.eq(3);
+        expect(quote[0]).to.eq(3);
       });
 
       it("1 -> 0", async () => {
@@ -172,7 +192,7 @@ describe("Quoter", () => {
           1
         );
 
-        expect(quote).to.eq(3);
+        expect(quote[0]).to.eq(3);
       });
 
       it("0 -> 1 -> 2", async () => {
@@ -184,7 +204,7 @@ describe("Quoter", () => {
           1
         );
 
-        expect(quote).to.eq(5);
+        expect(quote[0]).to.eq(5);
       });
 
       it("2 -> 1 -> 0", async () => {
@@ -196,7 +216,7 @@ describe("Quoter", () => {
           1
         );
 
-        expect(quote).to.eq(5);
+        expect(quote[0]).to.eq(5);
       });
     });
 
@@ -210,7 +230,7 @@ describe("Quoter", () => {
           encodePriceSqrt(100, 102)
         );
 
-        expect(quote).to.eq(9981);
+        expect(quote[0]).to.eq(9981);
       });
 
       it("1 -> 0", async () => {
@@ -222,7 +242,7 @@ describe("Quoter", () => {
           encodePriceSqrt(102, 100)
         );
 
-        expect(quote).to.eq(9981);
+        expect(quote[0]).to.eq(9981);
       });
     });
   });
