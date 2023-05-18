@@ -144,27 +144,27 @@ describe("Quoter", () => {
 
     describe("#quoteExactInputSingle", () => {
       it("0 -> 1", async () => {
-        const quote = await quoter.callStatic.quoteExactInputSingle(
-          tokens[0].address,
-          tokens[1].address,
-          FeeAmount.MEDIUM,
-          MaxUint128,
+        const quote = await quoter.callStatic.quoteExactInputSingle({
+          tokenIn: tokens[0].address,
+          tokenOut: tokens[1].address,
+          fee: FeeAmount.MEDIUM,
+          amountIn: MaxUint128,
           // -2%
-          encodePriceSqrt(100, 102)
-        );
+          sqrtPriceLimitX96: encodePriceSqrt(100, 102),
+        });
 
         expect(quote[0]).to.eq(9852);
       });
 
       it("1 -> 0", async () => {
-        const quote = await quoter.callStatic.quoteExactInputSingle(
-          tokens[1].address,
-          tokens[0].address,
-          FeeAmount.MEDIUM,
-          MaxUint128,
+        const quote = await quoter.callStatic.quoteExactInputSingle({
+          tokenIn: tokens[1].address,
+          tokenOut: tokens[0].address,
+          fee: FeeAmount.MEDIUM,
+          amountIn: MaxUint128,
           // +2%
-          encodePriceSqrt(102, 100)
-        );
+          sqrtPriceLimitX96: encodePriceSqrt(102, 100),
+        });
 
         expect(quote[0]).to.eq(9852);
       });
@@ -222,25 +222,25 @@ describe("Quoter", () => {
 
     describe("#quoteExactOutputSingle", () => {
       it("0 -> 1", async () => {
-        const quote = await quoter.callStatic.quoteExactOutputSingle(
-          tokens[0].address,
-          tokens[1].address,
-          FeeAmount.MEDIUM,
-          MaxUint128,
-          encodePriceSqrt(100, 102)
-        );
+        const quote = await quoter.callStatic.quoteExactOutputSingle({
+          tokenIn: tokens[0].address,
+          tokenOut: tokens[1].address,
+          fee: FeeAmount.MEDIUM,
+          amount: MaxUint128,
+          sqrtPriceLimitX96: encodePriceSqrt(100, 102),
+        });
 
         expect(quote[0]).to.eq(9981);
       });
 
       it("1 -> 0", async () => {
-        const quote = await quoter.callStatic.quoteExactOutputSingle(
-          tokens[1].address,
-          tokens[0].address,
-          FeeAmount.MEDIUM,
-          MaxUint128,
-          encodePriceSqrt(102, 100)
-        );
+        const quote = await quoter.callStatic.quoteExactOutputSingle({
+          tokenIn: tokens[1].address,
+          tokenOut: tokens[0].address,
+          fee: FeeAmount.MEDIUM,
+          amount: MaxUint128,
+          sqrtPriceLimitX96: encodePriceSqrt(102, 100),
+        });
 
         expect(quote[0]).to.eq(9981);
       });
