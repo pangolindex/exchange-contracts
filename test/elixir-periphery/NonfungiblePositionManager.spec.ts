@@ -164,8 +164,7 @@ describe("NonfungiblePositionManager", () => {
         FeeAmount.MEDIUM
       );
       const pool = new ethers.Contract(expectedAddress, IElixirPoolABI, wallet);
-
-      await pool.initialize(encodePriceSqrt(3, 1));
+      await pool["initialize(uint160)"](encodePriceSqrt(3, 1));
       const code = await wallet.provider.getCode(expectedAddress);
       expect(code).to.not.eq("0x");
       await nft.createAndInitializePoolIfNecessary(
