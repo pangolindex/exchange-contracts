@@ -318,6 +318,10 @@ contract NonfungiblePositionManager is
 
         PoolAddress.PoolKey memory poolKey = _poolIdToPoolKey[position.poolId];
         IElixirPool pool = IElixirPool(PoolAddress.computeAddress(factory, poolKey));
+
+        // we must update reward before burn otherwise it reverts if ticks get unintialized
+        _updateReward(position, pool);
+
         (amount0, amount1) = pool.burn(position.tickLower, position.tickUpper, params.liquidity);
 
         require(amount0 >= params.amount0Min && amount1 >= params.amount1Min, 'Price slippage check');
@@ -344,8 +348,6 @@ contract NonfungiblePositionManager is
                     FixedPoint128.Q128
                 )
             );
-
-        _updateReward(position, pool); // must use position.liquidity before update
 
         position.feeGrowthInside0LastX128 = feeGrowthInside0LastX128;
         position.feeGrowthInside1LastX128 = feeGrowthInside1LastX128;
