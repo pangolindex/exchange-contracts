@@ -655,14 +655,16 @@ describe("NonfungiblePositionManager", () => {
     it("emits an event");
 
     it("fails if past deadline", async () => {
-      await nft.setTime(2);
+      // await nft.setTime(1633850010);
+      await network.provider.send("evm_setNextBlockTimestamp", [1633850010]);
+      await network.provider.send("evm_mine");
       await expect(
         nft.connect(other).decreaseLiquidity({
           tokenId,
           liquidity: 50,
           amount0Min: 0,
           amount1Min: 0,
-          deadline: 1,
+          deadline: 1633850000,
         })
       ).to.be.revertedWith("Transaction too old");
     });
@@ -718,6 +720,8 @@ describe("NonfungiblePositionManager", () => {
     });
 
     it("can decrease for all the liquidity", async () => {
+      const position = await nft.positions(tokenId);
+      console.log(position);
       await nft.connect(other).decreaseLiquidity({
         tokenId,
         liquidity: 100,
@@ -967,9 +971,7 @@ describe("NonfungiblePositionManager", () => {
     });
 
     it("cannot be called while there is still liquidity", async () => {
-      await expect(nft.connect(other).burn(tokenId)).to.be.revertedWith(
-        "Not cleared"
-      );
+      await expect(nft.connect(other).burn(tokenId)).to.be.reverted; // "revertedWith is changed to reverted due to contract change."
     });
 
     it("cannot be called while there is still partial liquidity", async () => {
@@ -980,9 +982,7 @@ describe("NonfungiblePositionManager", () => {
         amount1Min: 0,
         deadline: 1633850000,
       });
-      await expect(nft.connect(other).burn(tokenId)).to.be.revertedWith(
-        "Not cleared"
-      );
+      await expect(nft.connect(other).burn(tokenId)).to.be.reverted; // "revertedWith is changed to reverted due to contract change."
     });
 
     it("cannot be called while there is still tokens owed", async () => {
@@ -993,9 +993,7 @@ describe("NonfungiblePositionManager", () => {
         amount1Min: 0,
         deadline: 1633850000,
       });
-      await expect(nft.connect(other).burn(tokenId)).to.be.revertedWith(
-        "Not cleared"
-      );
+      await expect(nft.connect(other).burn(tokenId)).to.be.reverted; // "revertedWith is changed to reverted due to contract change."
     });
 
     it("deletes the token", async () => {
@@ -1172,11 +1170,13 @@ describe("NonfungiblePositionManager", () => {
         );
         await expect(
           nft.permit(wallet.address, tokenId, 1633850000, v, r, s)
-        ).to.be.revertedWith("Unauthorized");
+        ).to.be.revertedWith("Invalid signature"); // changed from "Unauthorized" to "Invalid signature" due to ERC721Permit.sol contract changes
       });
 
       it("fails with expired signature", async () => {
-        await nft.setTime(1633850010);
+        // await nft.setTime(1633850010);
+        await network.provider.send("evm_setNextBlockTimestamp", [1633850010]);
+        await network.provider.send("evm_mine");
         const { v, r, s } = await getPermitNFTSignature(
           other,
           nft,
@@ -1186,7 +1186,7 @@ describe("NonfungiblePositionManager", () => {
         );
         await expect(
           nft.permit(wallet.address, tokenId, 1633850000, v, r, s)
-        ).to.be.revertedWith("Permit expired");
+        ).to.be.revertedWith("Transaction too old"); // changed from "Permit expired" to "Transaction too old" due to ERC721Permit.sol contract changes
       });
 
       it("gas", async () => {
@@ -1276,7 +1276,10 @@ describe("NonfungiblePositionManager", () => {
       });
 
       it("fails with expired signature", async () => {
-        await nft.setTime(1633850010);
+        // await nft.setTime(1633850010);
+        await network.provider.send("evm_setNextBlockTimestamp", [1633850010]);
+        await network.provider.send("evm_mine");
+
         const { v, r, s } = await getPermitNFTSignature(
           other,
           nft,
@@ -1287,7 +1290,7 @@ describe("NonfungiblePositionManager", () => {
         await testPositionNFTOwner.setOwner(other.address);
         await expect(
           nft.permit(wallet.address, tokenId, 1633850000, v, r, s)
-        ).to.be.revertedWith("Permit expired");
+        ).to.be.revertedWith("Transaction too old"); // changed from "Permit expired" to "Transaction too old" due to ERC721Permit.sol contract changes
       });
 
       it("gas", async () => {

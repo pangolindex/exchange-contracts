@@ -8,7 +8,7 @@ import {
 } from "../../../artifacts/contracts/pangolin-core/PangolinFactory.sol/PangolinFactory.json";
 import { Fixture } from "ethereum-waffle";
 import { ethers, waffle } from "hardhat";
-import { IElixirFactory, IWETH9, MockTimeSwapRouter } from "../../typechain";
+import { IElixirFactory, IWETH9, MockTimeSwapRouter } from "../../../typechain";
 
 import WETH9 from "../contracts/WETH9.json";
 import { Contract } from "@ethersproject/contracts";
