@@ -720,8 +720,6 @@ describe("NonfungiblePositionManager", () => {
     });
 
     it("can decrease for all the liquidity", async () => {
-      const position = await nft.positions(tokenId);
-      console.log(position);
       await nft.connect(other).decreaseLiquidity({
         tokenId,
         liquidity: 100,

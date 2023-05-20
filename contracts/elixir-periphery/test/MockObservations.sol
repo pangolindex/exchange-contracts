@@ -64,7 +64,7 @@ contract MockObservations {
 
     function observations(
         uint256 index
-    ) external view returns (uint32, int56, uint160, bool) {
+    ) external view returns (uint32, int56, uint160, bool, uint192) {
         Oracle.Observation memory observation = oracleObservations[index];
         if (lastObservationCurrentTimestamp) {
             observation.blockTimestamp =
@@ -76,7 +76,8 @@ contract MockObservations {
             observation.blockTimestamp,
             observation.tickCumulative,
             observation.secondsPerLiquidityCumulativeX128,
-            observation.initialized
+            observation.initialized,
+            observation.rewardPerLiquidityCumulativeX64
         );
     }
 }

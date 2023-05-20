@@ -69,10 +69,15 @@ describe("OracleLibrary", () => {
     it("correct output when tick is 0", async () => {
       const period = 3;
       const secondsPerLiqCumulatives: [BigNumberish, BigNumberish] = [10, 20];
+      const rewardPerLiquidityCumulatives: [BigNumberish, BigNumberish] = [
+        BN0,
+        BN0,
+      ];
       const mockObservable = await observableWith({
         period,
         tickCumulatives: [12, 12],
         secondsPerLiqCumulatives,
+        rewardPerLiquidityCumulatives,
       });
       const { arithmeticMeanTick, harmonicMeanLiquidity } =
         await oracle.consult(mockObservable.address, period);
@@ -87,10 +92,15 @@ describe("OracleLibrary", () => {
       const period = 4;
 
       const secondsPerLiqCumulatives: [BigNumberish, BigNumberish] = [10, 15];
+      const rewardPerLiquidityCumulatives: [BigNumberish, BigNumberish] = [
+        BN0,
+        BN0,
+      ];
       const mockObservable = await observableWith({
         period,
         tickCumulatives: [-10, -12],
         secondsPerLiqCumulatives,
+        rewardPerLiquidityCumulatives,
       });
 
       const { arithmeticMeanTick, harmonicMeanLiquidity } =
@@ -108,10 +118,15 @@ describe("OracleLibrary", () => {
       const period = 1;
 
       const secondsPerLiqCumulatives: [BigNumberish, BigNumberish] = [10, 11];
+      const rewardPerLiquidityCumulatives: [BigNumberish, BigNumberish] = [
+        BN0,
+        BN0,
+      ];
       const mockObservable = await observableWith({
         period,
         tickCumulatives: [12, 12],
         secondsPerLiqCumulatives,
+        rewardPerLiquidityCumulatives,
       });
 
       const { arithmeticMeanTick, harmonicMeanLiquidity } =
@@ -139,15 +154,18 @@ describe("OracleLibrary", () => {
       period,
       tickCumulatives,
       secondsPerLiqCumulatives,
+      rewardPerLiquidityCumulatives,
     }: {
       period: number;
       tickCumulatives: [BigNumberish, BigNumberish];
       secondsPerLiqCumulatives: [BigNumberish, BigNumberish];
+      rewardPerLiquidityCumulatives: [BigNumberish, BigNumberish];
     }) {
       return mockObservableFactory.deploy(
         [period, 0],
         tickCumulatives.map(BigNumber.from),
-        secondsPerLiqCumulatives.map(BigNumber.from)
+        secondsPerLiqCumulatives.map(BigNumber.from),
+        rewardPerLiquidityCumulatives.map(BigNumber.from)
       );
     }
   });

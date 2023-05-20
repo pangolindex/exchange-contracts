@@ -1,5 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`NonfungiblePositionManager #burn gas 1`] = `69956`;
+
 exports[`NonfungiblePositionManager #collect gas transfers both 1`] = `126472`;
 
 exports[`NonfungiblePositionManager #collect gas transfers token0 only 1`] = `117444`;
@@ -8,7 +10,9 @@ exports[`NonfungiblePositionManager #collect gas transfers token1 only 1`] = `11
 
 exports[`NonfungiblePositionManager #createAndInitializePoolIfNecessary gas 1`] = `263440`;
 
-exports[`NonfungiblePositionManager #decreaseLiquidity gas partial decrease 1`] = `187712`;
+exports[`NonfungiblePositionManager #decreaseLiquidity gas complete decrease 1`] = `168135`;
+
+exports[`NonfungiblePositionManager #decreaseLiquidity gas partial decrease 1`] = `188561`;
 
 exports[`NonfungiblePositionManager #increaseLiquidity gas 1`] = `195911`;
 
@@ -32,4 +36,6 @@ exports[`NonfungiblePositionManager #transferFrom gas 1`] = `109916`;
 
 exports[`NonfungiblePositionManager #transferFrom gas comes from approved 1`] = `108522`;
 
-exports[`NonfungiblePositionManager bytecode size 1`] = `24569`;
+exports[`NonfungiblePositionManager bytecode size 1`] = `24568`;
+
+exports[`NonfungiblePositionManager multicall exit gas 1`] = `252005`;
