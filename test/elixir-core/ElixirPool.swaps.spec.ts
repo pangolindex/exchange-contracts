@@ -509,7 +509,7 @@ describe("ElixirPool swap tests", () => {
           token1,
           pool,
         });
-        await pool.initialize(poolCase.startingPrice);
+        await pool["initialize(uint160)"](poolCase.startingPrice);
         // mint all positions
         for (const position of poolCase.positions) {
           await poolFunctions.mint(

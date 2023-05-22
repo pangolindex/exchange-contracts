@@ -56,7 +56,9 @@ interface TokensFixture {
 }
 
 async function tokensFixture(): Promise<TokensFixture> {
-  const tokenFactory = await ethers.getContractFactory("TestERC20");
+  const tokenFactory = await ethers.getContractFactory(
+    "contracts/elixir-core/test/TestERC20.sol:TestERC20"
+  );
   const tokenA = (await tokenFactory.deploy(
     BigNumber.from(2).pow(255)
   )) as TestERC20;
@@ -94,26 +96,20 @@ export const TEST_POOL_START_TIME = 1601906400;
 export const poolFixture: Fixture<PoolFixture> =
   async function (): Promise<PoolFixture> {
     let wallet: Wallet;
-    let poolDeployer: Wallet;
     [wallet] = await (ethers as any).getSigners();
 
     const { factory } = await factoryFixture();
     const { token0, token1, token2 } = await tokensFixture();
 
-    // const MockTimeElixirPoolDeployerFactory = await ethers.getContractFactory(
-    //   "MockTimeElixirPoolDeployer"
-    // );
-    // const MockTimeElixirPoolFactory = await ethers.getContractFactory(
-    //   "MockTimeElixirPool"
-    // );
-
-    poolDeployer = await impersonateDeployer(wallet);
-
-    const poolFactory = await ethers.getContractFactory("ElixirPool");
-    const poolImplementation = await poolFactory.connect(poolDeployer).deploy();
+    const MockTimeElixirPoolDeployerFactory = await ethers.getContractFactory(
+      "MockTimeElixirPoolDeployer"
+    );
+    const MockTimeElixirPoolFactory = await ethers.getContractFactory(
+      "MockTimeElixirPool"
+    );
 
     const calleeContractFactory = await ethers.getContractFactory(
-      "TestElixirCallee"
+      "contracts/elixir-core/test/TestElixirCallee.sol:TestElixirCallee"
     );
     const routerContractFactory = await ethers.getContractFactory(
       "TestElixirRouter"
@@ -123,6 +119,8 @@ export const poolFixture: Fixture<PoolFixture> =
       (await calleeContractFactory.deploy()) as TestElixirCallee;
     const swapTargetRouter =
       (await routerContractFactory.deploy()) as TestElixirRouter;
+
+    const implementationAddress = await factory.implementation();
 
     return {
       token0,
@@ -138,7 +136,9 @@ export const poolFixture: Fixture<PoolFixture> =
         secondToken = token1
       ) => {
         const mockTimePoolDeployer =
-          (await MockTimeElixirPoolDeployerFactory.deploy()) as MockTimeElixirPoolDeployer;
+          (await MockTimeElixirPoolDeployerFactory.deploy(
+            implementationAddress
+          )) as MockTimeElixirPoolDeployer;
         const tx = await mockTimePoolDeployer.deploy(
           factory.address,
           firstToken.address,

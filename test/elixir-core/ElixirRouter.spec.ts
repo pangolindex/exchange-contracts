@@ -117,8 +117,8 @@ describe("ElixirPool", () => {
       inputToken = token0;
       outputToken = token2;
 
-      await pool0.initialize(encodePriceSqrt(1, 1));
-      await pool1.initialize(encodePriceSqrt(1, 1));
+      await pool0["initialize(uint160)"](encodePriceSqrt(1, 1));
+      await pool1["initialize(uint160)"](encodePriceSqrt(1, 1));
 
       await pool0Functions.mint(
         wallet.address,

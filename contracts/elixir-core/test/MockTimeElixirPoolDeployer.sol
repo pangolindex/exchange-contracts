@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity =0.7.6;
 
-// import "../interfaces/IElixirPoolDeployer.sol";
+import "openzeppelin-contracts-solc-0.7/proxy/Clones.sol";
+
+import "../interfaces/IElixirPool.sol";
 
 import "./MockTimeElixirPool.sol";
 
-contract MockTimeElixirPoolDeployer is IElixirPoolDeployer {
+contract MockTimeElixirPoolDeployer {
+    address public immutable implementation;
+
     struct Parameters {
         address factory;
         address token0;
@@ -14,9 +18,13 @@ contract MockTimeElixirPoolDeployer is IElixirPoolDeployer {
         int24 tickSpacing;
     }
 
-    Parameters public override parameters;
+    Parameters public parameters;
 
     event PoolDeployed(address pool);
+
+    constructor(address _implementation) {
+        implementation = _implementation;
+    }
 
     function deploy(
         address factory,
@@ -32,13 +40,11 @@ contract MockTimeElixirPoolDeployer is IElixirPoolDeployer {
             fee: fee,
             tickSpacing: tickSpacing
         });
-        pool = address(
-            new MockTimeElixirPool{
-                salt: keccak256(
-                    abi.encodePacked(token0, token1, fee, tickSpacing)
-                )
-            }()
+        pool = Clones.cloneDeterministic(
+            implementation,
+            keccak256(abi.encode(token0, token1, fee))
         );
+        IElixirPool(pool).initialize(token0, token1, fee, tickSpacing);
         emit PoolDeployed(pool);
         delete parameters;
     }

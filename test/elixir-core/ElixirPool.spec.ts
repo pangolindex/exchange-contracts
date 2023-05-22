@@ -122,32 +122,35 @@ describe("ElixirPool", () => {
 
   describe("#initialize", () => {
     it("fails if already initialized", async () => {
-      await pool.initialize(encodePriceSqrt(1, 1));
-      await expect(pool.initialize(encodePriceSqrt(1, 1))).to.be.reverted;
+      await pool["initialize(uint160)"](encodePriceSqrt(1, 1));
+      await expect(pool["initialize(uint160)"](encodePriceSqrt(1, 1))).to.be
+        .reverted;
     });
     it("fails if starting price is too low", async () => {
-      await expect(pool.initialize(1)).to.be.revertedWith("R");
-      await expect(pool.initialize(MIN_SQRT_RATIO.sub(1))).to.be.revertedWith(
-        "R"
-      );
+      await expect(pool["initialize(uint160)"](1)).to.be.revertedWith("R");
+      await expect(
+        pool["initialize(uint160)"](MIN_SQRT_RATIO.sub(1))
+      ).to.be.revertedWith("R");
     });
     it("fails if starting price is too high", async () => {
-      await expect(pool.initialize(MAX_SQRT_RATIO)).to.be.revertedWith("R");
       await expect(
-        pool.initialize(BigNumber.from(2).pow(160).sub(1))
+        pool["initialize(uint160)"](MAX_SQRT_RATIO)
+      ).to.be.revertedWith("R");
+      await expect(
+        pool["initialize(uint160)"](BigNumber.from(2).pow(160).sub(1))
       ).to.be.revertedWith("R");
     });
     it("can be initialized at MIN_SQRT_RATIO", async () => {
-      await pool.initialize(MIN_SQRT_RATIO);
+      await pool["initialize(uint160)"](MIN_SQRT_RATIO);
       expect((await pool.slot0()).tick).to.eq(getMinTick(1));
     });
     it("can be initialized at MAX_SQRT_RATIO - 1", async () => {
-      await pool.initialize(MAX_SQRT_RATIO.sub(1));
+      await pool["initialize(uint160)"](MAX_SQRT_RATIO.sub(1));
       expect((await pool.slot0()).tick).to.eq(getMaxTick(1) - 1);
     });
     it("sets initial variables", async () => {
       const price = encodePriceSqrt(1, 2);
-      await pool.initialize(price);
+      await pool["initialize(uint160)"](price);
 
       const { sqrtPriceX96, observationIndex } = await pool.slot0();
       expect(sqrtPriceX96).to.eq(price);
@@ -155,7 +158,7 @@ describe("ElixirPool", () => {
       expect((await pool.slot0()).tick).to.eq(-6932);
     });
     it("initializes the first observations slot", async () => {
-      await pool.initialize(encodePriceSqrt(1, 1));
+      await pool["initialize(uint160)"](encodePriceSqrt(1, 1));
       checkObservationEquals(await pool.observations(0), {
         secondsPerLiquidityCumulativeX128: 0,
         initialized: true,
@@ -165,7 +168,7 @@ describe("ElixirPool", () => {
     });
     it("emits a Initialized event with the input tick", async () => {
       const sqrtPriceX96 = encodePriceSqrt(1, 2);
-      await expect(pool.initialize(sqrtPriceX96))
+      await expect(pool["initialize(uint160)"](sqrtPriceX96))
         .to.emit(pool, "Initialize")
         .withArgs(sqrtPriceX96, -6932);
     });
@@ -178,13 +181,13 @@ describe("ElixirPool", () => {
       ).to.be.revertedWith("LOK");
     });
     it("emits an event including both old and new", async () => {
-      await pool.initialize(encodePriceSqrt(1, 1));
+      await pool["initialize(uint160)"](encodePriceSqrt(1, 1));
       await expect(pool.increaseObservationCardinalityNext(2))
         .to.emit(pool, "IncreaseObservationCardinalityNext")
         .withArgs(1, 2);
     });
     it("does not emit an event for no op call", async () => {
-      await pool.initialize(encodePriceSqrt(1, 1));
+      await pool["initialize(uint160)"](encodePriceSqrt(1, 1));
       await pool.increaseObservationCardinalityNext(3);
       await expect(pool.increaseObservationCardinalityNext(2)).to.not.emit(
         pool,
@@ -192,13 +195,13 @@ describe("ElixirPool", () => {
       );
     });
     it("does not change cardinality next if less than current", async () => {
-      await pool.initialize(encodePriceSqrt(1, 1));
+      await pool["initialize(uint160)"](encodePriceSqrt(1, 1));
       await pool.increaseObservationCardinalityNext(3);
       await pool.increaseObservationCardinalityNext(2);
       expect((await pool.slot0()).observationCardinalityNext).to.eq(3);
     });
     it("increases cardinality and cardinality next first time", async () => {
-      await pool.initialize(encodePriceSqrt(1, 1));
+      await pool["initialize(uint160)"](encodePriceSqrt(1, 1));
       await pool.increaseObservationCardinalityNext(2);
       const { observationCardinality, observationCardinalityNext } =
         await pool.slot0();
@@ -215,7 +218,7 @@ describe("ElixirPool", () => {
     });
     describe("after initialization", () => {
       beforeEach("initialize the pool at price of 10:1", async () => {
-        await pool.initialize(encodePriceSqrt(1, 10));
+        await pool["initialize(uint160)"](encodePriceSqrt(1, 10));
         await mint(wallet.address, minTick, maxTick, 3161);
       });
 
@@ -803,7 +806,7 @@ describe("ElixirPool", () => {
   // the combined amount of liquidity that the pool is initialized with (including the 1 minimum liquidity that is burned)
   const initializeLiquidityAmount = expandTo18Decimals(2);
   async function initializeAtZeroTick(pool: MockTimeElixirPool): Promise<void> {
-    await pool.initialize(encodePriceSqrt(1, 1));
+    await pool["initialize(uint160)"](encodePriceSqrt(1, 1));
     const tickSpacing = await pool.tickSpacing();
     const [min, max] = [getMinTick(tickSpacing), getMaxTick(tickSpacing)];
     await mint(wallet.address, min, max, initializeLiquidityAmount);
@@ -1194,7 +1197,7 @@ describe("ElixirPool", () => {
   describe("#collect", () => {
     beforeEach(async () => {
       pool = await createPool(FeeAmount.LOW, TICK_SPACINGS[FeeAmount.LOW]);
-      await pool.initialize(encodePriceSqrt(1, 1));
+      await pool["initialize(uint160)"](encodePriceSqrt(1, 1));
     });
 
     it("works with multiple LPs", async () => {
@@ -1330,7 +1333,7 @@ describe("ElixirPool", () => {
 
     beforeEach(async () => {
       pool = await createPool(FeeAmount.LOW, TICK_SPACINGS[FeeAmount.LOW]);
-      await pool.initialize(encodePriceSqrt(1, 1));
+      await pool["initialize(uint160)"](encodePriceSqrt(1, 1));
       await mint(wallet.address, minTick, maxTick, liquidityAmount);
     });
 
@@ -1604,7 +1607,7 @@ describe("ElixirPool", () => {
       });
       describe("post initialize", () => {
         beforeEach("initialize pool", async () => {
-          await pool.initialize(encodePriceSqrt(1, 1));
+          await pool["initialize(uint160)"](encodePriceSqrt(1, 1));
         });
         it("mint can only be called for multiples of 12", async () => {
           await expect(mint(wallet.address, -6, 0, 1)).to.be.reverted;
@@ -1666,7 +1669,7 @@ describe("ElixirPool", () => {
     const p0 = (await sqrtTickMath.getSqrtRatioAtTick(-24081)).add(1);
     // initialize at a price of ~0.3 token1/token0
     // meaning if you swap in 2 token0, you should end up getting 0 token1
-    await pool.initialize(p0);
+    await pool["initialize(uint160)"](p0);
     expect(await pool.liquidity(), "current pool liquidity is 1").to.eq(0);
     expect((await pool.slot0()).tick, "pool tick is -24081").to.eq(-24081);
 
@@ -1725,7 +1728,7 @@ describe("ElixirPool", () => {
       await expect(flash(0, 200, other.address)).to.be.reverted;
     });
     it("fails if no liquidity", async () => {
-      await pool.initialize(encodePriceSqrt(1, 1));
+      await pool["initialize(uint160)"](encodePriceSqrt(1, 1));
       await expect(flash(100, 200, other.address)).to.be.revertedWith("L");
       await expect(flash(100, 0, other.address)).to.be.revertedWith("L");
       await expect(flash(0, 200, other.address)).to.be.revertedWith("L");
@@ -1949,7 +1952,7 @@ describe("ElixirPool", () => {
     });
     describe("after initialization", () => {
       beforeEach("initialize the pool", () =>
-        pool.initialize(encodePriceSqrt(1, 1))
+        pool["initialize(uint160)"](encodePriceSqrt(1, 1))
       );
       it("oracle starting state after initialization", async () => {
         const {
@@ -1999,7 +2002,7 @@ describe("ElixirPool", () => {
 
   describe("#setFeeProtocol", () => {
     beforeEach("initialize the pool", async () => {
-      await pool.initialize(encodePriceSqrt(1, 1));
+      await pool["initialize(uint160)"](encodePriceSqrt(1, 1));
     });
 
     it("can only be called by factory owner", async () => {
@@ -2060,7 +2063,7 @@ describe("ElixirPool", () => {
 
   describe("#lock", () => {
     beforeEach("initialize the pool", async () => {
-      await pool.initialize(encodePriceSqrt(1, 1));
+      await pool["initialize(uint160)"](encodePriceSqrt(1, 1));
       await mint(wallet.address, minTick, maxTick, expandTo18Decimals(1));
     });
 
@@ -2081,7 +2084,7 @@ describe("ElixirPool", () => {
     const tickUpper = TICK_SPACINGS[FeeAmount.MEDIUM];
     const tickSpacing = TICK_SPACINGS[FeeAmount.MEDIUM];
     beforeEach(async () => {
-      await pool.initialize(encodePriceSqrt(1, 1));
+      await pool["initialize(uint160)"](encodePriceSqrt(1, 1));
       await mint(wallet.address, tickLower, tickUpper, 10);
     });
     it("throws if ticks are in reverse order", async () => {
@@ -2282,7 +2285,7 @@ describe("ElixirPool", () => {
 
   describe("fees overflow scenarios", async () => {
     it("up to max uint 128", async () => {
-      await pool.initialize(encodePriceSqrt(1, 1));
+      await pool["initialize(uint160)"](encodePriceSqrt(1, 1));
       await mint(wallet.address, minTick, maxTick, 1);
       await flash(0, 0, wallet.address, MaxUint128, MaxUint128);
 
@@ -2306,7 +2309,7 @@ describe("ElixirPool", () => {
     });
 
     it("overflow max uint 128", async () => {
-      await pool.initialize(encodePriceSqrt(1, 1));
+      await pool["initialize(uint160)"](encodePriceSqrt(1, 1));
       await mint(wallet.address, minTick, maxTick, 1);
       await flash(0, 0, wallet.address, MaxUint128, MaxUint128);
       await flash(0, 0, wallet.address, 1, 1);
@@ -2332,7 +2335,7 @@ describe("ElixirPool", () => {
     });
 
     it("overflow max uint 128 after poke burns fees owed to 0", async () => {
-      await pool.initialize(encodePriceSqrt(1, 1));
+      await pool["initialize(uint160)"](encodePriceSqrt(1, 1));
       await mint(wallet.address, minTick, maxTick, 1);
       await flash(0, 0, wallet.address, MaxUint128, MaxUint128);
       await pool.burn(minTick, maxTick, 0);
@@ -2352,7 +2355,7 @@ describe("ElixirPool", () => {
     });
 
     it("two positions at the same snapshot", async () => {
-      await pool.initialize(encodePriceSqrt(1, 1));
+      await pool["initialize(uint160)"](encodePriceSqrt(1, 1));
       await mint(wallet.address, minTick, maxTick, 1);
       await mint(other.address, minTick, maxTick, 1);
       await flash(0, 0, wallet.address, MaxUint128, 0);
@@ -2383,7 +2386,7 @@ describe("ElixirPool", () => {
     });
 
     it("two positions 1 wei of fees apart overflows exactly once", async () => {
-      await pool.initialize(encodePriceSqrt(1, 1));
+      await pool["initialize(uint160)"](encodePriceSqrt(1, 1));
       await mint(wallet.address, minTick, maxTick, 1);
       await flash(0, 0, wallet.address, 1, 0);
       await mint(other.address, minTick, maxTick, 1);
@@ -2424,7 +2427,7 @@ describe("ElixirPool", () => {
       underpay = (await underpayFactory.deploy()) as TestElixirSwapPay;
       await token0.approve(underpay.address, constants.MaxUint256);
       await token1.approve(underpay.address, constants.MaxUint256);
-      await pool.initialize(encodePriceSqrt(1, 1));
+      await pool["initialize(uint160)"](encodePriceSqrt(1, 1));
       await mint(wallet.address, minTick, maxTick, expandTo18Decimals(1));
     });
 

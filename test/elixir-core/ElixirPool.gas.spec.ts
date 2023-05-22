@@ -56,7 +56,7 @@ describe("ElixirPool gas tests", () => {
             pool,
           });
 
-        await pool.initialize(encodePriceSqrt(1, 1));
+        await pool["initialize(uint160)"](encodePriceSqrt(1, 1));
         await pool.setFeeProtocol(feeProtocol, feeProtocol);
         await pool.increaseObservationCardinalityNext(4);
         await pool.advanceTime(1);

@@ -119,7 +119,7 @@ describe("ElixirPool arbitrage tests", () => {
             await fix.token0.approve(tester.address, MaxUint256);
             await fix.token1.approve(tester.address, MaxUint256);
 
-            await pool.initialize(startingPrice);
+            await pool["initialize(uint160)"](startingPrice);
             if (feeProtocol != 0)
               await pool.setFeeProtocol(feeProtocol, feeProtocol);
             await mint(wallet.address, minTick, maxTick, passiveLiquidity);

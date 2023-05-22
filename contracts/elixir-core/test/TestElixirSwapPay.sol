@@ -6,7 +6,7 @@ import "../interfaces/IERC20Minimal.sol";
 import "../interfaces/callback/IElixirSwapCallback.sol";
 import "../interfaces/IElixirPool.sol";
 
-abstract contract TestElixirSwapPay is IElixirSwapCallback {
+contract TestElixirSwapPay is IElixirSwapCallback {
     function swap(
         address pool,
         address recipient,

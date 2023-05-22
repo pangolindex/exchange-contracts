@@ -6,7 +6,7 @@ import "../interfaces/IERC20Minimal.sol";
 import "../interfaces/callback/IElixirSwapCallback.sol";
 import "../interfaces/IElixirPool.sol";
 
-abstract contract ElixirPoolSwapTest is IElixirSwapCallback {
+contract ElixirPoolSwapTest is IElixirSwapCallback {
     int256 private _amount0Delta;
     int256 private _amount1Delta;
 
@@ -34,11 +34,11 @@ abstract contract ElixirPoolSwapTest is IElixirSwapCallback {
         (nextSqrtRatio, , , , , , ) = IElixirPool(pool).slot0();
     }
 
-    function ElixirSwapCallback(
+    function elixirSwapCallback(
         int256 amount0Delta,
         int256 amount1Delta,
         bytes calldata data
-    ) external {
+    ) external override {
         address sender = abi.decode(data, (address));
 
         if (amount0Delta > 0) {

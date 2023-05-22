@@ -22,15 +22,10 @@ import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 
 interface ElixirPoolSwapTestInterface extends ethers.utils.Interface {
   functions: {
-    "ElixirSwapCallback(int256,int256,bytes)": FunctionFragment;
     "elixirSwapCallback(int256,int256,bytes)": FunctionFragment;
     "getSwapResult(address,bool,int256,uint160)": FunctionFragment;
   };
 
-  encodeFunctionData(
-    functionFragment: "ElixirSwapCallback",
-    values: [BigNumberish, BigNumberish, BytesLike]
-  ): string;
   encodeFunctionData(
     functionFragment: "elixirSwapCallback",
     values: [BigNumberish, BigNumberish, BytesLike]
@@ -40,10 +35,6 @@ interface ElixirPoolSwapTestInterface extends ethers.utils.Interface {
     values: [string, boolean, BigNumberish, BigNumberish]
   ): string;
 
-  decodeFunctionResult(
-    functionFragment: "ElixirSwapCallback",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(
     functionFragment: "elixirSwapCallback",
     data: BytesLike
@@ -70,20 +61,6 @@ export class ElixirPoolSwapTest extends Contract {
   interface: ElixirPoolSwapTestInterface;
 
   functions: {
-    ElixirSwapCallback(
-      amount0Delta: BigNumberish,
-      amount1Delta: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
-
-    "ElixirSwapCallback(int256,int256,bytes)"(
-      amount0Delta: BigNumberish,
-      amount1Delta: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>;
-
     elixirSwapCallback(
       amount0Delta: BigNumberish,
       amount1Delta: BigNumberish,
@@ -114,20 +91,6 @@ export class ElixirPoolSwapTest extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>;
   };
-
-  ElixirSwapCallback(
-    amount0Delta: BigNumberish,
-    amount1Delta: BigNumberish,
-    data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
-
-  "ElixirSwapCallback(int256,int256,bytes)"(
-    amount0Delta: BigNumberish,
-    amount1Delta: BigNumberish,
-    data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>;
 
   elixirSwapCallback(
     amount0Delta: BigNumberish,
@@ -160,20 +123,6 @@ export class ElixirPoolSwapTest extends Contract {
   ): Promise<ContractTransaction>;
 
   callStatic: {
-    ElixirSwapCallback(
-      amount0Delta: BigNumberish,
-      amount1Delta: BigNumberish,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    "ElixirSwapCallback(int256,int256,bytes)"(
-      amount0Delta: BigNumberish,
-      amount1Delta: BigNumberish,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
     elixirSwapCallback(
       amount0Delta: BigNumberish,
       amount1Delta: BigNumberish,
@@ -222,20 +171,6 @@ export class ElixirPoolSwapTest extends Contract {
   filters: {};
 
   estimateGas: {
-    ElixirSwapCallback(
-      amount0Delta: BigNumberish,
-      amount1Delta: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
-    "ElixirSwapCallback(int256,int256,bytes)"(
-      amount0Delta: BigNumberish,
-      amount1Delta: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>;
-
     elixirSwapCallback(
       amount0Delta: BigNumberish,
       amount1Delta: BigNumberish,
@@ -268,20 +203,6 @@ export class ElixirPoolSwapTest extends Contract {
   };
 
   populateTransaction: {
-    ElixirSwapCallback(
-      amount0Delta: BigNumberish,
-      amount1Delta: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
-    "ElixirSwapCallback(int256,int256,bytes)"(
-      amount0Delta: BigNumberish,
-      amount1Delta: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>;
-
     elixirSwapCallback(
       amount0Delta: BigNumberish,
       amount1Delta: BigNumberish,
