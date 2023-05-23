@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity =0.7.6;
 
-import 'openzeppelin-contracts-solc-0.7/proxy/Clones.sol';
+import "openzeppelin-contracts-solc-0.7/proxy/Clones.sol";
 
-import './interfaces/IElixirFactory.sol';
-import './interfaces/IElixirPool.sol';
+import "./interfaces/IElixirFactory.sol";
+import "./interfaces/IElixirPool.sol";
 
 /// @title Canonical Elixir factory
 /// @notice Deploys Elixir pools and manages ownership and control over pool protocol fees
@@ -18,7 +18,9 @@ contract ElixirFactory is IElixirFactory {
     /// @inheritdoc IElixirFactory
     mapping(uint24 => int24) public override feeAmountTickSpacing;
     /// @inheritdoc IElixirFactory
-    mapping(address => mapping(address => mapping(uint24 => address))) public override getPool;
+    mapping(address => mapping(address => mapping(uint24 => address)))
+        public
+        override getPool;
 
     constructor(address _implementation) {
         implementation = _implementation;
@@ -41,12 +43,17 @@ contract ElixirFactory is IElixirFactory {
         uint24 fee
     ) external override returns (address pool) {
         require(tokenA != tokenB);
-        (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+        (address token0, address token1) = tokenA < tokenB
+            ? (tokenA, tokenB)
+            : (tokenB, tokenA);
         require(token0 != address(0));
         int24 tickSpacing = feeAmountTickSpacing[fee];
         require(tickSpacing != 0);
         require(getPool[token0][token1][fee] == address(0));
-        pool = Clones.cloneDeterministic(implementation, keccak256(abi.encode(token0, token1, fee)));
+        pool = Clones.cloneDeterministic(
+            implementation,
+            keccak256(abi.encode(token0, token1, fee))
+        );
         IElixirPool(pool).initialize(token0, token1, fee, tickSpacing);
         getPool[token0][token1][fee] = pool;
         // populate mapping in the reverse direction, deliberate choice to avoid the cost of comparing addresses
