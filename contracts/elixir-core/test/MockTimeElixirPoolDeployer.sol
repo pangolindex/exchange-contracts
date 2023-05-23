@@ -10,15 +10,15 @@ import "./MockTimeElixirPool.sol";
 contract MockTimeElixirPoolDeployer {
     address public immutable implementation;
 
-    struct Parameters {
-        address factory;
-        address token0;
-        address token1;
-        uint24 fee;
-        int24 tickSpacing;
-    }
+    // struct Parameters {
+    //     address factory;
+    //     address token0;
+    //     address token1;
+    //     uint24 fee;
+    //     int24 tickSpacing;
+    // }
 
-    Parameters public parameters;
+    // Parameters public parameters;
 
     event PoolDeployed(address pool);
 
@@ -33,19 +33,20 @@ contract MockTimeElixirPoolDeployer {
         uint24 fee,
         int24 tickSpacing
     ) external returns (address pool) {
-        parameters = Parameters({
-            factory: factory,
-            token0: token0,
-            token1: token1,
-            fee: fee,
-            tickSpacing: tickSpacing
-        });
+        // parameters = Parameters({
+        //     factory: factory,
+        //     token0: token0,
+        //     token1: token1,
+        //     fee: fee,
+        //     tickSpacing: tickSpacing
+        // });
         pool = Clones.cloneDeterministic(
             implementation,
             keccak256(abi.encode(token0, token1, fee))
         );
         IElixirPool(pool).initialize(token0, token1, fee, tickSpacing);
+        MockTimeElixirPool(pool).setFactory(factory);
         emit PoolDeployed(pool);
-        delete parameters;
+        // delete parameters;
     }
 }

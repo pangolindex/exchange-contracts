@@ -135,9 +135,11 @@ export const poolFixture: Fixture<PoolFixture> =
         firstToken = token0,
         secondToken = token1
       ) => {
+        const mockTimePoolImplementation =
+          await MockTimeElixirPoolFactory.deploy();
         const mockTimePoolDeployer =
           (await MockTimeElixirPoolDeployerFactory.deploy(
-            implementationAddress
+            mockTimePoolImplementation.address
           )) as MockTimeElixirPoolDeployer;
         const tx = await mockTimePoolDeployer.deploy(
           factory.address,

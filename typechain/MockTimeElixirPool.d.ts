@@ -23,6 +23,7 @@ import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 interface MockTimeElixirPoolInterface extends ethers.utils.Interface {
   functions: {
     "advanceTime(uint256)": FunctionFragment;
+    "blockTimestamp()": FunctionFragment;
     "burn(int24,int24,uint128)": FunctionFragment;
     "collect(address,int24,int24,uint128,uint128)": FunctionFragment;
     "collectProtocol(address,uint128,uint128)": FunctionFragment;
@@ -41,10 +42,12 @@ interface MockTimeElixirPoolInterface extends ethers.utils.Interface {
     "positions(bytes32)": FunctionFragment;
     "protocolFees()": FunctionFragment;
     "rewardSlot()": FunctionFragment;
+    "setFactory(address)": FunctionFragment;
     "setFeeGrowthGlobal0X128(uint256)": FunctionFragment;
     "setFeeGrowthGlobal1X128(uint256)": FunctionFragment;
     "setFeeProtocol(uint8,uint8)": FunctionFragment;
     "setRewardRate(uint144,uint32)": FunctionFragment;
+    "setTime(uint256)": FunctionFragment;
     "slot0()": FunctionFragment;
     "snapshotCumulativesInside(int24,int24)": FunctionFragment;
     "swap(address,bool,int256,uint160,bytes)": FunctionFragment;
@@ -59,6 +62,10 @@ interface MockTimeElixirPoolInterface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: "advanceTime",
     values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "blockTimestamp",
+    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "burn",
@@ -123,6 +130,7 @@ interface MockTimeElixirPoolInterface extends ethers.utils.Interface {
     functionFragment: "rewardSlot",
     values?: undefined
   ): string;
+  encodeFunctionData(functionFragment: "setFactory", values: [string]): string;
   encodeFunctionData(
     functionFragment: "setFeeGrowthGlobal0X128",
     values: [BigNumberish]
@@ -138,6 +146,10 @@ interface MockTimeElixirPoolInterface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: "setRewardRate",
     values: [BigNumberish, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setTime",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(functionFragment: "slot0", values?: undefined): string;
   encodeFunctionData(
@@ -163,6 +175,10 @@ interface MockTimeElixirPoolInterface extends ethers.utils.Interface {
 
   decodeFunctionResult(
     functionFragment: "advanceTime",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "blockTimestamp",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "burn", data: BytesLike): Result;
@@ -204,6 +220,7 @@ interface MockTimeElixirPoolInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "rewardSlot", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "setFactory", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "setFeeGrowthGlobal0X128",
     data: BytesLike
@@ -220,6 +237,7 @@ interface MockTimeElixirPoolInterface extends ethers.utils.Interface {
     functionFragment: "setRewardRate",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "setTime", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "slot0", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "snapshotCumulativesInside",
@@ -286,6 +304,14 @@ export class MockTimeElixirPool extends Contract {
       by: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
+
+    blockTimestamp(overrides?: CallOverrides): Promise<{
+      0: number;
+    }>;
+
+    "blockTimestamp()"(overrides?: CallOverrides): Promise<{
+      0: number;
+    }>;
 
     burn(
       tickLower: BigNumberish,
@@ -554,6 +580,16 @@ export class MockTimeElixirPool extends Contract {
       1: number;
     }>;
 
+    setFactory(
+      factory_: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
+
+    "setFactory(address)"(
+      factory_: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
+
     setFeeGrowthGlobal0X128(
       _feeGrowthGlobal0X128: BigNumberish,
       overrides?: Overrides
@@ -595,6 +631,16 @@ export class MockTimeElixirPool extends Contract {
     "setRewardRate(uint144,uint32)"(
       rewardPerSecondX48: BigNumberish,
       rewardRateEffectiveUntil: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
+
+    setTime(
+      time_: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
+
+    "setTime(uint256)"(
+      time_: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
 
@@ -784,6 +830,10 @@ export class MockTimeElixirPool extends Contract {
     by: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>;
+
+  blockTimestamp(overrides?: CallOverrides): Promise<number>;
+
+  "blockTimestamp()"(overrides?: CallOverrides): Promise<number>;
 
   burn(
     tickLower: BigNumberish,
@@ -1028,6 +1078,16 @@ export class MockTimeElixirPool extends Contract {
     1: number;
   }>;
 
+  setFactory(
+    factory_: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
+
+  "setFactory(address)"(
+    factory_: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
+
   setFeeGrowthGlobal0X128(
     _feeGrowthGlobal0X128: BigNumberish,
     overrides?: Overrides
@@ -1069,6 +1129,16 @@ export class MockTimeElixirPool extends Contract {
   "setRewardRate(uint144,uint32)"(
     rewardPerSecondX48: BigNumberish,
     rewardRateEffectiveUntil: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
+
+  setTime(
+    time_: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
+
+  "setTime(uint256)"(
+    time_: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
@@ -1232,6 +1302,10 @@ export class MockTimeElixirPool extends Contract {
       by: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>;
+
+    blockTimestamp(overrides?: CallOverrides): Promise<number>;
+
+    "blockTimestamp()"(overrides?: CallOverrides): Promise<number>;
 
     burn(
       tickLower: BigNumberish,
@@ -1516,6 +1590,13 @@ export class MockTimeElixirPool extends Contract {
       1: number;
     }>;
 
+    setFactory(factory_: string, overrides?: CallOverrides): Promise<void>;
+
+    "setFactory(address)"(
+      factory_: string,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
     setFeeGrowthGlobal0X128(
       _feeGrowthGlobal0X128: BigNumberish,
       overrides?: CallOverrides
@@ -1557,6 +1638,13 @@ export class MockTimeElixirPool extends Contract {
     "setRewardRate(uint144,uint32)"(
       rewardPerSecondX48: BigNumberish,
       rewardRateEffectiveUntil: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    setTime(time_: BigNumberish, overrides?: CallOverrides): Promise<void>;
+
+    "setTime(uint256)"(
+      time_: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>;
 
@@ -1810,6 +1898,10 @@ export class MockTimeElixirPool extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>;
 
+    blockTimestamp(overrides?: CallOverrides): Promise<BigNumber>;
+
+    "blockTimestamp()"(overrides?: CallOverrides): Promise<BigNumber>;
+
     burn(
       tickLower: BigNumberish,
       tickUpper: BigNumberish,
@@ -1972,6 +2064,13 @@ export class MockTimeElixirPool extends Contract {
 
     "rewardSlot()"(overrides?: CallOverrides): Promise<BigNumber>;
 
+    setFactory(factory_: string, overrides?: Overrides): Promise<BigNumber>;
+
+    "setFactory(address)"(
+      factory_: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>;
+
     setFeeGrowthGlobal0X128(
       _feeGrowthGlobal0X128: BigNumberish,
       overrides?: Overrides
@@ -2013,6 +2112,13 @@ export class MockTimeElixirPool extends Contract {
     "setRewardRate(uint144,uint32)"(
       rewardPerSecondX48: BigNumberish,
       rewardRateEffectiveUntil: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>;
+
+    setTime(time_: BigNumberish, overrides?: Overrides): Promise<BigNumber>;
+
+    "setTime(uint256)"(
+      time_: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>;
 
@@ -2093,6 +2199,12 @@ export class MockTimeElixirPool extends Contract {
     "advanceTime(uint256)"(
       by: BigNumberish,
       overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
+    blockTimestamp(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    "blockTimestamp()"(
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     burn(
@@ -2272,6 +2384,16 @@ export class MockTimeElixirPool extends Contract {
 
     "rewardSlot()"(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
+    setFactory(
+      factory_: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
+    "setFactory(address)"(
+      factory_: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
     setFeeGrowthGlobal0X128(
       _feeGrowthGlobal0X128: BigNumberish,
       overrides?: Overrides
@@ -2313,6 +2435,16 @@ export class MockTimeElixirPool extends Contract {
     "setRewardRate(uint144,uint32)"(
       rewardPerSecondX48: BigNumberish,
       rewardRateEffectiveUntil: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
+    setTime(
+      time_: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
+    "setTime(uint256)"(
+      time_: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
 

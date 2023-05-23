@@ -20,6 +20,18 @@ contract MockTimeElixirPool is ElixirPool {
         time += by;
     }
 
+    function setFactory(address factory_) external {
+        factory = factory_;
+    }
+
+    function setTime(uint256 time_) external {
+        time = time_;
+    }
+
+    function blockTimestamp() external view returns (uint32) {
+        return _blockTimestamp();
+    }
+
     function _blockTimestamp() internal view override returns (uint32) {
         return uint32(time);
     }

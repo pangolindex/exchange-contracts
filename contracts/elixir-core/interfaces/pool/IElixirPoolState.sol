@@ -38,7 +38,10 @@ interface IElixirPoolState {
     /// reward contract that will update these variables based on a proper reward distribution logic.
     /// @return rewardPerSecondX48 The rewards per second promised to be distributed to the pool as a Q96.48 value
     /// rewardRateEffectiveUntil The timestamp when the rewardPerSecondX48 is no longer effective
-    function rewardSlot() external view returns (uint144 rewardPerSecondX48, uint32 rewardRateEffectiveUntil);
+    function rewardSlot()
+        external
+        view
+        returns (uint144 rewardPerSecondX48, uint32 rewardRateEffectiveUntil);
 
     /// @notice The fee growth as a Q128.128 fees of token0 collected per unit of liquidity for the entire life of the pool
     /// @dev This value can overflow the uint256
@@ -50,7 +53,10 @@ interface IElixirPoolState {
 
     /// @notice The amounts of token0 and token1 that are owed to the protocol
     /// @dev Protocol fees will never exceed uint128 max in either token
-    function protocolFees() external view returns (uint128 token0, uint128 token1);
+    function protocolFees()
+        external
+        view
+        returns (uint128 token0, uint128 token1);
 
     /// @notice The currently in range liquidity available to the pool
     /// @dev This value has no relationship to the total liquidity across all ticks
@@ -70,7 +76,9 @@ interface IElixirPoolState {
     /// Outside values can only be used if the tick is initialized, i.e. if liquidityGross is greater than 0.
     /// In addition, these values are only relative and must be used only in comparison to previous snapshots for
     /// a specific position.
-    function ticks(int24 tick)
+    function ticks(
+        int24 tick
+    )
         external
         view
         returns (
@@ -95,7 +103,9 @@ interface IElixirPoolState {
     /// Returns feeGrowthInside1LastX128 fee growth of token1 inside the tick range as of the last mint/burn/poke,
     /// Returns tokensOwed0 the computed amount of token0 owed to the position as of the last mint/burn/poke,
     /// Returns tokensOwed1 the computed amount of token1 owed to the position as of the last mint/burn/poke
-    function positions(bytes32 key)
+    function positions(
+        bytes32 key
+    )
         external
         view
         returns (
@@ -115,7 +125,9 @@ interface IElixirPoolState {
     /// Returns secondsPerLiquidityCumulativeX128 the seconds per in range liquidity for the life of the pool as of the observation timestamp,
     /// Returns initialized whether the observation has been initialized and the values are safe to use
     /// Returns rewardPerLiquidityCumulativeX64 reward per liquidity
-    function observations(uint256 index)
+    function observations(
+        uint256 index
+    )
         external
         view
         returns (
@@ -123,6 +135,6 @@ interface IElixirPoolState {
             int56 tickCumulative,
             uint160 secondsPerLiquidityCumulativeX128,
             bool initialized,
-	          uint192 rewardPerLiquidityCumulativeX64
+            uint192 rewardPerLiquidityCumulativeX64
         );
 }

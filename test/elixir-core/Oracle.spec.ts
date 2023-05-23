@@ -17,7 +17,9 @@ describe("Oracle", () => {
   });
 
   const oracleFixture = async () => {
-    const oracleTestFactory = await ethers.getContractFactory("OracleTest");
+    const oracleTestFactory = await ethers.getContractFactory(
+      "contracts/elixir-core/test/OracleTest.sol:OracleTest"
+    );
     return (await oracleTestFactory.deploy()) as OracleTest;
   };
 

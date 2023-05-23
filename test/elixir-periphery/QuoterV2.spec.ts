@@ -1,9 +1,9 @@
 import { Fixture } from "ethereum-waffle";
 import { constants, Wallet } from "ethers";
-import { ethers, waffle } from "hardhat";
+import { ethers, waffle, network } from "hardhat";
 import {
   MockTimeNonfungiblePositionManager,
-  QuoterV2,
+  ElixirQuoter,
   TestERC20,
 } from "../../typechain";
 import completeFixture from "./shared/completeFixture";
@@ -27,12 +27,32 @@ describe("QuoterV2", function () {
   const swapRouterFixture: Fixture<{
     nft: MockTimeNonfungiblePositionManager;
     tokens: [TestERC20, TestERC20, TestERC20];
-    quoter: QuoterV2;
+    quoter: ElixirQuoter;
   }> = async (wallets, provider) => {
     const { weth9, factory, router, tokens, nft } = await completeFixture(
       wallets,
       provider
     );
+
+    ////// POOL IMPLEMENTATION DEPLOYMENT
+    //  impersonating poolDeployer's account
+    const poolDeployerAddress = "0x427207B1Cdb6F2Ab8B1D21Ab77600f00b0a639a7";
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [poolDeployerAddress],
+    });
+
+    const poolDeployer = await (ethers as any).getSigner(poolDeployerAddress);
+
+    //  fund the impersonated account
+    await wallets[0].sendTransaction({
+      to: poolDeployerAddress,
+      value: ethers.utils.parseEther("100"),
+    });
+
+    const poolFactory = await ethers.getContractFactory("ElixirPool");
+    const poolImplementation = await poolFactory.connect(poolDeployer).deploy();
+    //////
 
     // approve & fund wallets
     for (const token of tokens) {
@@ -42,11 +62,11 @@ describe("QuoterV2", function () {
       await token.transfer(trader.address, expandTo18Decimals(1_000_000));
     }
 
-    const quoterFactory = await ethers.getContractFactory("QuoterV2");
+    const quoterFactory = await ethers.getContractFactory("ElixirQuoter");
     quoter = (await quoterFactory.deploy(
       factory.address,
       weth9.address
-    )) as QuoterV2;
+    )) as ElixirQuoter;
 
     return {
       tokens,
@@ -57,7 +77,7 @@ describe("QuoterV2", function () {
 
   let nft: MockTimeNonfungiblePositionManager;
   let tokens: [TestERC20, TestERC20, TestERC20];
-  let quoter: QuoterV2;
+  let quoter: ElixirQuoter;
 
   let loadFixture: ReturnType<typeof waffle.createFixtureLoader>;
 

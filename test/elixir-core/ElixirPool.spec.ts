@@ -158,6 +158,7 @@ describe("ElixirPool", () => {
       expect((await pool.slot0()).tick).to.eq(-6932);
     });
     it("initializes the first observations slot", async () => {
+      await pool.setTime(TEST_POOL_START_TIME);
       await pool["initialize(uint160)"](encodePriceSqrt(1, 1));
       checkObservationEquals(await pool.observations(0), {
         secondsPerLiquidityCumulativeX128: 0,
@@ -218,6 +219,7 @@ describe("ElixirPool", () => {
     });
     describe("after initialization", () => {
       beforeEach("initialize the pool at price of 10:1", async () => {
+        await pool.setTime(TEST_POOL_START_TIME);
         await pool["initialize(uint160)"](encodePriceSqrt(1, 10));
         await mint(wallet.address, minTick, maxTick, 3161);
       });
@@ -1951,9 +1953,10 @@ describe("ElixirPool", () => {
       await expect(pool.increaseObservationCardinalityNext(2)).to.be.reverted;
     });
     describe("after initialization", () => {
-      beforeEach("initialize the pool", () =>
-        pool["initialize(uint160)"](encodePriceSqrt(1, 1))
-      );
+      beforeEach("initialize the pool", async () => {
+        await pool.setTime(TEST_POOL_START_TIME);
+        pool["initialize(uint160)"](encodePriceSqrt(1, 1));
+      });
       it("oracle starting state after initialization", async () => {
         const {
           observationCardinality,
