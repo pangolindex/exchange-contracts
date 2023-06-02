@@ -103,6 +103,9 @@ async function main() {
         console.log(nativeToken, ": WAVAX");
     }
 
+    // Deploy multicall
+    const multicall2 = await deploy("Multicall2");
+
     /**************
      * GOVERNANCE *
      **************/
