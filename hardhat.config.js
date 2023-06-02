@@ -1,6 +1,7 @@
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-etherscan");
+require('hardhat-contract-sizer');
 const { CHAINS } = require("@pangolindex/sdk");
 require("dotenv").config();
 const fs = require("fs");
@@ -77,14 +78,11 @@ module.exports = {
         version: "0.6.12",
       },
       {
-        version: "0.7.0",
-      },
-      {
         version: "0.7.6",
         settings: {
           optimizer: {
             enabled: true,
-            runs: 1000,
+            runs: 800,
           },
         },
       },
@@ -115,6 +113,15 @@ module.exports = {
           },
         },
       },
+      {
+        version: "0.8.19",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 2000,
+          },
+        },
+      },
     ],
     overrides: {
       "contracts/mini-chef-zapper/MiniChefV2Zapper.sol": {
@@ -128,6 +135,26 @@ module.exports = {
             "*": {
               "*": ["storageLayout"],
             },
+          },
+        },
+      },
+      "contracts/WAVAX.sol": {
+        version: "0.5.17",
+        settings: {
+          // For mocking
+          outputSelection: {
+            "*": {
+              "*": ["storageLayout"],
+            },
+          },
+        },
+      },
+      "contracts/elixir-periphery/NonfungiblePositionManager.sol": {
+        version: "0.7.6",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 20,
           },
         },
       },

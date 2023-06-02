@@ -1,0 +1,32 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Base64 #encode gas cost of encode(<some html>) 1`] = `1426`;
+
+exports[`Base64 #encode gas cost of encode(aLpHaBeT) 1`] = `1205`;
+
+exports[`Base64 #encode gas cost of encode(alphabet soup) 1`] = `1636`;
+
+exports[`Base64 #encode gas cost of encode(f) 1`] = `752`;
+
+exports[`Base64 #encode gas cost of encode(fo) 1`] = `763`;
+
+exports[`Base64 #encode gas cost of encode(foo) 1`] = `749`;
+
+exports[`Base64 #encode gas cost of encode(foob) 1`] = `973`;
+
+exports[`Base64 #encode gas cost of encode(fooba) 1`] = `984`;
+
+exports[`Base64 #encode gas cost of encode(foobar) 1`] = `970`;
+
+exports[`Base64 #encode gas cost of encode(includes
+newlines) 1`] = `1868`;
+
+exports[`Base64 #encode gas cost of encode(test string) 1`] = `1426`;
+
+exports[`Base64 #encode gas cost of encode(this is a test) 1`] = `1647`;
+
+exports[`Base64 #encode gas cost of encode(this is a very long string that should cost a lot of gas to encode :)) 1`] = `5623`;
+
+exports[`Base64 #encode gas cost of encode(😀) 1`] = `973`;
+
+exports[`Base64 #encode max size string (24kB) gas cost 1`] = `3424700`;
