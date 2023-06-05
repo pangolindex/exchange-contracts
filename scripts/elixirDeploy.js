@@ -33,7 +33,7 @@ async function main() {
     //const weth = await wethFactory.deploy();
     //console.log("Deployed `WAVAX`:", weth.address);
 
-    const WETH_ADDRESS = "0xcF5ef8d007a616066e5eaEa0916592374a0F478D";
+    const WETH_ADDRESS = "0xd4949664cd82660aae99bedc034a0dea8a0bd517";
     //const WETH_ADDRESS = weth.address;
 
     const factoryFactory = await ethers.getContractFactory('ElixirFactory');
@@ -49,19 +49,19 @@ async function main() {
         NFTDescriptor: nftDescriptorLibrary.address,
       },
     })
-    const nftDescriptor = await nftDescriptorFactory.deploy(weth.address);
+    const nftDescriptor = await nftDescriptorFactory.deploy(WETH_ADDRESS);
     console.log("Deployed `NonfungibleTokenPositionDescriptor`: " + nftDescriptor.address);
 
     const nftManagerFactory = await ethers.getContractFactory('NonfungiblePositionManager');
-    const nftManager = await nftManagerFactory.deploy(factory.address, weth.address, nftDescriptor.address, ethers.constants.AddressZero);
+    const nftManager = await nftManagerFactory.deploy(factory.address, WETH_ADDRESS, nftDescriptor.address, ethers.constants.AddressZero);
     console.log("Deployed `NonfungiblePositionManager`: " + nftManager.address);
 
     const swapRouterFactory = await ethers.getContractFactory('SwapRouter');
-    const swapRouter = await swapRouterFactory.deploy(factory.address, weth.address);
+    const swapRouter = await swapRouterFactory.deploy(factory.address, WETH_ADDRESS);
     console.log("Deployed `SwapRouter`: " + swapRouter.address);
 
     const migratorFactory = await ethers.getContractFactory('ElixirMigrator');
-    const migrator = await migratorFactory.deploy(factory.address, weth.address, nftManager.address);
+    const migrator = await migratorFactory.deploy(factory.address, WETH_ADDRESS, nftManager.address);
     console.log("Deployed `ElixirMigrator`: " + migrator.address);
 
     const multicallFactory = await ethers.getContractFactory('ElixirInterfaceMulticall');
@@ -69,7 +69,7 @@ async function main() {
     console.log("Deployed `ElixirInterfaceMulticall`: " + multicall.address);
 
     const quoterFactory = await ethers.getContractFactory('ElixirQuoter');
-    const quoter = await quoterFactory.deploy(factory.address, weth.address);
+    const quoter = await quoterFactory.deploy(factory.address, WETH_ADDRESS);
     console.log("Deployed `ElixirQuoter`: " + quoter.address);
 
     const tickLensFactory = await ethers.getContractFactory('TickLens');

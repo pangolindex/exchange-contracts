@@ -85,3 +85,17 @@ exports[`Oracle #observe initialized with 5 observations with starting time of 4
 exports[`Oracle #observe initialized with 5 observations with starting time of 4294967291 gas middle 1`] = `25582`;
 
 exports[`Oracle #observe initialized with 5 observations with starting time of 4294967291 gas oldest 1`] = `29052`;
+
+exports[`Oracle full oracle gas cost of observe(0) 1`] = `8172`;
+
+exports[`Oracle full oracle gas cost of observe(0) after 5 seconds 1`] = `9023`;
+
+exports[`Oracle full oracle gas cost of observe(5) after 5 seconds 1`] = `8844`;
+
+exports[`Oracle full oracle gas cost of observe(200 * 13 + 5) 1`] = `158350`;
+
+exports[`Oracle full oracle gas cost of observe(200 * 13) 1`] = `158350`;
+
+exports[`Oracle full oracle gas cost of observe(oldest) 1`] = `157158`;
+
+exports[`Oracle full oracle gas cost of observe(oldest) after 5 seconds 1`] = `157158`;

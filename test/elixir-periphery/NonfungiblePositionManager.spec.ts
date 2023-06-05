@@ -545,7 +545,7 @@ describe("NonfungiblePositionManager", () => {
       });
     });
 
-    it("increases position liquidity", async () => {
+    it.only("increases position liquidity", async () => {
       await nft.increaseLiquidity({
         tokenId: tokenId,
         amount0Desired: 100,
@@ -554,8 +554,36 @@ describe("NonfungiblePositionManager", () => {
         amount1Min: 0,
         deadline: 1633850000,
       });
-      const { liquidity } = await nft.positions(tokenId);
-      expect(liquidity).to.eq(1100);
+      {
+        const { liquidity } = await nft.positions(tokenId);
+        expect(liquidity).to.eq(1100);
+      }
+
+      await nft.increaseLiquidity({
+        tokenId: tokenId,
+        amount0Desired: 100,
+        amount1Desired: 100,
+        amount0Min: 0,
+        amount1Min: 0,
+        deadline: 1633850000,
+      });
+      {
+        const { liquidity } = await nft.positions(tokenId);
+        expect(liquidity).to.eq(1200);
+      }
+
+      await nft.increaseLiquidity({
+        tokenId: tokenId,
+        amount0Desired: 100,
+        amount1Desired: 0,
+        amount0Min: 0,
+        amount1Min: 0,
+        deadline: 1633850000,
+      });
+      {
+        const { liquidity } = await nft.positions(tokenId);
+        expect(liquidity).to.eq(1300);
+      }
     });
 
     it("emits an event");
