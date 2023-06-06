@@ -26,15 +26,16 @@ async function main() {
     //const pool = await poolFactory.connect(poolDeployer).deploy();
     //console.log("Deployed `ElixirPool` Implementation: " + pool.address);
 
+    // ----------------------------------------------------------------------------
+    // This value comes from the `scripts/elixirDeployImplementation.js` script
+    // But we try to keep it same in each evm chain, so we use specific wallet to deploy above mentioned contract
+    // Because this address affect some logic in @pangolindex/component repo
     const POOL_IMPLEMENTATION = "0x5cB5539A18591947C82f5D840B05ed79f6395491";
+    // ----------------------------------------------------------------------------
     //const POOL_IMPLEMENTATION = pool.address;
 
-    //const wethFactory = await ethers.getContractFactory("WAVAX");
-    //const weth = await wethFactory.deploy();
-    //console.log("Deployed `WAVAX`:", weth.address);
-
+    // Wrapped Token Address in the related chain
     const WETH_ADDRESS = "0xd4949664cd82660aae99bedc034a0dea8a0bd517";
-    //const WETH_ADDRESS = weth.address;
 
     const factoryFactory = await ethers.getContractFactory('ElixirFactory');
     const factory = await factoryFactory.deploy(POOL_IMPLEMENTATION);
@@ -45,9 +46,9 @@ async function main() {
     console.log("Deployed `NFTDescriptor` library: " + nftDescriptorLibrary.address);
 
     const nftDescriptorFactory = await ethers.getContractFactory('NonfungibleTokenPositionDescriptor', {
-      libraries: {
-        NFTDescriptor: nftDescriptorLibrary.address,
-      },
+        libraries: {
+            NFTDescriptor: nftDescriptorLibrary.address,
+        },
     })
     const nftDescriptor = await nftDescriptorFactory.deploy(WETH_ADDRESS);
     console.log("Deployed `NonfungibleTokenPositionDescriptor`: " + nftDescriptor.address);
