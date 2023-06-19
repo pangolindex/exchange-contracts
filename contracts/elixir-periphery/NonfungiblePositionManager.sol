@@ -85,6 +85,9 @@ contract NonfungiblePositionManager is
         _elixirRewarder = _elixirRewarder_;
     }
 
+    function _checkTokenValidity(uint256 poolId) internal pure {
+        require(poolId != 0, "Invalid token ID");
+    }
     /// @inheritdoc INonfungiblePositionManager
     function positions(uint256 tokenId)
         external
@@ -106,7 +109,7 @@ contract NonfungiblePositionManager is
         )
     {
         Position memory position = _positions[tokenId];
-        require(position.poolId != 0);
+        _checkTokenValidity(position.poolId);
         PoolAddress.PoolKey memory poolKey = _poolIdToPoolKey[position.poolId];
         return (
             position.nonce,
@@ -137,7 +140,7 @@ contract NonfungiblePositionManager is
         )
     {
         Position memory position = _positions[tokenId];
-        require(position.poolId != 0);
+        _checkTokenValidity(position.poolId);
         return (
             position.rewardPerLiquidityInsideLastX64,
             position.rewardLastUpdated,
