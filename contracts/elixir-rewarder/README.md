@@ -2,6 +2,13 @@
 
 Elixir is modified UniswapV3 with the capability to have proper farms.
 
+## Audit Scope
+
+* Periphery changes from UniswapV3 in [elixir-periphery](../elixir-periphery/)
+* Core changes from UniswapV3 in [elixir-core](../elixir-core/)
+* Everything in [elixir-rewarder](./)
+* [`elixir-periphery/ElixirFactoryOwner.sol`](../elixir-periphery/ElixirFactoryOwner.sol)
+
 ## Elixir Core
 
 Following is the changes from UniswapV3 core.
