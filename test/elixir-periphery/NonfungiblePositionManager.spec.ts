@@ -545,7 +545,7 @@ describe("NonfungiblePositionManager", () => {
       });
     });
 
-    it.only("increases position liquidity", async () => {
+    it("increases position liquidity", async () => {
       await nft.increaseLiquidity({
         tokenId: tokenId,
         amount0Desired: 100,
@@ -575,7 +575,7 @@ describe("NonfungiblePositionManager", () => {
       await nft.increaseLiquidity({
         tokenId: tokenId,
         amount0Desired: 100,
-        amount1Desired: 0,
+        amount1Desired: 100,
         amount0Min: 0,
         amount1Min: 0,
         deadline: 1633850000,

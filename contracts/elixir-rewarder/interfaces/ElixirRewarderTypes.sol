@@ -15,7 +15,7 @@ interface ElixirRewarderTypes {
     error FarmAlreadyActive();
     error TooEarlyToActivateFarm();
     error FarmIsInactive();
-    error CheckYourPrivilege();
+    error NotPrivileged();
     error Overflow();
     error InvalidDayRange();
 
@@ -25,7 +25,7 @@ interface ElixirRewarderTypes {
         address rewardToken;
         uint56 rewardTokenChangeCounter;
         uint32 deactivationTime;
-        bool inactive;
+        bool active;
 
         uint112 rewardDistributed;
         uint112 rewardAdded;

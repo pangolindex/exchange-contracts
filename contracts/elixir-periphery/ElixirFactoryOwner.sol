@@ -9,6 +9,10 @@ import "./interfaces/IElixirFactoryOwner.sol";
 import "../elixir-core/interfaces/pool/IElixirPoolOwnerActions.sol";
 import "../elixir-core/interfaces/IElixirFactory.sol";
 
+interface INonfungiblePositionManager {
+    function updateRewardManager(address elixirRewarder) external;
+}
+
 /** @notice Owner contract for managing access control to factory owner gated calls. */
 contract ElixirFactoryOwner is IElixirFactoryOwner, AccessControlEnumerable {
     using SafeERC20 for IERC20;
@@ -20,10 +24,22 @@ contract ElixirFactoryOwner is IElixirFactoryOwner, AccessControlEnumerable {
     bytes32 public constant REWARD_ADDING_ROLE = keccak256("REWARD_ADDING_ROLE");
     bytes32 public constant REWARD_MANAGER_ROLE = keccak256("REWARD_MANAGER_ROLE");
     address public immutable factory;
+    address public nft;
+    address public rewarder;
 
-    constructor(address owner, address factory_) {
+    constructor(address owner, address factory_, address nftManager) {
         _grantRole(DEFAULT_ADMIN_ROLE, owner);
         factory = factory_;
+        nft = nftManager;
+    }
+
+    function setNftManager(address nftManager) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        nft = nftManager;
+    }
+
+    function setRewarder(address newRewarder) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        rewarder = newRewarder;
+        INonfungiblePositionManager(nft).updateRewardManager(newRewarder);
     }
 
     function setRewardRate(
@@ -101,10 +117,10 @@ contract ElixirFactoryOwner is IElixirFactoryOwner, AccessControlEnumerable {
 
     function doAnything(
         address target,
-        bytes memory leData
+        bytes memory data
     ) external payable onlyRole(DEFAULT_ADMIN_ROLE) {
         assembly {
-            let result := call(gas(), target, callvalue(), add(leData, 0x20), mload(leData), 0, 0)
+            let result := call(gas(), target, callvalue(), add(data, 0x20), mload(data), 0, 0)
 
             // Copy the returned data.
             returndatacopy(0, 0, returndatasize())

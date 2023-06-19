@@ -106,7 +106,7 @@ contract NonfungiblePositionManager is
         )
     {
         Position memory position = _positions[tokenId];
-        require(position.poolId != 0, 'Invalid token ID');
+        require(position.poolId != 0);
         PoolAddress.PoolKey memory poolKey = _poolIdToPoolKey[position.poolId];
         return (
             position.nonce,
@@ -137,7 +137,7 @@ contract NonfungiblePositionManager is
         )
     {
         Position memory position = _positions[tokenId];
-        require(position.poolId != 0, 'Invalid token ID');
+        require(position.poolId != 0);
         return (
             position.rewardPerLiquidityInsideLastX64,
             position.rewardLastUpdated,
@@ -196,22 +196,17 @@ contract NonfungiblePositionManager is
                 PoolAddress.PoolKey({token0: params.token0, token1: params.token1, fee: params.fee})
             );
 
-        _positions[tokenId] = Position({
-            nonce: 0,
-            operator: address(0),
-            poolId: poolId,
-            tickLower: params.tickLower,
-            tickUpper: params.tickUpper,
-            liquidity: liquidity,
-            feeGrowthInside0LastX128: feeGrowthInside0LastX128,
-            feeGrowthInside1LastX128: feeGrowthInside1LastX128,
-            tokensOwed0: 0,
-            tokensOwed1: 0,
-            rewardPerLiquidityInsideLastX64: 0,
-            rewardLastUpdated: 0,
-            rewardLastCollected: 0,
-            rewardOwed: 0
-        });
+
+        Position storage position = _positions[tokenId];
+        position.operator = address(0);
+        position.poolId = poolId;
+        position.tickLower = params.tickLower;
+        position.tickUpper = params.tickUpper;
+        position.liquidity = liquidity;
+        position.feeGrowthInside0LastX128 = feeGrowthInside0LastX128;
+        position.feeGrowthInside1LastX128 = feeGrowthInside1LastX128;
+
+        _updateReward(position, pool);
 
         emit IncreaseLiquidity(tokenId, liquidity, amount0, amount1);
     }
@@ -430,6 +425,9 @@ contract NonfungiblePositionManager is
         require(recipient != address(0));
 
         Position storage position = _positions[tokenId];
+        address pool = PoolAddress.computeAddress(factory, _poolIdToPoolKey[position.poolId]);
+
+        _updateReward(position, IElixirPool(pool));
 
         uint256 rewardOwed = position.rewardOwed;
         uint32 rewardLastCollected = _clampedTimestamp();
@@ -441,7 +439,7 @@ contract NonfungiblePositionManager is
             recipient,
             rewardOwed,
             tokenId,
-            PoolAddress.computeAddress(factory, _poolIdToPoolKey[position.poolId]),
+            pool,
             position.rewardLastUpdated,
             rewardLastCollected
         );
@@ -484,6 +482,9 @@ contract NonfungiblePositionManager is
             pool.snapshotCumulativesInside(position.tickLower, position.tickUpper);
 
         if (position.rewardPerLiquidityInsideLastX64 >= rewardPerLiquidityInsideCurrentX64) {
+            if (position.rewardLastUpdated == 0) {
+                position.rewardLastUpdated = _clampedTimestamp();
+            }
             return;
         }
 

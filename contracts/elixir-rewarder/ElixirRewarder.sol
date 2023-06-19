@@ -31,7 +31,7 @@ contract ElixirRewarder is ReentrancyGuard, Ownable2Step, IElixirRewarder, Elixi
         if (msg.sender != farm.manager &&
             msg.sender != defaultRewardManager &&
             msg.sender != owner()
-        ) revert CheckYourPrivilege();
+        ) revert NotPrivileged();
         if (numOfDays == 0 || numOfDays > 14) revert InvalidDayRange();
 
         uint256 balanceBefore = IERC20(farm.rewardToken).balanceOf(address(this));
@@ -72,10 +72,10 @@ contract ElixirRewarder is ReentrancyGuard, Ownable2Step, IElixirRewarder, Elixi
     function deactivateFarm(address pool) external onlyOwner nonReentrant {
         Farm storage farm = farms[pool];
         if (block.timestamp < farm.distributionEndTime) revert WaitForDistributionToEnd();
-        if (farm.inactive) revert NoOp();
+        if (!farm.active) revert NoOp();
 
         farm.deactivationTime = _clampedTimestamp();
-        farm.inactive = true;
+        farm.active = false;
         farm.manager = address(0);
 
         emit FarmDeactivated(pool);
@@ -83,9 +83,9 @@ contract ElixirRewarder is ReentrancyGuard, Ownable2Step, IElixirRewarder, Elixi
 
     function cancelDeactivation(address pool) external onlyOwner nonReentrant {
         Farm storage farm = farms[pool];
-        if (!farm.inactive) revert NoOp();
+        if (farm.active || farm.deactivationTime == 0) revert NoOp();
 
-        farm.inactive = false;
+        farm.active = true;
 
         emit CancelledDeactivation(pool);
     }
@@ -96,14 +96,14 @@ contract ElixirRewarder is ReentrancyGuard, Ownable2Step, IElixirRewarder, Elixi
         bool noRevert
     ) external onlyOwner nonReentrant {
         Farm storage farm = farms[pool];
-        if (!farm.inactive) revert FarmAlreadyActive();
+        if (farm.active) revert FarmAlreadyActive();
         if (block.timestamp < farm.deactivationTime + 2 weeks) revert TooEarlyToActivateFarm();
         if (newRewardToken == farm.rewardToken) revert NoOp();
 
         if (farm.deactivationTime == 0) {
             // first time activation
             farm.rewardToken = newRewardToken;
-            farm.inactive = false;
+            farm.active = true;
         } else {
             uint112 rewardDistributed = farm.rewardDistributed;
             uint112 rewardAdded = farm.rewardAdded;
@@ -114,7 +114,7 @@ contract ElixirRewarder is ReentrancyGuard, Ownable2Step, IElixirRewarder, Elixi
             unchecked {
                 ++farm.rewardTokenChangeCounter;
             }
-            farm.inactive = false;
+            farm.active = true;
             farm.rewardDistributed = 0;
             farm.rewardAdded = 0;
 
@@ -168,7 +168,7 @@ contract ElixirRewarder is ReentrancyGuard, Ownable2Step, IElixirRewarder, Elixi
         uint32 /* rewardLastUpdated */,
         uint32 /*rewardLastCollected*/
     ) external nonReentrant {
-        if (msg.sender != nonfungiblePositionManager) revert CheckYourPrivilege();
+        if (msg.sender != nonfungiblePositionManager) revert NotPrivileged();
 
         Farm storage farm = farms[pool];
         address userAddress = IERC721(nonfungiblePositionManager).ownerOf(tokenId);
@@ -193,7 +193,7 @@ contract ElixirRewarder is ReentrancyGuard, Ownable2Step, IElixirRewarder, Elixi
 
     function setFarmManager(address pool, address newFarmManager) external onlyOwner nonReentrant {
         Farm storage farm = farms[pool];
-        if (farm.inactive) revert FarmIsInactive();
+        if (!farm.active) revert FarmIsInactive();
         farm.manager = newFarmManager;
         emit FarmManagerSet(pool, newFarmManager);
     }
