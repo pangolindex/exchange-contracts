@@ -4,6 +4,7 @@ scripts/
 test/
 cache/
 node_modules/
+typechain/
 .env
 .idea
 .vscode
