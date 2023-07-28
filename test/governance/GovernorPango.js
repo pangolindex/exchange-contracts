@@ -348,7 +348,7 @@ describe("GovernorPango", function () {
             // Move funds into NFT 3
             const NEW_NFT_ID = 3;
             _pangolinStakingPositions.ownerOf.whenCalledWith(NEW_NFT_ID).returns(signerB.address);
-            _pangolinStakingPositions.positions.whenCalledWith(VOTER_NFT_ID).returns(createPosition({
+            _pangolinStakingPositions.positions.whenCalledWith(NEW_NFT_ID).returns(createPosition({
                 lastUpdate: VOTING_PERIOD_BEGIN_TIMESTAMP,
                 valueVariables: {
                     balance: 100,
