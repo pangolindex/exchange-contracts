@@ -33,7 +33,7 @@
     "typechain": "^4.0.0",
     "typescript": "^4.6.3"
   },
-  "version": "2.1.8",
+  "version": "2.1.9",
   "description": "Contracts for the Pangolin Dex.",
   "main": "index.js",
   "repository": {
