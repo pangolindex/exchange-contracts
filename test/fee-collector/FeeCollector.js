@@ -18,6 +18,7 @@ describe('FeeCollector', function() {
     let FeeCollector, MiniChefV2, StakingRewards, PangolinFactory, PangolinPair, _Token;
     let feeCollector, pangolinFactory, stakingRewards, _miniChefV2;
     let wavax, png, tokenA, tokenB;
+    let initHash;
 
     before(async function() {
         [ OWNER, addr1, addr2, addr3 ] = await ethers.getSigners();
@@ -39,42 +40,31 @@ describe('FeeCollector', function() {
         StakingRewards = await ethers.getContractFactory('StakingRewards');
         PangolinFactory = await ethers.getContractFactory('PangolinFactory');
         PangolinPair = await ethers.getContractFactory('PangolinPair');
+        initHash = ethers.utils.keccak256(PangolinPair.bytecode);
 
-        _Token = await smock.mock('Png');
+        _Token = await smock.mock('contracts/pangolin-core/test/ERC20.sol:ERC20');
     });
 
     beforeEach(async function() {
         _miniChefV2 = await smock.fake(MiniChefV2);
 
         wavax = await _Token.deploy(
-            ethers.utils.parseEther('100000000'), // _maxSupply
-            ethers.utils.parseEther('100000000'), // initialSupply
-            'WAVAX', // _symbol
-            'Wrapped AVAX', // _name
+            ethers.utils.parseEther('100000000'),
         );
         await wavax.deployed();
 
         png = await _Token.deploy(
-            ethers.utils.parseEther('100000000'), // _maxSupply
-            ethers.utils.parseEther('100000000'), // initialSupply
-            'PNG', // _symbol
-            'Pangolin Token', // _name
+            ethers.utils.parseEther('100000000'),
         );
         await png.deployed();
 
         tokenA = await _Token.deploy(
-            ethers.utils.parseEther('100000000'), // _maxSupply
-            ethers.utils.parseEther('100000000'), // initialSupply
-            'TOKA', // _symbol
-            'Token A', // _name
+            ethers.utils.parseEther('100000000'),
         );
         await tokenA.deployed();
 
         tokenB = await _Token.deploy(
-            ethers.utils.parseEther('100000000'), // _maxSupply
-            ethers.utils.parseEther('100000000'), // initialSupply
-            'TOKB', // _symbol
-            'Token B', // _name
+            ethers.utils.parseEther('100000000'),
         );
         await tokenB.deployed();
 
@@ -90,7 +80,7 @@ describe('FeeCollector', function() {
         feeCollector = await FeeCollector.deploy(
             wavax.address,
             pangolinFactory.address,
-            '0x40231f6b438bce0797c9ada29b718a87ea0a5cea3fe9a771abdd76bd41a3e545', // init pair hash
+            initHash, // init pair hash
             stakingRewards.address,
             _miniChefV2.address,
             0, // chef pid for dummy PGL

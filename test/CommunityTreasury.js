@@ -4,9 +4,9 @@ const { expect } = require('chai');
 const { BigNumber } = require('ethers');
 const { ethers } = require('hardhat');
 
-const OWNER_ADDRESS = ethers.utils.getAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
-
 const oneToken = BigNumber.from("1000000000000000000");
+const CAP = oneToken.mul(230_000_000);
+const PRE_MINT = oneToken.mul(1_000_000);
 
 
 // Start test block
@@ -21,7 +21,7 @@ describe('CommunityTreasury', function () {
 
     beforeEach(async function () {
         // PNG
-        this.png = await this.PNG.deploy(OWNER_ADDRESS);
+        this.png = await this.PNG.deploy(CAP, PRE_MINT, "Pangolin", "PNG");
         await this.png.deployed();
 
         // Community Treasury
@@ -73,7 +73,7 @@ describe('CommunityTreasury', function () {
             expect(await this.png.balanceOf(this.community.address)).to.equal(0);
 
             await expect(this.community.transfer(this.addr2.address, transferAmount)).to.be.revertedWith(
-                'Png::_transferTokens: transfer amount exceeds balance'
+                'ERC20: transfer amount exceeds balance'
             );
         });
     });

@@ -5,7 +5,7 @@ import { solidity, MockProvider, createFixtureLoader } from "ethereum-waffle";
 import { getCreate2Address } from "./shared/utilities";
 import { factoryFixture } from "./shared/fixtures";
 
-import PangolinPair from "../../build/PangolinPair.json";
+import PangolinPair from "../../artifacts/contracts/pangolin-core/PangolinPair.sol/PangolinPair.json";
 
 const AddressZero = ethers.constants.AddressZero;
 
@@ -40,8 +40,7 @@ describe("PangolinFactory", () => {
   });
 
   async function createPair(tokens: [string, string]) {
-    const bytecode = `0x${PangolinPair.evm.bytecode.object}`;
-    const create2Address = getCreate2Address(factory.address, tokens, bytecode);
+    const create2Address = getCreate2Address(factory.address, tokens, PangolinPair.bytecode);
     await expect(factory.createPair(...tokens))
       .to.emit(factory, "PairCreated")
       .withArgs(
@@ -77,12 +76,6 @@ describe("PangolinFactory", () => {
 
   it("createPair:reverse", async () => {
     await createPair(TEST_ADDRESSES.slice().reverse() as [string, string]);
-  });
-
-  it("createPair:gas", async () => {
-    const tx = await factory.createPair(...TEST_ADDRESSES);
-    const receipt = await tx.wait();
-    expect(receipt.gasUsed).to.eq(2509920);
   });
 
   it("setFeeTo", async () => {

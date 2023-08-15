@@ -9,6 +9,8 @@ const DENOMINATOR = BigNumber.from("10000");
 const STARTING_BALANCE = ethers.utils.parseUnits("218500000", 18);
 const TOTAL_SUPPLY = ethers.utils.parseUnits("230000000", 18);
 const ZERO_ADDRESS = ethers.constants.AddressZero;
+const MINTER_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("MINTER_ROLE"));
+const FUNDER_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("FUNDER_ROLE"));
 
 const distributionSchedule = [
   2500, 1400, 800, 530, 390,
@@ -84,8 +86,7 @@ describe("TreasuryVester.sol", function () {
       );
     await this.vester.deployed();
 
-    await this.png.setMinter(this.vester.address);
-
+    await this.png.grantRole(MINTER_ROLE, this.vester.address);
   });
 
 
@@ -580,7 +581,7 @@ describe("TreasuryVester.sol", function () {
           ethers.Wallet.createRandom().address // guardian
         );
       await this.vester.deployed();
-      await this.png.setMinter(this.vester.address);
+      await this.png.grantRole(MINTER_ROLE, this.vester.address);
       await this.chef.addFunder(this.vester.address);
       await expect(this.vester.startVesting())
         .to.emit(

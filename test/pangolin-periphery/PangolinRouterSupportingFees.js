@@ -19,7 +19,7 @@ describe('PangolinRouterSupportingFees', function() {
         PangolinFactory = await ethers.getContractFactory('PangolinFactory');
         PangolinPair = await ethers.getContractFactory('PangolinPair');
 
-        _Token = await smock.mock('Png');
+        _Token = await smock.mock('contracts/pangolin-core/test/ERC20.sol:ERC20');
         _Wavax = await smock.mock('WAVAX');
     });
 
@@ -30,20 +30,10 @@ describe('PangolinRouterSupportingFees', function() {
         wavax = await _Wavax.deploy();
         await wavax.deployed();
 
-        tokenA = await _Token.deploy(
-            ethers.utils.parseEther('100000000'), // _maxSupply
-            ethers.utils.parseEther('100000000'), // initialSupply
-            'TOKA', // _symbol
-            'Token A', // _name
-        );
+        tokenA = await _Token.deploy(ethers.utils.parseEther('100000000'));
         await tokenA.deployed();
 
-        tokenB = await _Token.deploy(
-            ethers.utils.parseEther('100000000'), // _maxSupply
-            ethers.utils.parseEther('100000000'), // initialSupply
-            'TOKB', // _symbol
-            'Token B', // _name
-        );
+        tokenB = await _Token.deploy(ethers.utils.parseEther('100000000'));
         await tokenB.deployed();
 
         router = await PangolinRouterSupportingFees.deploy(

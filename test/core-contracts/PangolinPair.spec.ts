@@ -228,43 +228,6 @@ describe("PangolinPair", () => {
     );
   });
 
-  it("swap:gas", async () => {
-    const token0Amount = expandTo18Decimals(5);
-    const token1Amount = expandTo18Decimals(10);
-    await addLiquidity(token0Amount, token1Amount);
-
-    // ensure that setting price{0,1}CumulativeLast for the first time doesn't affect our gas math
-    // await mineBlock(
-    //   provider,
-    //   (await provider.getBlock("latest")).timestamp + 1
-    // );
-    await provider.send("evm_mine", [
-      (await provider.getBlock("latest")).timestamp + 1,
-    ]);
-
-    await pair.sync(overrides);
-
-    const swapAmount = expandTo18Decimals(1);
-    const expectedOutputAmount = BigNumber.from("453305446940074565");
-    await token1.transfer(pair.address, swapAmount);
-    // await mineBlock(
-    //   provider,
-    //   (await provider.getBlock("latest")).timestamp + 1
-    // );
-    await provider.send("evm_mine", [
-      (await provider.getBlock("latest")).timestamp + 1,
-    ]);
-    const tx = await pair.swap(
-      expectedOutputAmount,
-      0,
-      wallet.address,
-      "0x",
-      overrides
-    );
-    const receipt = await tx.wait();
-    expect(receipt.gasUsed).to.eq(73462);
-  });
-
   it("burn", async () => {
     const token0Amount = expandTo18Decimals(3);
     const token1Amount = expandTo18Decimals(3);

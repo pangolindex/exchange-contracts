@@ -12,7 +12,6 @@ import {
     fundWAVAX
 } from "./utils"
 import fixture from './fixture'
-import {run} from "hardhat"
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
 import { Contract } from "@ethersproject/contracts"
 import { BigNumber, ContractFactory } from "ethers"
@@ -34,7 +33,6 @@ describe("BridgeMigrationRouter", async function() {
     type PNGMigratedPairsTokenSymbol = keyof typeof fixture.Pairs.Migrated.PNG
 
     before(async () => {
-        await run("compile")
         accountGenerator = await makeAccountGenerator()
         const bridgeTokenFactory = await ethers.getContractFactory("BridgeToken")
         owner = await getOwnerAccount()

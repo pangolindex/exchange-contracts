@@ -39,7 +39,7 @@ export async function getPairContract(pairAddress: string): Promise<Contract> {
 }
 
 export async function getWAVAXContract(): Promise<Contract> {
-    return await ethers.getContractAt("IWAVAX", fixture.Tokens.WAVAX)
+    return await ethers.getContractAt("contracts/pangolin-periphery/interfaces/IWAVAX.sol:IWAVAX", fixture.Tokens.WAVAX)
 }
 
 export async function fundWAVAX(account: SignerWithAddress, amount: BigNumber) {
@@ -49,7 +49,7 @@ export async function fundWAVAX(account: SignerWithAddress, amount: BigNumber) {
 }
 
 export async function fundToken(account: SignerWithAddress, tokenToFund: string, amountAvax: BigNumber): Promise<BigNumber> {
-    const WAVAX = await ethers.getContractAt("IWAVAX", fixture.Tokens.WAVAX)
+    const WAVAX = await ethers.getContractAt("contracts/pangolin-periphery/interfaces/IWAVAX.sol:IWAVAX", fixture.Tokens.WAVAX)
     //we're already funded in this case
     if (tokenToFund == WAVAX.address) return amountAvax
 

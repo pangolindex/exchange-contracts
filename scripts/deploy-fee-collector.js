@@ -14,7 +14,7 @@ async function main() {
     const feeCollector = await FeeCollector.deploy(
         WAVAX,
         FACTORY,
-        "0x40231f6b438bce0797c9ada29b718a87ea0a5cea3fe9a771abdd76bd41a3e545", // init pair hash
+        "0x1169430a09523b1aad7ce680744d548bd63c05ff5ea0d0783160ae7c15bac3f2", // init pair hash
         STAKING_CONTRACT,
         MINICHEF,
         0, // chef pid for dummy PGL

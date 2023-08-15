@@ -3,9 +3,9 @@ import { deployContract } from "ethereum-waffle";
 
 import { expandTo18Decimals } from "./utilities";
 
-import ERC20 from "../../../build/ERC20.json";
-import PangolinFactory from "../../../build/PangolinFactory.json";
-import PangolinPair from "../../../build/PangolinPair.json";
+import ERC20 from "../../../artifacts/contracts/pangolin-core/test/ERC20.sol/ERC20.json";
+import PangolinFactory from "../../../artifacts/contracts/pangolin-core/PangolinFactory.sol/PangolinFactory.json";
+import PangolinPair from "../../../artifacts/contracts/pangolin-core/PangolinPair.sol/PangolinPair.json";
 
 interface FactoryFixture {
   factory: Contract;
