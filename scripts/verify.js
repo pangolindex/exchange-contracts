@@ -1,5 +1,6 @@
 const { ethers } = require("hardhat");
 const { ADDRESSES } = require(`../addresses/${network.name}.js`);
+const hre = require("hardhat");
 
 async function main() {
     for (let i = 0; i < ADDRESSES.length; i++) {
