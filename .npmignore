@@ -8,3 +8,5 @@ typechain/
 .env
 .idea
 .vscode
+artifacts/build-info
+audits
