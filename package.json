@@ -35,7 +35,6 @@
   },
   "version": "2.1.9",
   "description": "Contracts for the Pangolin Dex.",
-  "main": "index.js",
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/pangolindex/exchange-contracts.git"
