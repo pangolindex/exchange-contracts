@@ -1,9 +1,9 @@
-import { abi as IElixirPoolABI } from "../../artifacts/contracts/elixir-core/interfaces/IElixirPool.sol/IElixirPool.json";
+import { abi as IPangolinV3PoolABI } from "../../artifacts/contracts/PangolinV3-core/interfaces/IPangolinV3Pool.sol/IPangolinV3Pool.json";
 import { Fixture } from "ethereum-waffle";
 import { BigNumberish, constants, Wallet } from "ethers";
 import { ethers, waffle, network } from "hardhat";
 import {
-  IElixirFactory,
+  IPangolinV3Factory,
   IWETH9,
   MockTimeNonfungiblePositionManager,
   NonfungiblePositionManagerPositionsGasTest,
@@ -31,7 +31,7 @@ describe("NonfungiblePositionManager", () => {
 
   const nftFixture: Fixture<{
     nft: MockTimeNonfungiblePositionManager;
-    factory: IElixirFactory;
+    factory: IPangolinV3Factory;
     tokens: [TestERC20, TestERC20, TestERC20];
     weth9: IWETH9;
     router: SwapRouter;
@@ -77,7 +77,7 @@ describe("NonfungiblePositionManager", () => {
     };
   };
 
-  let factory: IElixirFactory;
+  let factory: IPangolinV3Factory;
   let nft: MockTimeNonfungiblePositionManager;
   let tokens: [TestERC20, TestERC20, TestERC20];
   let weth9: IWETH9;
@@ -163,7 +163,7 @@ describe("NonfungiblePositionManager", () => {
         tokens[1].address,
         FeeAmount.MEDIUM
       );
-      const pool = new ethers.Contract(expectedAddress, IElixirPoolABI, wallet);
+      const pool = new ethers.Contract(expectedAddress, IPangolinV3PoolABI, wallet);
       await pool["initialize(uint160)"](encodePriceSqrt(3, 1));
       const code = await wallet.provider.getCode(expectedAddress);
       expect(code).to.not.eq("0x");

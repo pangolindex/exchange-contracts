@@ -3,7 +3,7 @@ import { constants, Contract, Wallet } from "ethers";
 import { ethers, waffle, network } from "hardhat";
 import {
   IPangolinPair,
-  IElixirFactory,
+  IPangolinV3Factory,
   IWETH9,
   MockTimeNonfungiblePositionManager,
   TestERC20,
@@ -25,7 +25,7 @@ describe("ElixirMigrator", () => {
 
   const migratorFixture: Fixture<{
     factoryV2: Contract;
-    factoryV3: IElixirFactory;
+    factoryV3: IPangolinV3Factory;
     token: TestERC20;
     weth9: IWETH9;
     nft: MockTimeNonfungiblePositionManager;
@@ -79,7 +79,7 @@ describe("ElixirMigrator", () => {
   };
 
   let factoryV2: Contract;
-  let factoryV3: IElixirFactory;
+  let factoryV3: IPangolinV3Factory;
   let token: TestERC20;
   let weth9: IWETH9;
   let nft: MockTimeNonfungiblePositionManager;

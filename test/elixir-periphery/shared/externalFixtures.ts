@@ -1,14 +1,14 @@
 import {
   abi as FACTORY_ABI,
   bytecode as FACTORY_BYTECODE,
-} from "../../../artifacts/contracts/elixir-core/ElixirFactory.sol/ElixirFactory.json";
+} from "../../../artifacts/contracts/PangolinV3-core/ElixirFactory.sol/ElixirFactory.json";
 import {
   abi as FACTORY_V2_ABI,
   bytecode as FACTORY_V2_BYTECODE,
 } from "../../../artifacts/contracts/pangolin-core/PangolinFactory.sol/PangolinFactory.json";
 import { Fixture } from "ethereum-waffle";
 import { ethers, waffle } from "hardhat";
-import { IElixirFactory, IWETH9, MockTimeSwapRouter } from "../../../typechain";
+import { IPangolinV3Factory, IWETH9, MockTimeSwapRouter } from "../../../typechain";
 
 import WETH9 from "../contracts/WETH9.json";
 import { Contract } from "@ethersproject/contracts";
@@ -38,7 +38,7 @@ export const v2FactoryFixture: Fixture<{ factory: Contract }> = async ([
   return { factory };
 };
 
-const v3CoreFactoryFixture: Fixture<IElixirFactory> = async ([wallet]) => {
+const v3CoreFactoryFixture: Fixture<IPangolinV3Factory> = async ([wallet]) => {
   const POOL_IMPLEMENTATION = "0x5cB5539A18591947C82f5D840B05ed79f6395491";
 
   return (await waffle.deployContract(
@@ -48,12 +48,12 @@ const v3CoreFactoryFixture: Fixture<IElixirFactory> = async ([wallet]) => {
       abi: FACTORY_ABI,
     },
     [POOL_IMPLEMENTATION]
-  )) as IElixirFactory;
+  )) as IPangolinV3Factory;
 };
 
 export const v3RouterFixture: Fixture<{
   weth9: IWETH9;
-  factory: IElixirFactory;
+  factory: IPangolinV3Factory;
   router: MockTimeSwapRouter;
 }> = async ([wallet], provider) => {
   const { weth9 } = await wethFixture([wallet], provider);

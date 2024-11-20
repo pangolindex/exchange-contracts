@@ -1,4 +1,4 @@
-import { bytecode } from "../../../artifacts/contracts/elixir-core/ElixirPool.sol/ElixirPool.json";
+import { bytecode } from "../../../artifacts/contracts/PangolinV3-core/ElixirPool.sol/ElixirPool.json";
 import { utils } from "ethers";
 
 // export const POOL_BYTECODE_HASH = utils.keccak256(bytecode);

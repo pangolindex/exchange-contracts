@@ -149,7 +149,7 @@ module.exports = {
           },
         },
       },
-      "contracts/elixir-periphery/NonfungiblePositionManager.sol": {
+      "contracts/PangolinV3-periphery/NonfungiblePositionManager.sol": {
         version: "0.7.6",
         settings: {
           optimizer: {
@@ -160,7 +160,50 @@ module.exports = {
       },
     },
   },
-  networks: networksFromSdk,
+  networks: {
+    hardhat: {
+      allowUnlimitedContractSize: true,
+    },
+    coston: {
+      url: "https://coston-api.flare.network/ext/bc/C/rpc",
+      gasPrice: 225000000000,
+      chainId: 16,
+      accounts: [
+          ""
+      ]
+    },
+    flare: {
+      url: "https://flare-api.flare.network/ext/C/rpc",
+      gasPrice: 225000000000,
+      chainId: 14,
+      accounts: [
+          ""
+      ]
+    },
+    fuji: {
+      allowUnlimitedContractSize: true,
+      url: "https://api.avax-test.network/ext/bc/C/rpc",
+      gasPrice: 225000000000,
+      chainId: 43113,
+      accounts: [
+          ""
+      ]
+    },
+    avalanche: {
+      allowUnlimitedContractSize: true,
+      url: "https://api.avax.network/ext/bc/C/rpc",
+      gasPrice: 2250000000000,
+      chainId: 43114,
+      accounts: [
+          ""
+      ]
+    },
+    contractSizer: {
+      alphaSort: true,
+      runOnCompile: true,
+      disambiguatePaths: false,
+    },
+  },
   etherscan: {
     apiKey: {
       mainnet: process.env.ETHERSCAN_API_KEY,
@@ -187,8 +230,9 @@ module.exports = {
       arbitrumOne: process.env.ARBISCAN_API_KEY,
       arbitrumTestnet: process.env.ARBISCAN_API_KEY,
       // avalanche
-      avalanche: process.env.SNOWTRACE_API_KEY,
+      avalanche: "avalanche",
       avalancheFujiTestnet: process.env.SNOWTRACE_API_KEY,
+      fuji: process.env.SNOWTRACE_API_KEY,
       // moonbeam
       moonriver: process.env.MOONRIVER_MOONSCAN_API_KEY,
       moonbaseAlpha: process.env.MOONBEAM_MOONSCAN_API_KEY,
@@ -217,6 +261,22 @@ module.exports = {
         urls: {
           apiURL: "https://coston2-explorer.flare.network/api",
           browserURL: "https://coston2-explorer.flare.network/",
+        },
+      },
+      {
+        network: "fuji",
+        chainId: 43113,
+        urls: {
+          apiURL: "https://api.avax-test.network/ext/bc/C/rpc",
+          browserURL: "https://testnet.snowtrace.io/",
+        },
+      },
+      {
+        network: "avalanche",
+        chainId: 43114,
+        urls: {
+          apiURL: "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan",
+          browserURL: "https://avalanche.routescan.io",
         },
       },
     ],

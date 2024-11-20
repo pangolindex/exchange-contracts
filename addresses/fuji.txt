@@ -1,0 +1,9 @@
+Deployed `PangolinV3Factory`: 0xa2C8Cc50C82C9CA44470869f2214cf48a0c45F6b
+Deployed `NFTDescriptor` library: 0xE63b2C046fb4cd38E4a0fD8Cb5a700FD878B7392
+Deployed `NonfungibleTokenPositionDescriptor`: 0x27be1406540392a4d4ff1cfDf0bdB211676c3efa
+Deployed `NonfungiblePositionManager`: 0xffb8250c9cE730cC84B40cBdAce2FF7DFA8e6ef9
+Deployed `SwapRouter`: 0x1d5A17D62c68A09A0F8FBa7d585Ce6AA99CB60Dd
+Deployed `PangolinV3Migrator`: 0xC50f7aD420E2c273Eaf9A6BCD90C3Df6295a3570
+Deployed `PangolinV3InterfaceMulticall`: 0x7CadfB320dFF982a65F8Ab15E4D0AC27d666873C
+Deployed `PangolinV3Quoter`: 0x45c3Dc3728D0EA76d77D89Fe7a649dd77eD26d63
+Deployed `TickLens`: 0x9573A023DE6A9f22BA67D2A1C3B029f5f93fF19f

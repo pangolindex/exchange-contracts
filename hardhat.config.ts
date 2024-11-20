@@ -150,16 +150,21 @@ module.exports = {
           },
         },
       },
-      "contracts/elixir-periphery/NonfungiblePositionManager.sol":
+      "contracts/PangolinV3-periphery/NonfungiblePositionManager.sol":
         CUSTOM_OPTIMIZER_COMPILER_SETTINGS,
-      "contracts/elixir-periphery/test/MockTimeNonfungiblePositionManager.sol":
+      "contracts/PangolinV3-periphery/test/MockTimeNonfungiblePositionManager.sol":
         CUSTOM_OPTIMIZER_COMPILER_SETTINGS,
-      "contracts/elixir-periphery/test/NFTDescriptorTest.sol":
+      "contracts/PangolinV3-periphery/test/NFTDescriptorTest.sol":
         LOWEST_OPTIMIZER_COMPILER_SETTINGS,
-      "contracts/elixir-periphery/NonfungibleTokenPositionDescriptor.sol":
+      "contracts/PangolinV3-periphery/NonfungibleTokenPositionDescriptor.sol":
         LOWEST_OPTIMIZER_COMPILER_SETTINGS,
-      "contracts/elixir-periphery/libraries/NFTDescriptor.sol":
+      "contracts/PangolinV3-periphery/libraries/NFTDescriptor.sol":
         LOWEST_OPTIMIZER_COMPILER_SETTINGS,
+    },
+    contractSizer: {
+      alphaSort: true,
+      runOnCompile: true,
+      disambiguatePaths: false,
     },
   },
   watcher: {
@@ -169,7 +174,45 @@ module.exports = {
       verbose: true,
     },
   },
-  networks: networksFromSdk,
+  networks: {
+    hardhat: {
+      allowUnlimitedContractSize: true,
+    },
+    coston: {
+      url: "https://coston-api.flare.network/ext/bc/C/rpc",
+      gasPrice: 225000000000,
+      chainId: 16,
+      accounts: [
+          ""
+      ]
+    },
+    flare: {
+      url: "https://flare-api.flare.network/ext/C/rpc",
+      gasPrice: 225000000000,
+      chainId: 14,
+      accounts: [
+          ""
+      ]
+    },
+    fuji: {
+      allowUnlimitedContractSize: true,
+      url: "https://api.avax-test.network/ext/bc/C/rpc",
+      gasPrice: 225000000000,
+      chainId: 43113,
+      accounts: [
+          ""
+      ]
+    },
+    avalanche: {
+      allowUnlimitedContractSize: true,
+      url: "https://api.avax.network/ext/bc/C/rpc",
+      gasPrice: 225000000000,
+      chainId: 43114,
+      accounts: [
+          ""
+      ]
+    },
+  },
   etherscan: {
     apiKey: {
       mainnet: process.env.ETHERSCAN_API_KEY,
@@ -196,8 +239,9 @@ module.exports = {
       arbitrumOne: process.env.ARBISCAN_API_KEY,
       arbitrumTestnet: process.env.ARBISCAN_API_KEY,
       // avalanche
-      avalanche: process.env.SNOWTRACE_API_KEY,
+      avalanche: "avalanche",
       avalancheFujiTestnet: process.env.SNOWTRACE_API_KEY,
+      fuji: "fuji",
       // moonbeam
       moonriver: process.env.MOONRIVER_MOONSCAN_API_KEY,
       moonbaseAlpha: process.env.MOONBEAM_MOONSCAN_API_KEY,
@@ -226,6 +270,22 @@ module.exports = {
         urls: {
           apiURL: "https://coston2-explorer.flare.network/api",
           browserURL: "https://coston2-explorer.flare.network/",
+        },
+      },
+      {
+        network: "fuji",
+        chainId: 43113,
+        urls: {
+          apiURL: "https://api.routescan.io/v2/network/testnet/evm/43113/etherscan",
+          browserURL: "https://testnet.snowtrace.io/",
+        },
+      },
+      {
+        network: "avalanche",
+        chainId: 43114,
+        urls: {
+          apiURL: "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan",
+          browserURL: "https://avalanche.routescan.io",
         },
       },
     ],

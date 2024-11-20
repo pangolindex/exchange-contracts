@@ -57,7 +57,7 @@ interface TokensFixture {
 
 async function tokensFixture(): Promise<TokensFixture> {
   const tokenFactory = await ethers.getContractFactory(
-    "contracts/elixir-core/test/TestERC20.sol:TestERC20"
+    "contracts/PangolinV3-core/test/TestERC20.sol:TestERC20"
   );
   const tokenA = (await tokenFactory.deploy(
     BigNumber.from(2).pow(255)
@@ -109,7 +109,7 @@ export const poolFixture: Fixture<PoolFixture> =
     );
 
     const calleeContractFactory = await ethers.getContractFactory(
-      "contracts/elixir-core/test/TestElixirCallee.sol:TestElixirCallee"
+      "contracts/PangolinV3-core/test/TestElixirCallee.sol:TestElixirCallee"
     );
     const routerContractFactory = await ethers.getContractFactory(
       "TestElixirRouter"
