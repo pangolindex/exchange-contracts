@@ -26,7 +26,7 @@ async function main() {
     //const pool = await poolFactory.connect(poolDeployer).deploy();
     //console.log("Deployed `PangolinV3Pool` Implementation: " + pool.address);
 
-    const POOL_IMPLEMENTATION = "0x474195Ac6cC3bDe2018DD0689694c79F33f00E12";
+    const POOL_IMPLEMENTATION = "0x3b5C658112f0b8b64f72EcCd7f9bDaeB7Cf9E73F";
     //const POOL_IMPLEMENTATION = pool.address;
 
     //const wethFactory = await ethers.getContractFactory("WAVAX");
@@ -63,7 +63,7 @@ async function main() {
     await delay(2000);
 
     const nftManagerFactory = await ethers.getContractFactory('NonfungiblePositionManager');
-    const nftManager = await nftManagerFactory.deploy(factory.address, WETH_ADDRESS, nftDescriptor.address, ethers.constants.AddressZero);
+    const nftManager = await nftManagerFactory.deploy(factory.address, WETH_ADDRESS, nftDescriptor.address, ethers.constants.AddressZero);//(factory.address, WETH_ADDRESS, nftDescriptor.address, ethers.constants.AddressZero);
     console.log("Deployed `NonfungiblePositionManager`: " + nftManager.address);
 
     await delay(2000);

@@ -16,7 +16,7 @@ interface IPangolinV3PoolOwnerActions {
     /// @param feeProtocol1 new protocol fee for token1 of the pool
     function setFeeProtocol(uint8 feeProtocol0, uint8 feeProtocol1) external;
 
-    function setFee(uint24 _fee, int24 tickSpacing) external;
+    function setFee(uint24 _fee) external;
 
     /// @notice Collect the protocol fee accrued to the pool
     /// @param recipient The address to which collected protocol fees should be sent

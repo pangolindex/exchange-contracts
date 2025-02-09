@@ -106,7 +106,7 @@ contract NonfungiblePositionManager is
         )
     {
         Position memory position = _positions[tokenId];
-        require(position.poolId != 0, 'Invalid token ID');
+        require(position.poolId != 0);
         PoolAddress.PoolKey memory poolKey = _poolIdToPoolKey[position.poolId];
         return (
             position.nonce,
@@ -137,7 +137,7 @@ contract NonfungiblePositionManager is
         )
     {
         Position memory position = _positions[tokenId];
-        require(position.poolId != 0, 'Invalid token ID');
+        require(position.poolId != 0);
         return (
             position.rewardPerLiquidityInsideLastX64,
             position.rewardLastUpdated,
@@ -213,11 +213,15 @@ contract NonfungiblePositionManager is
             rewardOwed: 0
         });
 
+        Position storage position = _positions[tokenId];
+
+        _updateReward(position, pool);
+
         emit IncreaseLiquidity(tokenId, liquidity, amount0, amount1);
     }
 
     function _isAuthorizedForToken(uint256 tokenId) internal view {
-        require(_isApprovedOrOwner(msg.sender, tokenId), 'Not approved');
+        require(_isApprovedOrOwner(msg.sender, tokenId), 'Na');
     }
     modifier isAuthorizedForToken(uint256 tokenId) {
         _isAuthorizedForToken(tokenId);
@@ -431,6 +435,11 @@ contract NonfungiblePositionManager is
 
         Position storage position = _positions[tokenId];
 
+        PoolAddress.PoolKey memory poolKey = _poolIdToPoolKey[position.poolId];
+        IPangolinV3Pool pool = IPangolinV3Pool(PoolAddress.computeAddress(factory, poolKey));
+
+        _updateReward(position, pool);
+
         uint256 rewardOwed = position.rewardOwed;
         uint32 rewardLastCollected = _clampedTimestamp();
 
@@ -505,7 +514,7 @@ contract NonfungiblePositionManager is
 
     /// @inheritdoc IERC721
     function getApproved(uint256 tokenId) public view override(ERC721, IERC721) returns (address) {
-        require(_exists(tokenId), 'ERC721: nonexistent token');
+        require(_exists(tokenId));
 
         return _positions[tokenId].operator;
     }

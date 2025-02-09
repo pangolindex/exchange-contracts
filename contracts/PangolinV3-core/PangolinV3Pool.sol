@@ -931,12 +931,10 @@ contract PangolinV3Pool is IPangolinV3Pool {
         emit SetFeeProtocol(feeProtocolOld % 16, feeProtocolOld >> 4, feeProtocol0, feeProtocol1);
     }
 
-    function setFee(uint24 _fee, int24 _tickSpacing) external override onlyFactoryOwner {
+    function setFee(uint24 _fee) external override onlyFactoryOwner {
         uint24 oldfee = fee;
-        int24 oldtickspacing = tickSpacing;
         fee = _fee;
-        tickSpacing = _tickSpacing;
-        emit SetFee(oldfee, fee, oldtickspacing, tickSpacing);
+        emit SetFee(oldfee, fee);
     }
 
     /// @inheritdoc IPangolinV3PoolOwnerActions

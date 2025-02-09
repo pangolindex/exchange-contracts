@@ -86,9 +86,7 @@ contract PangolinV3Factory is IPangolinV3Factory {
 
     function setFee(address _pool, uint24 _fee) external {
         require(msg.sender == owner, "AUTH");
-        int24 tickSpacing = feeAmountTickSpacing[_fee];
-        require(tickSpacing != 0, "ERRTICK");
-        IPangolinV3Pool(_pool).setFee(_fee, tickSpacing);
+        IPangolinV3Pool(_pool).setFee(_fee);
     }
 
     function getFee(address _pool) external view returns (uint24) {

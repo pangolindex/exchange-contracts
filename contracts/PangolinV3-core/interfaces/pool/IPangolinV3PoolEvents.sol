@@ -112,7 +112,7 @@ interface IPangolinV3PoolEvents {
     /// @param feeProtocol1New The updated value of the token1 protocol fee
     event SetFeeProtocol(uint8 feeProtocol0Old, uint8 feeProtocol1Old, uint8 feeProtocol0New, uint8 feeProtocol1New);
 
-    event SetFee(uint24 oldfee, uint24 fee, int24 oldtickspacing, int24 tickspacing);
+    event SetFee(uint24 oldfee, uint24 fee);
 
     /// @notice Emitted when the collected protocol fees are withdrawn by the factory owner
     /// @param sender The address that collects the protocol fees
