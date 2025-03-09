@@ -18,9 +18,9 @@
 pragma solidity >=0.4.22 <0.6;
 
 contract WAVAX {
-    string public name     = "Wrapped AVAX";
-    string public symbol   = "WAVAX";
-    uint8  public decimals = 18;
+    string public constant name     = "Wrapped AVAX";
+    string public constant symbol   = "WAVAX";
+    uint8  public constant decimals = 18;
 
     event  Approval(address indexed src, address indexed guy, uint wad);
     event  Transfer(address indexed src, address indexed dst, uint wad);
