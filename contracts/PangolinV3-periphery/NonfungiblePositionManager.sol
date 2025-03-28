@@ -8,7 +8,6 @@ import '../PangolinV3-core/libraries/FullMath.sol';
 import '../PangolinV3-rewarder/interfaces/IPangolinV3Rewarder.sol';
 
 import './interfaces/INonfungiblePositionManager.sol';
-import './interfaces/INonfungibleTokenPositionDescriptor.sol';
 import './libraries/PositionKey.sol';
 import './libraries/PoolAddress.sol';
 import './base/LiquidityManagement.sol';
@@ -126,23 +125,36 @@ contract NonfungiblePositionManager is
 
     /// @inheritdoc INonfungiblePositionManager
     function positionReward(uint256 tokenId)
-        external
-        view
-        override
-        returns (
-            uint192 rewardPerLiquidityInsideLastX64,
-            uint32 rewardLastUpdated,
-            uint32 rewardLastCollected,
-            uint256 rewardOwed
-        )
+    external
+    view
+    override
+    returns (
+        uint192 rewardPerLiquidityInsideLastX64,
+        uint32 rewardLastUpdated,
+        uint32 rewardLastCollected,
+        uint256 totalReward
+    )
     {
         Position memory position = _positions[tokenId];
         require(position.poolId != 0);
+        PoolAddress.PoolKey memory poolKey = _poolIdToPoolKey[position.poolId];
+        IPangolinV3Pool pool = IPangolinV3Pool(PoolAddress.computeAddress(factory, poolKey));
+
+        (, , , uint192 rewardPerLiquidityInsideCurrentX64) =
+            pool.snapshotCumulativesInside(position.tickLower, position.tickUpper);
+
+        uint256 instantaneousReward = FullMath.mulDiv(
+            rewardPerLiquidityInsideCurrentX64 - position.rewardPerLiquidityInsideLastX64,
+            position.liquidity,
+            2**64
+        );
+
+        totalReward = position.rewardOwed + instantaneousReward;
         return (
             position.rewardPerLiquidityInsideLastX64,
             position.rewardLastUpdated,
             position.rewardLastCollected,
-            position.rewardOwed
+            totalReward
         );
     }
 
@@ -236,10 +248,7 @@ contract NonfungiblePositionManager is
         _;
     }
 
-    function tokenURI(uint256 tokenId) public view override(ERC721, IERC721Metadata) returns (string memory) {
-        require(_exists(tokenId));
-        return INonfungibleTokenPositionDescriptor(_tokenDescriptor).tokenURI(this, tokenId);
-    }
+    function tokenURI(uint256 tokenId) public view override(ERC721, IERC721Metadata) returns (string memory) {}
 
     // save bytecode by removing implementation of unused method
     function baseURI() public pure override returns (string memory) {}
@@ -328,7 +337,7 @@ contract NonfungiblePositionManager is
 
         (amount0, amount1) = pool.burn(position.tickLower, position.tickUpper, params.liquidity);
 
-        require(amount0 >= params.amount0Min && amount1 >= params.amount1Min, 'Price slippage check');
+        require(amount0 >= params.amount0Min && amount1 >= params.amount1Min);
 
         bytes32 positionKey = PositionKey.compute(address(this), position.tickLower, position.tickUpper);
         // this is now updated to the current transaction
@@ -457,13 +466,6 @@ contract NonfungiblePositionManager is
     }
 
     /// @inheritdoc INonfungiblePositionManager
-    function forgoReward(uint256 tokenId) external payable override isAuthorizedForToken(tokenId) {
-        Position storage position = _positions[tokenId];
-        position.rewardLastCollected = _clampedTimestamp();
-        position.rewardOwed = 0;
-    }
-
-    /// @inheritdoc INonfungiblePositionManager
     function burn(uint256 tokenId) external payable override isAuthorizedForToken(tokenId) {
         Position storage position = _positions[tokenId];
         require(
@@ -496,13 +498,11 @@ contract NonfungiblePositionManager is
             return;
         }
 
-        if (position.rewardLastUpdated != 0) {
-            position.rewardOwed += FullMath.mulDiv(
-                rewardPerLiquidityInsideCurrentX64 - position.rewardPerLiquidityInsideLastX64,
-                position.liquidity,
-                2**64
-            );
-        }
+        position.rewardOwed += FullMath.mulDiv(
+            rewardPerLiquidityInsideCurrentX64 - position.rewardPerLiquidityInsideLastX64,
+            position.liquidity,
+            2**64
+        );
 
         position.rewardPerLiquidityInsideLastX64 = rewardPerLiquidityInsideCurrentX64;
         position.rewardLastUpdated = _clampedTimestamp();

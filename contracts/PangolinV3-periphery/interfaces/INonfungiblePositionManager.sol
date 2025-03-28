@@ -204,13 +204,6 @@ interface INonfungiblePositionManager is
     /// recipient The account that should receive the reward tokens
     function claimReward(uint256 tokenId, address recipient) external payable;
 
-    /// @notice Deletes reward debt of the token
-    /// @dev Because of (1) `burn` prevents burning the tokenId if there is any reward debt and (2) `claimReward` can
-    /// be DOSed by an improper reward manager implementation or a reward token, we have this separate function to
-    /// forgo rewards if user really needs to burn the tokenId and does not care about the rewards
-    /// @param tokenId The ID of the NFT to forgo the rewards
-    function forgoReward(uint256 tokenId) external payable;
-
     /// @notice Burns a token ID, which deletes it from the NFT contract. The token must have 0 liquidity and all tokens
     /// must be collected first.
     /// @param tokenId The ID of the token that is being burned

@@ -932,6 +932,7 @@ contract PangolinV3Pool is IPangolinV3Pool {
     }
 
     function setFee(uint24 _fee) external override onlyFactoryOwner {
+        require(_fee >= 10 && _fee <= 30000);
         uint24 oldfee = fee;
         fee = _fee;
         emit SetFee(oldfee, fee);
