@@ -73,7 +73,7 @@ contract PangolinV3Factory is IPangolinV3Factory {
     /// @inheritdoc IPangolinV3Factory
     function enableFeeAmount(uint24 fee, int24 tickSpacing) public override {
         require(msg.sender == owner);
-        require(fee < 1000000);
+        require(fee >= 10 && fee <= 30000);
         // tick spacing is capped at 16384 to prevent the situation where tickSpacing is so large that
         // TickBitmap#nextInitializedTickWithinOneWord overflows int24 container from a valid tick
         // 16384 ticks represents a >5x price change with ticks of 1 bips
