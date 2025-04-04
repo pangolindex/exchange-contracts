@@ -209,10 +209,6 @@ interface INonfungiblePositionManager is
     /// @param tokenId The ID of the token that is being burned
     function burn(uint256 tokenId) external payable;
 
-    /// @notice Restricted function to update address that generates tokenURI
-    /// @param tokenDescriptor_ The address of the new token descriptor
-    function updateTokenDescriptor(address tokenDescriptor_) external payable;
-
     /// @notice Restricted function to update the reward manager contract address
     /// @param rewardManager_ The contract that will distribute rewards during `claimReward`
     function updateRewardManager(address rewardManager_) external payable;

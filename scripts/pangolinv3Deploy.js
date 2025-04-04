@@ -26,7 +26,7 @@ async function main() {
     //const pool = await poolFactory.connect(poolDeployer).deploy();
     //console.log("Deployed `PangolinV3Pool` Implementation: " + pool.address);
 
-    const POOL_IMPLEMENTATION = "0x6Dd86cfBD864647dc10703342dd5Ea8643c2A2D4";
+    const POOL_IMPLEMENTATION = "0xB1C039631628f4BAcC57A6f8af878Ed6136C0872";
     //const POOL_IMPLEMENTATION = pool.address;
 
     //const wethFactory = await ethers.getContractFactory("WAVAX");

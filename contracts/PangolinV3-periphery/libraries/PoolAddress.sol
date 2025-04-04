@@ -7,7 +7,7 @@ library PoolAddress {
     // `0x41a723f9e6457830b1b7a44df4435fab88581d073226894b33131815dd674c22`
     // if implementation address is `0x5cB5539A18591947C82f5D840B05ed79f6395491`. We get that implementation address
     // by always using `0x427207B1Cdb6F2Ab8B1D21Ab77600f00b0a639a7` with nonce 0 as the deployer of the implementation.
-    bytes32 internal constant POOL_INIT_CODE_HASH = 0x0de5c24290e12a9a79eaf8848d0f7e0d4070d652c483c45dca0775d3b033d0b4;
+    bytes32 internal constant POOL_INIT_CODE_HASH = 0xa9bb1321d78097b23af97a9c07d5ec13e1adc404334585171c54ecccb5ad93b2;
 
     /// @notice The identifying key of the pool
     struct PoolKey {

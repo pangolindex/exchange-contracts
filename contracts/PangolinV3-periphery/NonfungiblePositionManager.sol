@@ -478,10 +478,6 @@ contract NonfungiblePositionManager is
         _burn(tokenId);
     }
 
-    function updateTokenDescriptor(address _tokenDescriptor_) external payable override onlyFactoryOwner {
-        _tokenDescriptor = _tokenDescriptor_;
-    }
-
     function updateRewardManager(address _pangolinRewarder_) external payable override onlyFactoryOwner {
         _pangolinRewarder = _pangolinRewarder_;
     }
@@ -495,18 +491,22 @@ contract NonfungiblePositionManager is
             pool.snapshotCumulativesInside(position.tickLower, position.tickUpper);
 
         if (position.rewardPerLiquidityInsideLastX64 >= rewardPerLiquidityInsideCurrentX64) {
+            position.rewardLastUpdated = _clampedTimestamp();
             return;
         }
 
-        position.rewardOwed += FullMath.mulDiv(
-            rewardPerLiquidityInsideCurrentX64 - position.rewardPerLiquidityInsideLastX64,
-            position.liquidity,
-            2**64
-        );
+        if (position.rewardLastUpdated != 0) {
+            position.rewardOwed += FullMath.mulDiv(
+                rewardPerLiquidityInsideCurrentX64 - position.rewardPerLiquidityInsideLastX64,
+                position.liquidity,
+                2**64
+            );
+        }
 
         position.rewardPerLiquidityInsideLastX64 = rewardPerLiquidityInsideCurrentX64;
         position.rewardLastUpdated = _clampedTimestamp();
     }
+
 
     function _getAndIncrementNonce(uint256 tokenId) internal override returns (uint256) {
         return uint256(_positions[tokenId].nonce++);
