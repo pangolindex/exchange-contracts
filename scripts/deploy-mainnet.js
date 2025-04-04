@@ -85,7 +85,7 @@ async function main() {
     async function deploy(factory, args) {
         await delay(5000);
         var ContractFactory = await ethers.getContractFactory(factory);
-        var contract = await ContractFactory.deploy(...args);
+        var contract = await ContractFactory.deploy(...args ?? []);
         await contract.deployed();
         contracts.push({ address: contract.address, args: args });
         await confirmTransactionCount();
