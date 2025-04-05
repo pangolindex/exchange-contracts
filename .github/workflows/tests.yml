@@ -1,0 +1,27 @@
+name: Tests
+
+env:
+  CI: true
+
+on:
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "16.x"
+          cache: "yarn"
+          registry-url: "https://registry.npmjs.org/"
+
+      - run: yarn --frozen-lockfile
+
+      # this is just dummy private key, doesnt matter for tests to run
+      - run: echo "PRIVATE_KEY=7830402369e2dd6ae73869f788ba81ffb2efa09b2b819f89ecc882f379444444" > .env
+
+      - run: yarn test
