@@ -144,7 +144,7 @@ contract PangolinBridgeMigrationRouter {
      */
     function _arePairsCompatible(address pairA, address pairB) internal view {
         require(pairA != address(0), "PangolinBridgeMigrationRouter: liquidityPairFrom address 0");
-        require(pairA != address(0), "PangolinBridgeMigrationRouter: liquidityPairTo address 0");
+        require(pairB != address(0), "PangolinBridgeMigrationRouter: liquidityPairTo address 0");
         require(pairA != pairB, "PangolinBridgeMigrationRouter: Cant convert to the same liquidity pairs");
         require(
             IPangolinPair(pairA).token0() == IPangolinPair(pairB).token0() ||
